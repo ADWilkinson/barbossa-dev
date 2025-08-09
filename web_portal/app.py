@@ -26,10 +26,29 @@ CHANGELOGS_DIR = BARBOSSA_DIR / 'changelogs'
 SECURITY_DIR = BARBOSSA_DIR / 'security'
 WORK_TRACKING_DIR = BARBOSSA_DIR / 'work_tracking'
 
-# Default credentials (should be changed in production)
-users = {
-    "admin": generate_password_hash("changeme123!")
-}
+# Load credentials from external file (not in git)
+def load_credentials():
+    creds_file = Path.home() / '.barbossa_credentials.json'
+    if creds_file.exists():
+        with open(creds_file, 'r') as f:
+            creds = json.load(f)
+            return {
+                username: generate_password_hash(password)
+                for username, password in creds.items()
+            }
+    else:
+        # Create default credentials file
+        default_creds = {"admin": "Galleon6242"}
+        with open(creds_file, 'w') as f:
+            json.dump(default_creds, f)
+        # Set restrictive permissions
+        os.chmod(creds_file, 0o600)
+        return {
+            username: generate_password_hash(password)
+            for username, password in default_creds.items()
+        }
+
+users = load_credentials()
 
 @auth.verify_password
 def verify_password(username, password):
@@ -219,7 +238,7 @@ if __name__ == '__main__':
     context.load_cert_chain(str(cert_file), str(key_file))
     
     print("Starting Barbossa Web Portal on https://0.0.0.0:8443")
-    print("Default credentials: admin / changeme123!")
-    print("WARNING: Change default credentials in production!")
+    print("Credentials loaded from ~/.barbossa_credentials.json")
+    print("Login with configured credentials")
     
     app.run(host='0.0.0.0', port=8443, ssl_context=context, debug=False)

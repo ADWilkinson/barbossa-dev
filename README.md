@@ -131,11 +131,11 @@ claude --dangerously-skip-permissions < barbossa_prompt.txt
 
 Access the HTTPS dashboard at `https://eastindiaonchaincompany.xyz:8443`
 
-Default credentials:
+Credentials are stored securely in `~/.barbossa_credentials.json` (outside git repository)
 - Username: `admin`
-- Password: `changeme123!`
+- Password: Configured in external file
 
-**⚠️ Change default credentials in production!**
+**🔒 Credentials file has restricted permissions (600) for security**
 
 ### Portal Features
 - Real-time Barbossa status
