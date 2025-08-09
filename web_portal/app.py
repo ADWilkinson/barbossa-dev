@@ -180,9 +180,12 @@ def get_barbossa_status():
         with open(current_work_file, 'r') as f:
             status['current_work'] = json.load(f)
     
-    # Get recent logs
+    # Get recent logs - including both barbossa and claude execution logs
     if LOGS_DIR.exists():
-        log_files = sorted(LOGS_DIR.glob('barbossa_*.log'), key=lambda x: x.stat().st_mtime, reverse=True)[:5]
+        barbossa_logs = list(LOGS_DIR.glob('barbossa_*.log'))
+        claude_logs = list(LOGS_DIR.glob('claude_*.log'))
+        all_logs = barbossa_logs + claude_logs
+        log_files = sorted(all_logs, key=lambda x: x.stat().st_mtime, reverse=True)[:10]
         for log_file in log_files:
             status['recent_logs'].append({
                 'name': log_file.name,
