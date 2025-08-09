@@ -23,7 +23,7 @@ echo -e "${YELLOW}Checking environment...${NC}"
 
 # Install Python dependencies if needed
 echo -e "${YELLOW}Installing Python dependencies...${NC}"
-pip3 install --user requests
+pip3 install --user requests --break-system-packages 2>/dev/null || echo "Dependencies may already be installed"
 
 # Test security system
 echo -e "${YELLOW}Testing security system...${NC}"

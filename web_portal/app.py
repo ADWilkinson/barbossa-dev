@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 """
-Barbossa Web Portal - HTTPS Dashboard
-Provides secure web interface for monitoring Barbossa and server status
+Barbossa Web Portal - Advanced Management Dashboard
+Provides comprehensive monitoring, logging, and control interface for Barbossa
 """
 
 import json
 import os
 import ssl
 import subprocess
-from datetime import datetime
+import re
+import time
+from datetime import datetime, timedelta
 from pathlib import Path
-from flask import Flask, render_template, jsonify, request, session, redirect, url_for
+from flask import Flask, render_template, jsonify, request, session, redirect, url_for, send_file
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
+import shutil
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
@@ -25,6 +28,11 @@ LOGS_DIR = BARBOSSA_DIR / 'logs'
 CHANGELOGS_DIR = BARBOSSA_DIR / 'changelogs'
 SECURITY_DIR = BARBOSSA_DIR / 'security'
 WORK_TRACKING_DIR = BARBOSSA_DIR / 'work_tracking'
+PROJECTS_DIR = BARBOSSA_DIR / 'projects'
+ARCHIVE_DIR = BARBOSSA_DIR / 'archive'
+
+# Ensure archive directory exists
+ARCHIVE_DIR.mkdir(exist_ok=True)
 
 # Load credentials from external file (not in git)
 def load_credentials():
@@ -53,198 +61,431 @@ users = load_credentials()
 @auth.verify_password
 def verify_password(username, password):
     if username in users and check_password_hash(users.get(username), password):
+        session['username'] = username
         return username
 
-@app.route('/')
-@auth.login_required
-def index():
-    """Main dashboard page"""
-    return render_template('index.html')
-
-@app.route('/api/status')
-@auth.login_required
-def get_status():
-    """Get Barbossa and system status"""
-    status = {
-        'barbossa': get_barbossa_status(),
-        'system': get_system_status(),
-        'services': get_services_status(),
-        'security': get_security_status()
-    }
-    return jsonify(status)
-
-@app.route('/api/logs')
-@auth.login_required
-def get_logs():
-    """Get recent Barbossa logs"""
-    logs = []
-    if LOGS_DIR.exists():
-        log_files = sorted(LOGS_DIR.glob('*.log'), key=lambda x: x.stat().st_mtime, reverse=True)[:10]
-        for log_file in log_files:
-            with open(log_file, 'r') as f:
-                lines = f.readlines()
-                logs.append({
-                    'filename': log_file.name,
-                    'timestamp': datetime.fromtimestamp(log_file.stat().st_mtime).isoformat(),
-                    'content': ''.join(lines[-50:])  # Last 50 lines
-                })
-    return jsonify(logs)
-
-@app.route('/api/changelogs')
-@auth.login_required
-def get_changelogs():
-    """Get recent changelogs"""
-    changelogs = []
-    if CHANGELOGS_DIR.exists():
-        changelog_files = sorted(CHANGELOGS_DIR.glob('*.md'), key=lambda x: x.stat().st_mtime, reverse=True)[:10]
-        for changelog_file in changelog_files:
-            with open(changelog_file, 'r') as f:
-                changelogs.append({
-                    'filename': changelog_file.name,
-                    'timestamp': datetime.fromtimestamp(changelog_file.stat().st_mtime).isoformat(),
-                    'content': f.read()
-                })
-    return jsonify(changelogs)
-
-@app.route('/api/security-audit')
-@auth.login_required
-def get_security_audit():
-    """Get security audit log"""
-    audit_log = SECURITY_DIR / 'audit.log'
-    violations_log = SECURITY_DIR / 'security_violations.log'
+def sanitize_sensitive_info(text):
+    """Remove sensitive information from logs"""
+    if not text:
+        return text
     
-    audit_data = {
-        'audit_entries': [],
-        'violations': []
-    }
+    # Hide API keys
+    text = re.sub(r'(api[_-]?key|token|secret|password)["\']?\s*[:=]\s*["\']?[\w-]+', 
+                  r'\1=***REDACTED***', text, flags=re.IGNORECASE)
     
-    if audit_log.exists():
-        with open(audit_log, 'r') as f:
-            audit_data['audit_entries'] = f.readlines()[-100:]  # Last 100 entries
+    # Hide environment variables that might contain secrets
+    text = re.sub(r'(ANTHROPIC_API_KEY|GITHUB_TOKEN|SLACK_TOKEN)=[\w-]+', 
+                  r'\1=***REDACTED***', text)
     
-    if violations_log.exists():
-        with open(violations_log, 'r') as f:
-            audit_data['violations'] = f.readlines()
+    # Hide SSH keys
+    text = re.sub(r'-----BEGIN [A-Z ]+-----[\s\S]+?-----END [A-Z ]+-----', 
+                  '***SSH_KEY_REDACTED***', text)
     
-    return jsonify(audit_data)
+    return text
 
-@app.route('/api/work-tally')
-@auth.login_required
-def get_work_tally():
-    """Get current work tally"""
-    tally_file = WORK_TRACKING_DIR / 'work_tally.json'
-    if tally_file.exists():
-        with open(tally_file, 'r') as f:
-            return jsonify(json.load(f))
-    return jsonify({})
-
-def get_barbossa_status():
-    """Get Barbossa status"""
-    try:
-        result = subprocess.run(
-            ['python3', str(BARBOSSA_DIR / 'barbossa.py'), '--status'],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        return json.loads(result.stdout)
-    except:
-        return {'status': 'error', 'message': 'Could not get Barbossa status'}
-
-def get_system_status():
-    """Get system status"""
-    status = {}
+def get_system_stats():
+    """Get current system statistics"""
+    stats = {}
     
     # CPU usage
     try:
         result = subprocess.run(['top', '-bn1'], capture_output=True, text=True)
-        lines = result.stdout.split('\n')
-        for line in lines:
-            if 'Cpu(s)' in line or '%Cpu' in line:
-                status['cpu'] = line.strip()
-                break
+        cpu_line = [line for line in result.stdout.split('\n') if 'Cpu(s)' in line or '%Cpu' in line][0]
+        stats['cpu_usage'] = cpu_line.strip()
     except:
-        status['cpu'] = 'N/A'
+        stats['cpu_usage'] = 'N/A'
     
     # Memory usage
     try:
         result = subprocess.run(['free', '-h'], capture_output=True, text=True)
-        status['memory'] = result.stdout
+        lines = result.stdout.split('\n')
+        mem_line = lines[1].split()
+        stats['memory'] = {
+            'total': mem_line[1],
+            'used': mem_line[2],
+            'free': mem_line[3]
+        }
     except:
-        status['memory'] = 'N/A'
+        stats['memory'] = {'total': 'N/A', 'used': 'N/A', 'free': 'N/A'}
     
     # Disk usage
     try:
         result = subprocess.run(['df', '-h', '/'], capture_output=True, text=True)
-        status['disk'] = result.stdout
+        lines = result.stdout.split('\n')
+        disk_line = lines[1].split()
+        stats['disk'] = {
+            'total': disk_line[1],
+            'used': disk_line[2],
+            'available': disk_line[3],
+            'percent': disk_line[4]
+        }
     except:
-        status['disk'] = 'N/A'
+        stats['disk'] = {'total': 'N/A', 'used': 'N/A', 'available': 'N/A', 'percent': 'N/A'}
+    
+    return stats
+
+def get_barbossa_status():
+    """Get comprehensive Barbossa status"""
+    status = {
+        'running': False,
+        'last_run': None,
+        'next_run': None,
+        'work_tally': {},
+        'current_work': None,
+        'recent_logs': [],
+        'claude_processes': []
+    }
+    
+    # Check if Barbossa is currently running
+    result = subprocess.run(['pgrep', '-f', 'barbossa.py'], capture_output=True, text=True)
+    status['running'] = bool(result.stdout.strip())
+    
+    # Get work tally
+    tally_file = WORK_TRACKING_DIR / 'work_tally.json'
+    if tally_file.exists():
+        with open(tally_file, 'r') as f:
+            status['work_tally'] = json.load(f)
+    
+    # Get current work
+    current_work_file = WORK_TRACKING_DIR / 'current_work.json'
+    if current_work_file.exists():
+        with open(current_work_file, 'r') as f:
+            status['current_work'] = json.load(f)
+    
+    # Get recent logs
+    if LOGS_DIR.exists():
+        log_files = sorted(LOGS_DIR.glob('barbossa_*.log'), key=lambda x: x.stat().st_mtime, reverse=True)[:5]
+        for log_file in log_files:
+            status['recent_logs'].append({
+                'name': log_file.name,
+                'size': f"{log_file.stat().st_size / 1024:.1f} KB",
+                'modified': datetime.fromtimestamp(log_file.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+            })
+    
+    # Check for running Claude processes
+    result = subprocess.run(['ps', 'aux'], capture_output=True, text=True)
+    for line in result.stdout.split('\n'):
+        if 'claude' in line.lower() and 'grep' not in line:
+            parts = line.split()
+            if len(parts) > 10:
+                status['claude_processes'].append({
+                    'pid': parts[1],
+                    'cpu': parts[2],
+                    'mem': parts[3],
+                    'started': parts[8],
+                    'time': parts[9]
+                })
+    
+    # Calculate next run (based on cron schedule)
+    current_hour = datetime.now().hour
+    next_run_hour = ((current_hour // 4) + 1) * 4
+    if next_run_hour >= 24:
+        next_run_hour = 0
+    status['next_run'] = f"{next_run_hour:02d}:00 UTC"
     
     return status
 
-def get_services_status():
+def get_changelogs(limit=20):
+    """Get recent changelogs with details"""
+    changelogs = []
+    
+    if CHANGELOGS_DIR.exists():
+        changelog_files = sorted(CHANGELOGS_DIR.glob('*.md'), key=lambda x: x.stat().st_mtime, reverse=True)[:limit]
+        
+        for changelog_file in changelog_files:
+            # Parse filename for work area and timestamp
+            name_parts = changelog_file.stem.split('_')
+            work_area = name_parts[0] if name_parts else 'unknown'
+            
+            # Read first few lines for summary
+            with open(changelog_file, 'r') as f:
+                lines = f.readlines()[:10]
+                summary = ''.join(lines[:3]) if lines else 'No content'
+            
+            changelogs.append({
+                'filename': changelog_file.name,
+                'work_area': work_area,
+                'timestamp': datetime.fromtimestamp(changelog_file.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                'size': f"{changelog_file.stat().st_size / 1024:.1f} KB",
+                'summary': sanitize_sensitive_info(summary)
+            })
+    
+    return changelogs
+
+def get_security_events(limit=50):
+    """Get recent security events"""
+    events = []
+    
+    # Read audit log
+    audit_log = SECURITY_DIR / 'audit.log'
+    if audit_log.exists():
+        with open(audit_log, 'r') as f:
+            lines = f.readlines()[-limit:]
+            for line in reversed(lines):
+                if line.strip():
+                    # Parse log line
+                    parts = line.split(' - ')
+                    if len(parts) >= 3:
+                        events.append({
+                            'timestamp': parts[0],
+                            'level': parts[1],
+                            'message': sanitize_sensitive_info(' - '.join(parts[2:]))
+                        })
+    
+    return events
+
+def get_claude_outputs():
+    """Get Claude execution outputs"""
+    outputs = []
+    
+    if LOGS_DIR.exists():
+        claude_files = sorted(LOGS_DIR.glob('claude_*.log'), key=lambda x: x.stat().st_mtime, reverse=True)
+        
+        for claude_file in claude_files:
+            # Determine work type from filename
+            work_type = 'unknown'
+            if 'infrastructure' in claude_file.name:
+                work_type = 'infrastructure'
+            elif 'personal' in claude_file.name:
+                work_type = 'personal_projects'
+            elif 'davy' in claude_file.name:
+                work_type = 'davy_jones'
+            
+            # Check if file has content
+            size = claude_file.stat().st_size
+            status = 'completed' if size > 100 else 'in_progress' if size == 0 else 'partial'
+            
+            outputs.append({
+                'filename': claude_file.name,
+                'work_type': work_type,
+                'status': status,
+                'size': f"{size / 1024:.1f} KB" if size > 0 else "0 KB",
+                'timestamp': datetime.fromtimestamp(claude_file.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+            })
+    
+    return outputs
+
+@app.route('/')
+@auth.login_required
+def index():
+    """Main dashboard"""
+    return render_template('dashboard.html', 
+                         username=session.get('username'),
+                         timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC'))
+
+@app.route('/api/status')
+@auth.login_required
+def api_status():
+    """API endpoint for status data"""
+    return jsonify({
+        'barbossa': get_barbossa_status(),
+        'system': get_system_stats(),
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/api/changelogs')
+@auth.login_required
+def api_changelogs():
+    """API endpoint for changelogs"""
+    limit = request.args.get('limit', 20, type=int)
+    return jsonify(get_changelogs(limit))
+
+@app.route('/api/security')
+@auth.login_required
+def api_security():
+    """API endpoint for security events"""
+    limit = request.args.get('limit', 50, type=int)
+    return jsonify(get_security_events(limit))
+
+@app.route('/api/claude')
+@auth.login_required
+def api_claude():
+    """API endpoint for Claude outputs"""
+    return jsonify(get_claude_outputs())
+
+@app.route('/api/log/<path:filename>')
+@auth.login_required
+def api_log_content(filename):
+    """Get content of a specific log file"""
+    # Security check - ensure file is in allowed directories
+    allowed_dirs = [LOGS_DIR, CHANGELOGS_DIR, SECURITY_DIR]
+    
+    for allowed_dir in allowed_dirs:
+        file_path = allowed_dir / filename
+        if file_path.exists() and file_path.is_file():
+            with open(file_path, 'r') as f:
+                content = f.read()
+                # Limit to 1MB to prevent browser issues
+                if len(content) > 1024 * 1024:
+                    content = content[:1024 * 1024] + "\n\n... [TRUNCATED - File too large] ..."
+                
+                return jsonify({
+                    'filename': filename,
+                    'content': sanitize_sensitive_info(content),
+                    'size': f"{len(content) / 1024:.1f} KB"
+                })
+    
+    return jsonify({'error': 'File not found'}), 404
+
+@app.route('/api/clear-logs', methods=['POST'])
+@auth.login_required
+def api_clear_logs():
+    """Clear old logs (archive them first)"""
+    data = request.json
+    older_than_days = data.get('older_than_days', 7)
+    
+    cutoff_date = datetime.now() - timedelta(days=older_than_days)
+    archived_count = 0
+    
+    # Create archive with timestamp
+    archive_subdir = ARCHIVE_DIR / datetime.now().strftime('%Y%m%d_%H%M%S')
+    archive_subdir.mkdir(exist_ok=True)
+    
+    # Archive old logs
+    for log_dir in [LOGS_DIR, CHANGELOGS_DIR]:
+        if log_dir.exists():
+            for log_file in log_dir.glob('*'):
+                if log_file.is_file():
+                    file_time = datetime.fromtimestamp(log_file.stat().st_mtime)
+                    if file_time < cutoff_date:
+                        # Move to archive
+                        shutil.move(str(log_file), str(archive_subdir / log_file.name))
+                        archived_count += 1
+    
+    return jsonify({
+        'success': True,
+        'archived_count': archived_count,
+        'archive_location': str(archive_subdir)
+    })
+
+@app.route('/api/trigger-barbossa', methods=['POST'])
+@auth.login_required
+def api_trigger_barbossa():
+    """Manually trigger Barbossa execution"""
+    data = request.json
+    work_area = data.get('work_area', None)
+    
+    # Check if already running
+    result = subprocess.run(['pgrep', '-f', 'barbossa.py'], capture_output=True, text=True)
+    if result.stdout.strip():
+        return jsonify({'success': False, 'error': 'Barbossa is already running'}), 400
+    
+    # Build command
+    cmd = ['python3', str(BARBOSSA_DIR / 'barbossa.py')]
+    if work_area and work_area in ['infrastructure', 'personal_projects', 'davy_jones']:
+        cmd.extend(['--area', work_area])
+    
+    # Launch Barbossa in background
+    subprocess.Popen(cmd, cwd=BARBOSSA_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    
+    return jsonify({
+        'success': True,
+        'message': f'Barbossa triggered for {work_area or "automatic selection"}'
+    })
+
+@app.route('/api/kill-claude', methods=['POST'])
+@auth.login_required
+def api_kill_claude():
+    """Kill a Claude process"""
+    data = request.json
+    pid = data.get('pid')
+    
+    if not pid:
+        return jsonify({'success': False, 'error': 'PID required'}), 400
+    
+    try:
+        # Verify it's a Claude process
+        result = subprocess.run(['ps', '-p', str(pid)], capture_output=True, text=True)
+        if 'claude' not in result.stdout.lower():
+            return jsonify({'success': False, 'error': 'Not a Claude process'}), 400
+        
+        # Kill the process
+        subprocess.run(['kill', str(pid)])
+        time.sleep(1)
+        
+        # Check if killed
+        result = subprocess.run(['ps', '-p', str(pid)], capture_output=True, text=True)
+        if result.returncode != 0:
+            return jsonify({'success': True, 'message': f'Claude process {pid} terminated'})
+        else:
+            # Force kill if still running
+            subprocess.run(['kill', '-9', str(pid)])
+            return jsonify({'success': True, 'message': f'Claude process {pid} force terminated'})
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/services')
+@auth.login_required
+def api_services():
     """Get status of related services"""
     services = {}
     
-    # Check if Davy Jones Intern is running (Docker container)
-    try:
-        result = subprocess.run(['docker', 'ps', '--filter', 'name=davy-jones-intern', '--format', '{{.Names}}'], capture_output=True, text=True)
-        services['davy_jones_intern'] = 'running' if 'davy-jones-intern' in result.stdout else 'stopped'
-    except:
-        services['davy_jones_intern'] = 'unknown'
+    # Check Docker containers
+    result = subprocess.run(['docker', 'ps', '--format', '{{.Names}}:{{.Status}}'], capture_output=True, text=True)
+    docker_containers = {}
+    for line in result.stdout.strip().split('\n'):
+        if ':' in line:
+            name, status = line.split(':', 1)
+            docker_containers[name] = 'running' if 'Up' in status else 'stopped'
     
-    # Check Docker
-    try:
-        result = subprocess.run(['docker', 'ps'], capture_output=True)
-        services['docker'] = 'running' if result.returncode == 0 else 'stopped'
-    except:
-        services['docker'] = 'unknown'
+    services['docker'] = docker_containers
     
-    # Check cron
-    try:
-        result = subprocess.run(['pgrep', 'cron'], capture_output=True)
-        services['cron'] = 'running' if result.returncode == 0 else 'stopped'
-    except:
-        services['cron'] = 'unknown'
+    # Check important processes instead of systemd services
+    process_checks = {
+        'barbossa_portal': 'web_portal/app.py',
+        'cloudflared': 'cloudflared',
+        'claude': 'claude --dangerously-skip-permissions',
+        'docker': 'dockerd'
+    }
     
-    return services
+    ps_result = subprocess.run(['ps', 'aux'], capture_output=True, text=True)
+    for name, search_term in process_checks.items():
+        services[name] = 'active' if search_term in ps_result.stdout else 'inactive'
+    
+    # Check tmux sessions
+    result = subprocess.run(['tmux', 'ls'], capture_output=True, text=True)
+    tmux_sessions = []
+    if result.returncode == 0:
+        for line in result.stdout.strip().split('\n'):
+            if ':' in line:
+                session_name = line.split(':')[0]
+                tmux_sessions.append(session_name)
+    services['tmux_sessions'] = tmux_sessions
+    
+    return jsonify(services)
 
-def get_security_status():
-    """Get security status summary"""
-    import sys
-    sys.path.append(str(BARBOSSA_DIR))
-    from security_guard import security_guard
-    
-    return security_guard.get_audit_summary()
+@app.route('/health')
+def health():
+    """Health check endpoint (no auth required)"""
+    return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
 
 if __name__ == '__main__':
-    # Create SSL context for HTTPS
-    context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+    # Create SSL context
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     
-    # Use domain-specific certificates if available, otherwise generate
-    domain_cert = BARBOSSA_DIR / 'web_portal' / 'eastindia.crt'
-    domain_key = BARBOSSA_DIR / 'web_portal' / 'eastindia.key'
-    cert_file = BARBOSSA_DIR / 'web_portal' / 'cert.pem'
-    key_file = BARBOSSA_DIR / 'web_portal' / 'key.pem'
+    # Generate self-signed cert if not exists
+    cert_file = Path(__file__).parent / 'cert.pem'
+    key_file = Path(__file__).parent / 'key.pem'
     
-    # Prefer domain certificates if they exist
-    if domain_cert.exists() and domain_key.exists():
-        cert_file = domain_cert
-        key_file = domain_key
-        print("Using domain certificates for eastindiaonchaincompany.xyz")
-    elif not cert_file.exists() or not key_file.exists():
-        print("Generating self-signed certificates...")
+    if not cert_file.exists() or not key_file.exists():
+        print("Generating self-signed certificate...")
         subprocess.run([
-            'openssl', 'req', '-x509', '-newkey', 'rsa:4096', 
+            'openssl', 'req', '-x509', '-newkey', 'rsa:4096',
             '-keyout', str(key_file), '-out', str(cert_file),
-            '-days', '365', '-nodes',
-            '-subj', '/C=US/ST=State/L=City/O=EastIndiaOnchainCompany/CN=eastindiaonchaincompany.xyz'
+            '-days', '365', '-nodes', '-subj',
+            '/C=US/ST=State/L=City/O=Barbossa/CN=localhost'
         ])
     
     context.load_cert_chain(str(cert_file), str(key_file))
     
-    print("Starting Barbossa Web Portal on https://0.0.0.0:8443")
-    print("Credentials loaded from ~/.barbossa_credentials.json")
-    print("Login with configured credentials")
+    print(f"Starting Barbossa Web Portal on https://0.0.0.0:8443")
+    print(f"Access locally: https://localhost:8443")
+    print(f"Access remotely: https://eastindiaonchaincompany.xyz")
     
-    app.run(host='0.0.0.0', port=8443, ssl_context=context, debug=False)
+    app.run(
+        host='0.0.0.0',
+        port=8443,
+        ssl_context=context,
+        debug=False
+    )
