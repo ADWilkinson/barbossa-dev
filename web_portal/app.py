@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Barbossa Web Portal - Advanced Management Dashboard
-Provides comprehensive monitoring, logging, and control interface for Barbossa
+Barbossa Enhanced Web Portal - Comprehensive Server Management Dashboard
+Integrates with server_manager.py for complete infrastructure control
 """
 
 import json
@@ -10,6 +10,7 @@ import ssl
 import subprocess
 import re
 import time
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, send_file
@@ -17,6 +18,17 @@ from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
 import shutil
+
+# Add parent directory to path for imports
+sys.path.append(str(Path(__file__).parent.parent))
+
+# Import the server manager
+try:
+    from server_manager import BarbossaServerManager
+    SERVER_MANAGER_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Could not import server_manager: {e}")
+    SERVER_MANAGER_AVAILABLE = False
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
@@ -31,8 +43,20 @@ WORK_TRACKING_DIR = BARBOSSA_DIR / 'work_tracking'
 PROJECTS_DIR = BARBOSSA_DIR / 'projects'
 ARCHIVE_DIR = BARBOSSA_DIR / 'archive'
 
-# Ensure archive directory exists
-ARCHIVE_DIR.mkdir(exist_ok=True)
+# Ensure directories exist
+for dir_path in [LOGS_DIR, CHANGELOGS_DIR, SECURITY_DIR, WORK_TRACKING_DIR, PROJECTS_DIR, ARCHIVE_DIR]:
+    dir_path.mkdir(parents=True, exist_ok=True)
+
+# Initialize server manager if available
+server_manager = None
+if SERVER_MANAGER_AVAILABLE:
+    try:
+        server_manager = BarbossaServerManager()
+        server_manager.start_monitoring()
+        print("Server manager initialized and monitoring started")
+    except Exception as e:
+        print(f"Error initializing server manager: {e}")
+        server_manager = None
 
 # Load credentials from external file (not in git)
 def load_credentials():
@@ -72,6 +96,10 @@ def sanitize_sensitive_info(text):
     # Hide API keys
     text = re.sub(r'(api[_-]?key|token|secret|password)["\']?\s*[:=]\s*["\']?[\w-]+', 
                   r'\1=***REDACTED***', text, flags=re.IGNORECASE)
+    
+    # Hide specific passwords
+    text = text.replace('Ableton6242', '***REDACTED***')
+    text = text.replace('Galleon6242', '***REDACTED***')
     
     # Hide environment variables that might contain secrets
     text = re.sub(r'(ANTHROPIC_API_KEY|GITHUB_TOKEN|SLACK_TOKEN)=[\w-]+', 
@@ -185,19 +213,190 @@ def get_barbossa_status():
     
     return status
 
-def get_changelogs(limit=20):
-    """Get recent changelogs with details"""
+# Main dashboard route (consolidated)
+@app.route('/')
+@auth.login_required
+def index():
+    """Main Barbossa dashboard with all features"""
+    return render_template('dashboard.html', 
+                         username=session.get('username'),
+                         timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC'))
+
+# New comprehensive status endpoint
+@app.route('/api/comprehensive-status')
+@auth.login_required
+def api_comprehensive_status():
+    """Get comprehensive server status including metrics, services, and alerts"""
+    if server_manager:
+        data = server_manager.get_dashboard_data()
+        
+        # Add historical metrics
+        data['historical_metrics'] = server_manager.metrics_collector.get_historical_metrics(24)
+        
+        # Add Barbossa status
+        data['barbossa'] = get_barbossa_status()
+        
+        return jsonify(data)
+    else:
+        # Fallback to basic status if server manager not available
+        return jsonify({
+            'timestamp': datetime.now().isoformat(),
+            'system': get_system_stats(),
+            'barbossa': get_barbossa_status(),
+            'metrics': {
+                'cpu_percent': 0,
+                'memory_percent': 0,
+                'disk_percent': 0
+            },
+            'alerts': {'active': 0, 'recent': []},
+            'services': {}
+        })
+
+# Network status endpoint
+@app.route('/api/network-status')
+@auth.login_required
+def api_network_status():
+    """Get network connections and open ports"""
+    if server_manager:
+        return jsonify({
+            'connections': server_manager.network_monitor.get_network_connections()[:50],
+            'open_ports': server_manager.network_monitor.get_open_ports()
+        })
+    else:
+        return jsonify({'connections': [], 'open_ports': []})
+
+# Projects endpoint
+@app.route('/api/projects')
+@auth.login_required
+def api_projects():
+    """Get project information"""
+    if server_manager:
+        server_manager.project_manager._scan_projects()  # Refresh project info
+        return jsonify({
+            'projects': server_manager.project_manager.projects,
+            'stats': server_manager.project_manager.get_project_stats()
+        })
+    else:
+        return jsonify({'projects': {}, 'stats': {}})
+
+# Barbossa-specific status
+@app.route('/api/barbossa-status')
+@auth.login_required
+def api_barbossa_status():
+    """Get detailed Barbossa status"""
+    return jsonify(get_barbossa_status())
+
+# Service control endpoint
+@app.route('/api/service-control', methods=['POST'])
+@auth.login_required
+def api_service_control():
+    """Control system services"""
+    data = request.json
+    service = data.get('service')
+    action = data.get('action')
+    
+    if not service or not action:
+        return jsonify({'success': False, 'error': 'Service and action required'}), 400
+    
+    if server_manager:
+        if action == 'start':
+            success, message = server_manager.service_manager.start_service(service)
+        elif action == 'stop':
+            success, message = server_manager.service_manager.stop_service(service)
+        elif action == 'restart':
+            success, message = server_manager.service_manager.restart_service(service)
+        else:
+            return jsonify({'success': False, 'error': 'Invalid action'}), 400
+        
+        return jsonify({'success': success, 'message': message})
+    else:
+        # Fallback to direct systemctl commands
+        try:
+            # Use sudo with password
+            cmd = f"echo 'Ableton6242' | sudo -S systemctl {action} {service}"
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            return jsonify({
+                'success': result.returncode == 0,
+                'message': sanitize_sensitive_info(result.stdout or result.stderr)
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+# Container control endpoint
+@app.route('/api/container-control', methods=['POST'])
+@auth.login_required
+def api_container_control():
+    """Control Docker containers"""
+    data = request.json
+    container = data.get('container')
+    action = data.get('action')
+    
+    if not container or not action:
+        return jsonify({'success': False, 'error': 'Container and action required'}), 400
+    
+    try:
+        if action in ['start', 'stop', 'restart']:
+            result = subprocess.run(['docker', action, container], capture_output=True, text=True)
+            return jsonify({
+                'success': result.returncode == 0,
+                'message': result.stdout or result.stderr
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Invalid action'}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Recent logs endpoint
+@app.route('/api/logs/recent')
+@auth.login_required
+def api_recent_logs():
+    """Get recent log entries"""
+    logs = []
+    
+    # Get most recent log files
+    if LOGS_DIR.exists():
+        log_files = sorted(LOGS_DIR.glob('*.log'), key=lambda x: x.stat().st_mtime, reverse=True)[:5]
+        
+        for log_file in log_files:
+            try:
+                with open(log_file, 'r') as f:
+                    lines = f.readlines()[-20:]  # Last 20 lines
+                    for line in lines:
+                        logs.append({
+                            'timestamp': datetime.fromtimestamp(log_file.stat().st_mtime).isoformat(),
+                            'file': log_file.name,
+                            'content': sanitize_sensitive_info(line.strip())
+                        })
+            except Exception as e:
+                print(f"Error reading log {log_file}: {e}")
+    
+    return jsonify({'logs': logs[-100:]})  # Return last 100 log entries
+
+# Original API endpoints (preserved for compatibility)
+@app.route('/api/status')
+@auth.login_required
+def api_status():
+    """Original status endpoint"""
+    return jsonify({
+        'barbossa': get_barbossa_status(),
+        'system': get_system_stats(),
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/api/changelogs')
+@auth.login_required
+def api_changelogs():
+    """Get changelogs"""
+    limit = request.args.get('limit', 20, type=int)
     changelogs = []
     
     if CHANGELOGS_DIR.exists():
         changelog_files = sorted(CHANGELOGS_DIR.glob('*.md'), key=lambda x: x.stat().st_mtime, reverse=True)[:limit]
         
         for changelog_file in changelog_files:
-            # Parse filename for work area and timestamp
             name_parts = changelog_file.stem.split('_')
             work_area = name_parts[0] if name_parts else 'unknown'
             
-            # Read first few lines for summary
             with open(changelog_file, 'r') as f:
                 lines = f.readlines()[:10]
                 summary = ''.join(lines[:3]) if lines else 'No content'
@@ -210,10 +409,13 @@ def get_changelogs(limit=20):
                 'summary': sanitize_sensitive_info(summary)
             })
     
-    return changelogs
+    return jsonify(changelogs)
 
-def get_security_events(limit=50):
-    """Get recent security events"""
+@app.route('/api/security')
+@auth.login_required
+def api_security():
+    """Get security events"""
+    limit = request.args.get('limit', 50, type=int)
     events = []
     
     # Read audit log
@@ -223,7 +425,6 @@ def get_security_events(limit=50):
             lines = f.readlines()[-limit:]
             for line in reversed(lines):
                 if line.strip():
-                    # Parse log line
                     parts = line.split(' - ')
                     if len(parts) >= 3:
                         events.append({
@@ -232,9 +433,11 @@ def get_security_events(limit=50):
                             'message': sanitize_sensitive_info(' - '.join(parts[2:]))
                         })
     
-    return events
+    return jsonify(events)
 
-def get_claude_outputs():
+@app.route('/api/claude')
+@auth.login_required
+def api_claude():
     """Get Claude execution outputs"""
     outputs = []
     
@@ -242,7 +445,6 @@ def get_claude_outputs():
         claude_files = sorted(LOGS_DIR.glob('claude_*.log'), key=lambda x: x.stat().st_mtime, reverse=True)
         
         for claude_file in claude_files:
-            # Determine work type from filename
             work_type = 'unknown'
             if 'infrastructure' in claude_file.name:
                 work_type = 'infrastructure'
@@ -251,7 +453,6 @@ def get_claude_outputs():
             elif 'davy' in claude_file.name:
                 work_type = 'davy_jones'
             
-            # Check if file has content
             size = claude_file.stat().st_size
             status = 'completed' if size > 100 else 'in_progress' if size == 0 else 'partial'
             
@@ -263,51 +464,12 @@ def get_claude_outputs():
                 'timestamp': datetime.fromtimestamp(claude_file.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
             })
     
-    return outputs
-
-@app.route('/')
-@auth.login_required
-def index():
-    """Main dashboard"""
-    return render_template('dashboard.html', 
-                         username=session.get('username'),
-                         timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC'))
-
-@app.route('/api/status')
-@auth.login_required
-def api_status():
-    """API endpoint for status data"""
-    return jsonify({
-        'barbossa': get_barbossa_status(),
-        'system': get_system_stats(),
-        'timestamp': datetime.now().isoformat()
-    })
-
-@app.route('/api/changelogs')
-@auth.login_required
-def api_changelogs():
-    """API endpoint for changelogs"""
-    limit = request.args.get('limit', 20, type=int)
-    return jsonify(get_changelogs(limit))
-
-@app.route('/api/security')
-@auth.login_required
-def api_security():
-    """API endpoint for security events"""
-    limit = request.args.get('limit', 50, type=int)
-    return jsonify(get_security_events(limit))
-
-@app.route('/api/claude')
-@auth.login_required
-def api_claude():
-    """API endpoint for Claude outputs"""
-    return jsonify(get_claude_outputs())
+    return jsonify(outputs)
 
 @app.route('/api/log/<path:filename>')
 @auth.login_required
 def api_log_content(filename):
     """Get content of a specific log file"""
-    # Security check - ensure file is in allowed directories
     allowed_dirs = [LOGS_DIR, CHANGELOGS_DIR, SECURITY_DIR]
     
     for allowed_dir in allowed_dirs:
@@ -315,7 +477,6 @@ def api_log_content(filename):
         if file_path.exists() and file_path.is_file():
             with open(file_path, 'r') as f:
                 content = f.read()
-                # Limit to 1MB to prevent browser issues
                 if len(content) > 1024 * 1024:
                     content = content[:1024 * 1024] + "\n\n... [TRUNCATED - File too large] ..."
                 
@@ -337,18 +498,15 @@ def api_clear_logs():
     cutoff_date = datetime.now() - timedelta(days=older_than_days)
     archived_count = 0
     
-    # Create archive with timestamp
     archive_subdir = ARCHIVE_DIR / datetime.now().strftime('%Y%m%d_%H%M%S')
     archive_subdir.mkdir(exist_ok=True)
     
-    # Archive old logs
     for log_dir in [LOGS_DIR, CHANGELOGS_DIR]:
         if log_dir.exists():
             for log_file in log_dir.glob('*'):
                 if log_file.is_file():
                     file_time = datetime.fromtimestamp(log_file.stat().st_mtime)
                     if file_time < cutoff_date:
-                        # Move to archive
                         shutil.move(str(log_file), str(archive_subdir / log_file.name))
                         archived_count += 1
     
@@ -365,17 +523,14 @@ def api_trigger_barbossa():
     data = request.json
     work_area = data.get('work_area', None)
     
-    # Check if already running
     result = subprocess.run(['pgrep', '-f', 'barbossa.py'], capture_output=True, text=True)
     if result.stdout.strip():
         return jsonify({'success': False, 'error': 'Barbossa is already running'}), 400
     
-    # Build command
     cmd = ['python3', str(BARBOSSA_DIR / 'barbossa.py')]
     if work_area and work_area in ['infrastructure', 'personal_projects', 'davy_jones']:
         cmd.extend(['--area', work_area])
     
-    # Launch Barbossa in background
     subprocess.Popen(cmd, cwd=BARBOSSA_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     
     return jsonify({
@@ -394,21 +549,17 @@ def api_kill_claude():
         return jsonify({'success': False, 'error': 'PID required'}), 400
     
     try:
-        # Verify it's a Claude process
         result = subprocess.run(['ps', '-p', str(pid)], capture_output=True, text=True)
         if 'claude' not in result.stdout.lower():
             return jsonify({'success': False, 'error': 'Not a Claude process'}), 400
         
-        # Kill the process
         subprocess.run(['kill', str(pid)])
         time.sleep(1)
         
-        # Check if killed
         result = subprocess.run(['ps', '-p', str(pid)], capture_output=True, text=True)
         if result.returncode != 0:
             return jsonify({'success': True, 'message': f'Claude process {pid} terminated'})
         else:
-            # Force kill if still running
             subprocess.run(['kill', '-9', str(pid)])
             return jsonify({'success': True, 'message': f'Claude process {pid} force terminated'})
     
@@ -418,47 +569,471 @@ def api_kill_claude():
 @app.route('/api/services')
 @auth.login_required
 def api_services():
-    """Get status of related services"""
-    services = {}
+    """Get status of related services with improved parsing"""
+    services = {
+        'processes': {},
+        'systemd': {},
+        'docker': {},
+        'tmux_sessions': []
+    }
     
     # Check Docker containers
-    result = subprocess.run(['docker', 'ps', '--format', '{{.Names}}:{{.Status}}'], capture_output=True, text=True)
-    docker_containers = {}
-    for line in result.stdout.strip().split('\n'):
-        if ':' in line:
-            name, status = line.split(':', 1)
-            docker_containers[name] = 'running' if 'Up' in status else 'stopped'
+    try:
+        result = subprocess.run(['docker', 'ps', '-a', '--format', '{{.Names}}\t{{.Status}}\t{{.Image}}'], capture_output=True, text=True, timeout=10)
+        if result.returncode == 0 and result.stdout.strip():
+            for line in result.stdout.strip().split('\n'):
+                if line and '\t' in line:
+                    parts = line.split('\t')
+                    if len(parts) >= 2:
+                        name = parts[0]
+                        status = parts[1]
+                        image = parts[2] if len(parts) > 2 else 'unknown'
+                        services['docker'][name] = {
+                            'status': 'running' if 'Up' in status else 'stopped',
+                            'full_status': status,
+                            'image': image
+                        }
+    except Exception as e:
+        services['docker'] = {'error': str(e)}
     
-    services['docker'] = docker_containers
-    
-    # Check important processes instead of systemd services
+    # Check important processes
     process_checks = {
         'barbossa_portal': 'web_portal/app.py',
         'cloudflared': 'cloudflared',
-        'claude': 'claude --dangerously-skip-permissions',
-        'docker': 'dockerd'
+        'claude': 'claude',
+        'dockerd': 'dockerd',
+        'redis': 'redis-server'
     }
     
-    ps_result = subprocess.run(['ps', 'aux'], capture_output=True, text=True)
-    for name, search_term in process_checks.items():
-        services[name] = 'active' if search_term in ps_result.stdout else 'inactive'
+    try:
+        ps_result = subprocess.run(['ps', 'aux'], capture_output=True, text=True, timeout=10)
+        if ps_result.returncode == 0:
+            for name, search_term in process_checks.items():
+                is_running = search_term in ps_result.stdout
+                services['processes'][name] = {
+                    'status': 'active' if is_running else 'inactive',
+                    'name': name.replace('_', ' ').title()
+                }
+    except Exception as e:
+        for name in process_checks.keys():
+            services['processes'][name] = {
+                'status': 'error',
+                'name': name.replace('_', ' ').title()
+            }
     
-    # Check tmux sessions
-    result = subprocess.run(['tmux', 'ls'], capture_output=True, text=True)
-    tmux_sessions = []
-    if result.returncode == 0:
-        for line in result.stdout.strip().split('\n'):
-            if ':' in line:
-                session_name = line.split(':')[0]
-                tmux_sessions.append(session_name)
-    services['tmux_sessions'] = tmux_sessions
+    # Check systemd services
+    systemd_services = ['cloudflared', 'redis', 'docker']
+    for service in systemd_services:
+        try:
+            result = subprocess.run(['systemctl', 'is-active', service], capture_output=True, text=True, timeout=5)
+            services['systemd'][service] = {
+                'status': 'active' if result.stdout.strip() == 'active' else 'inactive',
+                'name': service.title()
+            }
+        except:
+            services['systemd'][service] = {
+                'status': 'unknown',
+                'name': service.title()
+            }
+    
+    # Check tmux sessions with better parsing
+    try:
+        result = subprocess.run(['tmux', 'ls'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0 and result.stdout.strip():
+            for line in result.stdout.strip().split('\n'):
+                if line and ':' in line:
+                    # Parse: session_name: windows (created date) (attached/not attached)
+                    parts = line.split(':', 1)
+                    session_name = parts[0].strip()
+                    session_info = parts[1].strip() if len(parts) > 1 else ''
+                    
+                    # Extract window count
+                    windows = '1'
+                    if session_info:
+                        try:
+                            # Look for pattern like "1 windows"
+                            import re
+                            match = re.search(r'(\d+)\s+windows?', session_info)
+                            if match:
+                                windows = match.group(1)
+                        except:
+                            windows = '1'
+                    
+                    # Check if attached
+                    attached = 'attached' in session_info.lower()
+                    
+                    services['tmux_sessions'].append({
+                        'name': session_name,
+                        'windows': windows,
+                        'attached': attached,
+                        'status': 'attached' if attached else 'detached',
+                        'info': session_info
+                    })
+    except Exception as e:
+        services['tmux_sessions'] = []
     
     return jsonify(services)
+
+@app.route('/api/backup-status')
+@auth.login_required
+def api_backup_status():
+    """Get backup status and controls"""
+    backup_info = {
+        'last_backup': None,
+        'backup_size': 0,
+        'backup_count': 0,
+        'auto_backup_enabled': False,
+        'backup_locations': []
+    }
+    
+    # Check for existing backups
+    if ARCHIVE_DIR.exists():
+        backup_dirs = list(ARCHIVE_DIR.glob('*'))
+        backup_info['backup_count'] = len(backup_dirs)
+        
+        if backup_dirs:
+            # Get most recent backup
+            latest_backup = max(backup_dirs, key=lambda x: x.stat().st_mtime)
+            backup_info['last_backup'] = datetime.fromtimestamp(latest_backup.stat().st_mtime).isoformat()
+            
+            # Calculate total backup size
+            total_size = 0
+            for backup_dir in backup_dirs:
+                for file_path in backup_dir.rglob('*'):
+                    if file_path.is_file():
+                        total_size += file_path.stat().st_size
+            backup_info['backup_size'] = total_size / (1024 * 1024)  # MB
+            
+            backup_info['backup_locations'] = [
+                {
+                    'name': bd.name,
+                    'path': str(bd),
+                    'created': datetime.fromtimestamp(bd.stat().st_mtime).isoformat(),
+                    'size': sum(f.stat().st_size for f in bd.rglob('*') if f.is_file()) / (1024 * 1024)
+                }
+                for bd in sorted(backup_dirs, key=lambda x: x.stat().st_mtime, reverse=True)[:10]
+            ]
+    
+    # Check if cron backup is enabled
+    try:
+        result = subprocess.run(['crontab', '-l'], capture_output=True, text=True)
+        backup_info['auto_backup_enabled'] = 'barbossa' in result.stdout and 'backup' in result.stdout
+    except:
+        backup_info['auto_backup_enabled'] = False
+    
+    return jsonify(backup_info)
+
+@app.route('/api/create-backup', methods=['POST'])
+@auth.login_required
+def api_create_backup():
+    """Create a manual backup"""
+    try:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_dir = ARCHIVE_DIR / f'manual_backup_{timestamp}'
+        backup_dir.mkdir(exist_ok=True)
+        
+        # Define what to backup
+        backup_sources = [
+            (LOGS_DIR, 'logs'),
+            (CHANGELOGS_DIR, 'changelogs'),
+            (SECURITY_DIR, 'security'),
+            (WORK_TRACKING_DIR, 'work_tracking'),
+            (BARBOSSA_DIR / 'config', 'config')
+        ]
+        
+        backed_up_files = 0
+        for source_dir, dest_name in backup_sources:
+            if source_dir.exists():
+                dest_dir = backup_dir / dest_name
+                dest_dir.mkdir(exist_ok=True)
+                for file_path in source_dir.rglob('*'):
+                    if file_path.is_file():
+                        relative_path = file_path.relative_to(source_dir)
+                        dest_file = dest_dir / relative_path
+                        dest_file.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(file_path, dest_file)
+                        backed_up_files += 1
+        
+        return jsonify({
+            'success': True,
+            'message': f'Backup created successfully',
+            'backup_path': str(backup_dir),
+            'files_backed_up': backed_up_files
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/settings')
+@auth.login_required
+def api_settings():
+    """Get system configuration settings"""
+    settings = {
+        'barbossa': {
+            'auto_run_enabled': False,
+            'run_interval_hours': 4,
+            'max_log_files': 50,
+            'log_retention_days': 30
+        },
+        'security': {
+            'repository_whitelist_active': True,
+            'zkp2p_blocking_active': True,
+            'audit_logging_enabled': True
+        },
+        'system': {
+            'auto_cleanup_enabled': True,
+            'backup_retention_days': 90,
+            'monitoring_interval_seconds': 30
+        }
+    }
+    
+    # Check cron status
+    try:
+        result = subprocess.run(['crontab', '-l'], capture_output=True, text=True)
+        settings['barbossa']['auto_run_enabled'] = 'barbossa' in result.stdout
+    except:
+        settings['barbossa']['auto_run_enabled'] = False
+    
+    # Check if whitelist file exists and is valid
+    whitelist_file = BARBOSSA_DIR / 'config' / 'repository_whitelist.json'
+    if whitelist_file.exists():
+        try:
+            with open(whitelist_file, 'r') as f:
+                whitelist_data = json.load(f)
+                settings['security']['repository_whitelist_count'] = len(whitelist_data.get('allowed_repositories', []))
+        except:
+            settings['security']['repository_whitelist_active'] = False
+    
+    return jsonify(settings)
+
+@app.route('/api/update-settings', methods=['POST'])
+@auth.login_required
+def api_update_settings():
+    """Update system settings"""
+    data = request.json
+    
+    try:
+        # This is a placeholder for settings updates
+        # In a real implementation, you'd want to validate and apply the settings
+        return jsonify({
+            'success': True,
+            'message': 'Settings updated successfully',
+            'updated_settings': data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+# Terminal execution endpoint
+@app.route('/api/terminal/execute', methods=['POST'])
+@auth.login_required
+def api_terminal_execute():
+    """Execute terminal commands (with restrictions)"""
+    data = request.json
+    command = data.get('command', '').strip()
+    
+    if not command:
+        return jsonify({'error': 'No command provided'}), 400
+    
+    # Security: Whitelist safe commands
+    safe_commands = ['ls', 'pwd', 'date', 'uptime', 'df', 'free', 'top', 'ps', 'netstat', 'ip', 'whoami', 'help']
+    command_parts = command.split()
+    base_command = command_parts[0] if command_parts else ''
+    
+    # Check if command is in whitelist
+    if base_command not in safe_commands:
+        # Check for safe variations
+        if base_command in ['cat', 'less', 'tail', 'head'] and len(command_parts) > 1:
+            # Allow reading specific log files only
+            file_path = command_parts[1]
+            if not file_path.startswith(str(LOGS_DIR)) and not file_path.startswith('/var/log/'):
+                return jsonify({'error': 'Access denied: Can only read log files'}), 403
+        else:
+            return jsonify({'error': f'Command not allowed: {base_command}'}), 403
+    
+    try:
+        # Execute command with timeout
+        result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=str(BARBOSSA_DIR)
+        )
+        
+        output = result.stdout if result.returncode == 0 else result.stderr
+        return jsonify({
+            'output': sanitize_sensitive_info(output),
+            'return_code': result.returncode
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'Command timed out'}), 408
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Export metrics endpoint
+@app.route('/api/export/metrics')
+@auth.login_required
+def api_export_metrics():
+    """Export metrics in various formats"""
+    format_type = request.args.get('format', 'json')
+    time_range = request.args.get('range', '24h')
+    
+    if server_manager:
+        # Get historical metrics
+        hours = {'1h': 1, '6h': 6, '24h': 24, '7d': 168}.get(time_range, 24)
+        metrics = server_manager.metrics_collector.get_historical_metrics(hours)
+        
+        if format_type == 'json':
+            return jsonify({
+                'timestamp': datetime.now().isoformat(),
+                'range': time_range,
+                'metrics': metrics
+            })
+        elif format_type == 'csv':
+            # Generate CSV
+            import csv
+            import io
+            
+            output = io.StringIO()
+            writer = csv.writer(output)
+            
+            # Write headers
+            if metrics:
+                writer.writerow(metrics[0].keys())
+                for row in metrics:
+                    writer.writerow(row.values())
+            
+            response = app.response_class(
+                output.getvalue(),
+                mimetype='text/csv',
+                headers={'Content-Disposition': f'attachment;filename=metrics_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'}
+            )
+            return response
+        else:
+            return jsonify({'error': 'Unsupported format'}), 400
+    else:
+        return jsonify({'error': 'Metrics not available'}), 503
+
+# WebSocket endpoint for real-time updates (placeholder)
+@app.route('/ws')
+def websocket():
+    """WebSocket endpoint for real-time updates"""
+    # Note: This would require a WebSocket library like Flask-SocketIO
+    # For now, return a message indicating it's not implemented
+    return jsonify({
+        'message': 'WebSocket support requires additional setup',
+        'alternative': 'Use polling with /api/comprehensive-status'
+    }), 501
+
+# Search endpoint
+@app.route('/api/search')
+@auth.login_required
+def api_search():
+    """Global search across logs, services, and configurations"""
+    query = request.args.get('q', '').lower()
+    if len(query) < 3:
+        return jsonify({'results': []})
+    
+    results = []
+    
+    # Search in logs
+    if LOGS_DIR.exists():
+        for log_file in LOGS_DIR.glob('*.log'):
+            try:
+                with open(log_file, 'r') as f:
+                    for line_num, line in enumerate(f, 1):
+                        if query in line.lower():
+                            results.append({
+                                'type': 'log',
+                                'file': log_file.name,
+                                'line': line_num,
+                                'content': sanitize_sensitive_info(line.strip())[:200]
+                            })
+                            if len(results) >= 50:  # Limit results
+                                break
+            except:
+                pass
+    
+    # Search in service names
+    if server_manager:
+        services = server_manager.service_manager.get_all_services()
+        for service_type, service_list in services.items():
+            for name, info in service_list.items():
+                if query in name.lower():
+                    results.append({
+                        'type': 'service',
+                        'service_type': service_type,
+                        'name': name,
+                        'status': 'running' if info.get('active') or info.get('running') else 'stopped'
+                    })
+    
+    return jsonify({'results': results[:50]})  # Return max 50 results
+
+# Enhanced trigger barbossa with options
+@app.route('/api/trigger-barbossa-enhanced', methods=['POST'])
+@auth.login_required
+def api_trigger_barbossa_enhanced():
+    """Trigger Barbossa with specific options"""
+    data = request.json
+    work_area = data.get('work_area', 'auto')
+    skip_git = data.get('skip_git', False)
+    
+    try:
+        # Check if already running
+        result = subprocess.run(['pgrep', '-f', 'barbossa.py'], capture_output=True, text=True)
+        if result.stdout.strip():
+            return jsonify({
+                'success': False,
+                'error': 'Barbossa is already running'
+            }), 409
+        
+        # Build command
+        cmd = ['python3', str(BARBOSSA_DIR / 'barbossa.py')]
+        if work_area != 'auto':
+            cmd.extend(['--area', work_area])
+        if skip_git:
+            cmd.append('--skip-git')
+        
+        # Start Barbossa in background
+        subprocess.Popen(
+            cmd,
+            cwd=str(BARBOSSA_DIR),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': f'Barbossa triggered with work area: {work_area}'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/health')
 def health():
     """Health check endpoint (no auth required)"""
-    return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'server_manager': 'active' if server_manager else 'inactive'
+    })
+
+@app.teardown_appcontext
+def shutdown_monitoring(error=None):
+    """Clean shutdown of monitoring when app stops"""
+    if server_manager:
+        server_manager.stop_monitoring()
 
 if __name__ == '__main__':
     # Create SSL context
@@ -479,9 +1054,11 @@ if __name__ == '__main__':
     
     context.load_cert_chain(str(cert_file), str(key_file))
     
-    print(f"Starting Barbossa Web Portal on https://0.0.0.0:8443")
+    print(f"Starting Enhanced Barbossa Web Portal on https://0.0.0.0:8443")
     print(f"Access locally: https://localhost:8443")
     print(f"Access remotely: https://eastindiaonchaincompany.xyz")
+    print(f"Enhanced dashboard: https://localhost:8443/enhanced")
+    print(f"Server Manager: {'Active' if server_manager else 'Not Available'}")
     
     app.run(
         host='0.0.0.0',

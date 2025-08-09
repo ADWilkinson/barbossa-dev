@@ -1,53 +1,31 @@
 #!/bin/bash
-# Sets up cron job for Barbossa execution every 4 hours
+# Setup cron job for Enhanced Barbossa automatic execution
 
-BARBOSSA_DIR="/home/dappnode/barbossa-engineer"
-CLAUDE_CMD="claude --dangerously-skip-permissions"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Create the cron execution script
-cat > $BARBOSSA_DIR/run_barbossa.sh << 'SCRIPT'
-#!/bin/bash
+echo "Setting up Enhanced Barbossa cron job..."
 
-# Barbossa Cron Execution Script
-BARBOSSA_DIR="/home/dappnode/barbossa-engineer"
-LOG_FILE="$BARBOSSA_DIR/logs/cron_$(date +%Y%m%d_%H%M%S).log"
+# Create the cron job entry (runs every 4 hours)
+CRON_JOB="0 */4 * * * $SCRIPT_DIR/run_barbossa_enhanced.sh"
 
-echo "Starting Barbossa at $(date)" >> $LOG_FILE
+# Check if cron job already exists
+if crontab -l 2>/dev/null | grep -q "run_barbossa_enhanced.sh"; then
+    echo "Enhanced Barbossa cron job already exists"
+else
+    # Add the cron job
+    (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
+    echo "Enhanced Barbossa cron job added successfully"
+fi
 
-# Load current work tally
-cd $BARBOSSA_DIR
-TALLY=$(cat work_tracking/work_tally.json)
-
-# Generate prompt with current data
-DATE=$(date +%Y-%m-%d)
-SESSION_ID=$(date +%s)
-INFRASTRUCTURE_COUNT=$(echo $TALLY | jq -r '.infrastructure')
-PERSONAL_PROJECTS_COUNT=$(echo $TALLY | jq -r '.personal_projects')
-DAVY_JONES_COUNT=$(echo $TALLY | jq -r '.davy_jones')
-
-# Create dynamic prompt
-sed -e "s/{DATE}/$DATE/g" \
-    -e "s/{SESSION_ID}/$SESSION_ID/g" \
-    -e "s/{INFRASTRUCTURE_COUNT}/$INFRASTRUCTURE_COUNT/g" \
-    -e "s/{PERSONAL_PROJECTS_COUNT}/$PERSONAL_PROJECTS_COUNT/g" \
-    -e "s/{DAVY_JONES_COUNT}/$DAVY_JONES_COUNT/g" \
-    barbossa_prompt.txt > /tmp/barbossa_prompt_$SESSION_ID.txt
-
-# Execute with Claude
-claude --dangerously-skip-permissions < /tmp/barbossa_prompt_$SESSION_ID.txt >> $LOG_FILE 2>&1
-
-# Clean up
-rm /tmp/barbossa_prompt_$SESSION_ID.txt
-
-echo "Barbossa completed at $(date)" >> $LOG_FILE
-SCRIPT
-
-chmod +x $BARBOSSA_DIR/run_barbossa.sh
-
-# Add to crontab (every 4 hours)
-echo "Adding cron job for Barbossa (every 4 hours)..."
-(crontab -l 2>/dev/null; echo "0 */4 * * * $BARBOSSA_DIR/run_barbossa.sh") | crontab -
-
-echo "Cron job added successfully!"
-echo "Barbossa will run every 4 hours"
+# Display current crontab
+echo ""
+echo "Current cron jobs:"
 crontab -l | grep barbossa
+
+echo ""
+echo "Enhanced Barbossa will run automatically every 4 hours"
+echo "Next runs will be at: 00:00, 04:00, 08:00, 12:00, 16:00, 20:00 UTC"
+echo ""
+echo "To manually trigger: python3 barbossa_enhanced.py"
+echo "To check status: python3 barbossa_enhanced.py --status"
+echo "To view logs: tail -f logs/cron_*.log"

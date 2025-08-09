@@ -47,3 +47,6 @@ web_portal/node_modules/
 web_portal/.next/
 web_portal/build/
 web_portal/dist/
+
+# Projects folder - managed by bot, not committed
+projects/

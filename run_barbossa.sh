@@ -1,34 +1,43 @@
 #!/bin/bash
+# Barbossa cron execution wrapper
+# This script is called by cron to run Barbossa autonomously
 
-# Barbossa Cron Execution Script
-BARBOSSA_DIR="/home/dappnode/barbossa-engineer"
-LOG_FILE="$BARBOSSA_DIR/logs/cron_$(date +%Y%m%d_%H%M%S).log"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
-echo "Starting Barbossa at $(date)" >> $LOG_FILE
+# Set up environment
+export PATH="/usr/local/bin:/usr/bin:/bin"
+export HOME="/home/dappnode"
 
-# Load current work tally
-cd $BARBOSSA_DIR
-TALLY=$(cat work_tracking/work_tally.json)
+# Log file
+LOG_FILE="$SCRIPT_DIR/logs/cron_$(date +%Y%m%d_%H%M%S).log"
 
-# Generate prompt with current data
-DATE=$(date +%Y-%m-%d)
-SESSION_ID=$(date +%s)
-INFRASTRUCTURE_COUNT=$(echo $TALLY | jq -r '.infrastructure')
-PERSONAL_PROJECTS_COUNT=$(echo $TALLY | jq -r '.personal_projects')
-DAVY_JONES_COUNT=$(echo $TALLY | jq -r '.davy_jones')
+# Function to log messages
+log_message() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+}
 
-# Create dynamic prompt
-sed -e "s/{DATE}/$DATE/g" \
-    -e "s/{SESSION_ID}/$SESSION_ID/g" \
-    -e "s/{INFRASTRUCTURE_COUNT}/$INFRASTRUCTURE_COUNT/g" \
-    -e "s/{PERSONAL_PROJECTS_COUNT}/$PERSONAL_PROJECTS_COUNT/g" \
-    -e "s/{DAVY_JONES_COUNT}/$DAVY_JONES_COUNT/g" \
-    barbossa_prompt.txt > /tmp/barbossa_prompt_$SESSION_ID.txt
+log_message "Starting Barbossa autonomous execution"
 
-# Execute with Claude
-claude --dangerously-skip-permissions < /tmp/barbossa_prompt_$SESSION_ID.txt >> $LOG_FILE 2>&1
+# Check if already running
+if pgrep -f "barbossa.py" > /dev/null; then
+    log_message "Barbossa is already running, skipping"
+    exit 0
+fi
 
-# Clean up
-rm /tmp/barbossa_prompt_$SESSION_ID.txt
+# Check Claude CLI availability
+if ! command -v claude &> /dev/null; then
+    log_message "ERROR: Claude CLI not found in PATH"
+    exit 1
+fi
 
-echo "Barbossa completed at $(date)" >> $LOG_FILE
+# Execute Barbossa (let it select work area automatically)
+log_message "Executing Barbossa..."
+python3 "$SCRIPT_DIR/barbossa.py" >> "$LOG_FILE" 2>&1
+
+log_message "Barbossa execution completed"
+
+# Optional: Clean up old logs (older than 30 days)
+find "$SCRIPT_DIR/logs" -name "*.log" -type f -mtime +30 -delete 2>/dev/null
+
+exit 0

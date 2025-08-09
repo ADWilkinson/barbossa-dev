@@ -1,68 +1,105 @@
 #!/usr/bin/env python3
 """
-Barbossa - Autonomous Software Engineer
-Main program that performs scheduled development tasks with strict security controls.
+Barbossa Enhanced - Comprehensive Server Management & Autonomous Engineering System
+Integrates server monitoring, project management, and autonomous development capabilities
 """
 
 import argparse
+import asyncio
 import json
 import logging
 import os
-import random
+import platform
 import subprocess
 import sys
-from datetime import datetime
+import threading
+import time
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
+import random
+import shutil
 
-# Import security guard - this is CRITICAL
+# Import components
 from security_guard import security_guard, SecurityViolationError
+from server_manager import BarbossaServerManager
 
-
-class Barbossa:
+class BarbossaEnhanced:
     """
-    Main Barbossa autonomous engineer class.
-    Executes development tasks while enforcing strict security policies.
+    Enhanced Barbossa system with integrated server management capabilities
     """
+    
+    VERSION = "2.0.0"
     
     WORK_AREAS = {
         'infrastructure': {
-            'name': 'Server Infrastructure Improvements',
-            'description': 'Enhance server infrastructure, security, and optimization',
-            'weight': 1.0
+            'name': 'Server Infrastructure Management',
+            'description': 'Comprehensive server monitoring, optimization, and maintenance',
+            'weight': 2.0,
+            'tasks': [
+                'System performance optimization',
+                'Docker container management',
+                'Service health monitoring',
+                'Security hardening',
+                'Backup management',
+                'Log rotation and cleanup',
+                'Network optimization',
+                'Resource usage analysis'
+            ]
         },
         'personal_projects': {
-            'name': 'Personal Project Feature Development',
-            'description': 'Develop features for ADWilkinson repositories',
+            'name': 'Personal Project Development',
+            'description': 'Feature development for ADWilkinson repositories',
             'repositories': [
                 'ADWilkinson/_save',
                 'ADWilkinson/chordcraft-app',
                 'ADWilkinson/piggyonchain',
-                'ADWilkinson/personal-website',  # Fixed: was persona-website
-                'ADWilkinson/saylormemes',  # Fixed: was saylor-memes
+                'ADWilkinson/personal-website',
+                'ADWilkinson/saylormemes',
                 'ADWilkinson/the-flying-dutchman-theme'
             ],
-            'weight': 2.0
+            'weight': 1.5
         },
         'davy_jones': {
-            'name': 'Davy Jones Intern Development',
-            'description': 'Improve the Davy Jones Intern bot (without affecting production)',
+            'name': 'Davy Jones Intern Enhancement',
+            'description': 'Bot improvements without affecting production',
             'repository': 'ADWilkinson/davy-jones-intern',
+            'weight': 1.0
+        },
+        'barbossa_self': {
+            'name': 'Barbossa Self-Improvement',
+            'description': 'Enhance Barbossa capabilities and features',
             'weight': 1.5,
-            'warning': 'DO NOT redeploy or affect running production instance'
+            'tasks': [
+                'Add new monitoring metrics',
+                'Improve dashboard UI/UX',
+                'Enhance security features',
+                'Add automation workflows',
+                'Implement new API endpoints',
+                'Optimize performance'
+            ]
         }
     }
     
     def __init__(self, work_dir: Optional[Path] = None):
-        """Initialize Barbossa with working directory and configuration"""
+        """Initialize Enhanced Barbossa with all subsystems"""
         self.work_dir = work_dir or Path.home() / 'barbossa-engineer'
         self.logs_dir = self.work_dir / 'logs'
         self.changelogs_dir = self.work_dir / 'changelogs'
         self.work_tracking_dir = self.work_dir / 'work_tracking'
+        self.metrics_db = self.work_dir / 'metrics.db'
         
         # Ensure directories exist
         for dir_path in [self.logs_dir, self.changelogs_dir, self.work_tracking_dir]:
             dir_path.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize server manager
+        self.server_manager = None
+        try:
+            self.server_manager = BarbossaServerManager()
+            self.server_manager.start_monitoring()
+        except Exception as e:
+            print(f"Warning: Could not initialize server manager: {e}")
         
         # Set up logging
         self._setup_logging()
@@ -70,17 +107,21 @@ class Barbossa:
         # Load work tally
         self.work_tally = self._load_work_tally()
         
-        self.logger.info("=" * 60)
-        self.logger.info("BARBOSSA INITIALIZED - Autonomous Software Engineer")
+        # System info
+        self.system_info = self._get_system_info()
+        
+        self.logger.info("=" * 70)
+        self.logger.info(f"BARBOSSA ENHANCED v{self.VERSION} - Comprehensive Server Management")
         self.logger.info(f"Working directory: {self.work_dir}")
-        self.logger.info("Security guard: ACTIVE - ZKP2P access BLOCKED")
-        self.logger.info("=" * 60)
+        self.logger.info(f"Platform: {self.system_info['platform']}")
+        self.logger.info(f"Server Manager: {'Active' if self.server_manager else 'Inactive'}")
+        self.logger.info("Security: MAXIMUM - ZKP2P access BLOCKED")
+        self.logger.info("=" * 70)
     
     def _setup_logging(self):
-        """Configure logging for Barbossa operations"""
-        log_file = self.logs_dir / f"barbossa_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        """Configure comprehensive logging"""
+        log_file = self.logs_dir / f"barbossa_enhanced_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
         
-        # Configure root logger
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -90,362 +131,438 @@ class Barbossa:
             ]
         )
         
-        self.logger = logging.getLogger('barbossa')
+        self.logger = logging.getLogger('barbossa_enhanced')
         self.logger.info(f"Logging to: {log_file}")
     
+    def _get_system_info(self) -> Dict:
+        """Gather comprehensive system information"""
+        info = {
+            'hostname': platform.node(),
+            'platform': platform.platform(),
+            'python_version': platform.python_version(),
+            'cpu_count': os.cpu_count(),
+            'home_dir': str(Path.home()),
+            'server_ip': '192.168.1.138'
+        }
+        
+        # Get disk usage
+        try:
+            result = subprocess.run(['df', '-h', '/'], capture_output=True, text=True)
+            lines = result.stdout.split('\n')
+            if len(lines) > 1:
+                parts = lines[1].split()
+                info['disk_usage'] = {
+                    'total': parts[1],
+                    'used': parts[2],
+                    'available': parts[3],
+                    'percent': parts[4]
+                }
+        except:
+            pass
+        
+        return info
+    
     def _load_work_tally(self) -> Dict[str, int]:
-        """Load the work tally from JSON file"""
+        """Load work tally from JSON file"""
         tally_file = self.work_tracking_dir / 'work_tally.json'
         if tally_file.exists():
             with open(tally_file, 'r') as f:
-                return json.load(f)
+                tally = json.load(f)
+                # Add new work areas if not present
+                for area in self.WORK_AREAS.keys():
+                    if area not in tally:
+                        tally[area] = 0
+                return tally
         return {area: 0 for area in self.WORK_AREAS.keys()}
     
     def _save_work_tally(self):
-        """Save the updated work tally to JSON file"""
+        """Save updated work tally"""
         tally_file = self.work_tracking_dir / 'work_tally.json'
         with open(tally_file, 'w') as f:
             json.dump(self.work_tally, f, indent=2)
         self.logger.info(f"Work tally saved: {self.work_tally}")
     
-    def select_work_area(self, provided_tally: Optional[Dict] = None) -> str:
-        """
-        Select a work area based on weighted random selection and work history.
-        Favors areas that have been worked on less.
-        """
-        if provided_tally:
-            self.work_tally.update(provided_tally)
+    def perform_system_health_check(self) -> Dict:
+        """Perform comprehensive system health check"""
+        health = {
+            'timestamp': datetime.now().isoformat(),
+            'status': 'healthy',
+            'issues': [],
+            'metrics': {}
+        }
         
-        # Calculate selection weights (inverse of work count)
-        weights = {}
-        for area, config in self.WORK_AREAS.items():
-            base_weight = config['weight']
-            work_count = self.work_tally.get(area, 0)
-            # Inverse weight: less worked areas get higher weight
-            adjusted_weight = base_weight * (1.0 / (work_count + 1))
-            weights[area] = adjusted_weight
+        if self.server_manager:
+            # Get current metrics
+            metrics = self.server_manager.metrics_collector.collect_metrics()
+            health['metrics'] = metrics
+            
+            # Check for issues
+            if metrics.get('cpu_percent', 0) > 90:
+                health['issues'].append(f"High CPU usage: {metrics['cpu_percent']:.1f}%")
+                health['status'] = 'warning'
+            
+            if metrics.get('memory_percent', 0) > 90:
+                health['issues'].append(f"High memory usage: {metrics['memory_percent']:.1f}%")
+                health['status'] = 'warning'
+            
+            if metrics.get('disk_percent', 0) > 85:
+                health['issues'].append(f"Low disk space: {metrics['disk_percent']:.1f}% used")
+                health['status'] = 'critical' if metrics['disk_percent'] > 95 else 'warning'
+            
+            # Check services
+            self.server_manager.service_manager._update_services()
+            critical_services = ['docker', 'cloudflared']
+            for service in critical_services:
+                if service in self.server_manager.service_manager.services:
+                    if not self.server_manager.service_manager.services[service].get('active'):
+                        health['issues'].append(f"Service {service} is down")
+                        health['status'] = 'critical'
         
-        # Normalize weights
-        total_weight = sum(weights.values())
-        probabilities = {k: v/total_weight for k, v in weights.items()}
-        
-        self.logger.info("Work area selection probabilities:")
-        for area, prob in probabilities.items():
-            self.logger.info(f"  {area}: {prob:.2%} (worked {self.work_tally.get(area, 0)} times)")
-        
-        # Select area based on weighted random
-        selected = random.choices(
-            list(probabilities.keys()),
-            weights=list(probabilities.values()),
-            k=1
-        )[0]
-        
-        self.logger.info(f"SELECTED WORK AREA: {selected}")
-        return selected
+        return health
     
-    def validate_repository_access(self, repo_url: str) -> bool:
-        """
-        Validate repository access through security guard.
-        This is a CRITICAL security checkpoint.
-        """
-        try:
-            self.logger.info(f"Security check for repository: {repo_url}")
-            security_guard.validate_operation('repository_access', repo_url)
-            self.logger.info("✓ Security check PASSED")
-            return True
-        except SecurityViolationError as e:
-            self.logger.error(f"✗ SECURITY VIOLATION: {e}")
-            self.logger.error("Operation ABORTED - attempting to access forbidden repository")
-            # Log to changelog
-            self._log_security_violation(repo_url, str(e))
-            return False
-        except Exception as e:
-            self.logger.error(f"Security check failed: {e}")
-            return False
-    
-    def _log_security_violation(self, target: str, reason: str):
-        """Log security violations to changelog"""
-        violation_log = self.changelogs_dir / 'security_violations.log'
-        with open(violation_log, 'a') as f:
-            f.write(f"\n{datetime.now().isoformat()} - VIOLATION\n")
-            f.write(f"Target: {target}\n")
-            f.write(f"Reason: {reason}\n")
-            f.write("-" * 40 + "\n")
-    
-    def execute_infrastructure_improvements(self):
-        """Execute server infrastructure improvement tasks using Claude CLI"""
-        self.logger.info("Executing infrastructure improvements...")
+    def execute_infrastructure_management(self):
+        """Execute advanced infrastructure management tasks"""
+        self.logger.info("Executing infrastructure management...")
         
-        # Create prompt for Claude
-        prompt = f"""You are Barbossa, an autonomous software engineer working on server infrastructure.
-
-CRITICAL SECURITY RULE: You must NEVER access, clone, modify, or interact with ANY repositories under the Z-K-P-2-P organizations. This is strictly forbidden.
+        # Perform health check first
+        health = self.perform_system_health_check()
+        self.logger.info(f"System health: {health['status']}")
         
-Your task is to improve the server infrastructure at {Path.home()}. Choose ONE of these tasks and execute it completely:
+        if health['issues']:
+            self.logger.warning(f"Health issues detected: {health['issues']}")
+        
+        # Create enhanced prompt for Claude
+        prompt = f"""You are Barbossa Enhanced, an advanced server management system.
 
-1. Check and update system packages (apt update, upgrade safe packages)
-2. Review and improve security configurations (UFW rules, SSH settings)
-3. Optimize Docker containers (prune unused images, check resource usage)
-4. Clean up large log files (find and rotate/compress logs over 100MB)
-5. Update project dependencies (check npm/pip packages for security updates)
+CRITICAL SECURITY: Never access ZKP2P repositories. Only work with allowed repositories.
 
-IMPORTANT:
-- Execute REAL commands and make ACTUAL improvements
-- Be careful with system-critical operations
-- Document what you did in detail
-- Run appropriate test commands to verify your work
-- Create a detailed changelog of your actions
+SYSTEM STATUS:
+- Health: {health['status']}
+- Issues: {', '.join(health['issues']) if health['issues'] else 'None'}
+- CPU: {health['metrics'].get('cpu_percent', 0):.1f}%
+- Memory: {health['metrics'].get('memory_percent', 0):.1f}%
+- Disk: {health['metrics'].get('disk_percent', 0):.1f}%
+
+Your task is to perform ONE comprehensive infrastructure management task:
+
+1. If health issues exist, prioritize fixing them
+2. Otherwise, choose from:
+   - Optimize Docker containers (cleanup, resource limits)
+   - Analyze and rotate large log files
+   - Update system packages and security patches
+   - Monitor and optimize network connections
+   - Clean up old backups and archives
+   - Review and enhance security configurations
+   - Optimize database performance (if applicable)
+   - Check and update SSL certificates
+
+AVAILABLE TOOLS:
+- Server Manager at ~/barbossa-engineer/server_manager.py
+- Docker, systemctl, apt, ufw, netstat, ss
+- Python scripts for automation
+- Sudo password: Ableton6242
+
+REQUIREMENTS:
+- Execute REAL improvements
+- Document all changes made
+- Test changes before finalizing
+- Create detailed changelog
+- Consider system impact
 
 System Info:
-- OS: Ubuntu 24.04 LTS
-- User: {os.getenv('USER')}
-- Home: {Path.home()}
-- Server IP: 192.168.1.138
+{json.dumps(self.system_info, indent=2)}
 
-Available tools: apt, docker, npm, pip, systemctl, ufw, git
-You have sudo access with password: Ableton6242
+Complete the task and report results."""
 
-Complete the task fully and report what was accomplished."""
-
-        # Save prompt to file
+        # Save and execute
         prompt_file = self.work_dir / 'temp_prompt.txt'
         with open(prompt_file, 'w') as f:
             f.write(prompt)
         
-        # Execute with Claude CLI in background
-        self.logger.info("Calling Claude CLI for infrastructure work...")
-        
-        # Create output file for Claude's results
         output_file = self.logs_dir / f"claude_infrastructure_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
         
-        # Launch Claude in background, redirecting output to file
         cmd = f"nohup claude --dangerously-skip-permissions < {prompt_file} > {output_file} 2>&1 &"
         subprocess.Popen(cmd, shell=True, cwd=self.work_dir)
         
-        self.logger.info(f"Claude launched in background. Output will be saved to: {output_file}")
+        self.logger.info(f"Infrastructure management launched. Output: {output_file}")
         
-        # Save initial changelog noting the task was started
-        changelog = []
-        changelog.append(f"# Infrastructure Improvements - {datetime.now().isoformat()}\n")
-        changelog.append("## Task Started\n")
-        changelog.append(f"Claude CLI launched in background for infrastructure improvements.\n")
-        changelog.append(f"Output file: {output_file}\n")
-        changelog.append(f"Prompt file: {prompt_file}\n")
-        changelog.append("\n### Selected Tasks:\n")
-        changelog.append("- Check and update system packages\n")
-        changelog.append("- Review security configurations\n")
-        changelog.append("- Optimize Docker containers\n")
-        changelog.append("- Clean up large log files\n")
-        changelog.append("- Update project dependencies\n")
+        # Create changelog
+        self._create_changelog('infrastructure', {
+            'health_status': health['status'],
+            'issues_found': health['issues'],
+            'prompt_file': str(prompt_file),
+            'output_file': str(output_file)
+        })
+    
+    def execute_barbossa_self_improvement(self):
+        """Execute self-improvement tasks for Barbossa"""
+        self.logger.info("Executing Barbossa self-improvement...")
         
-        self._save_changelog('infrastructure', changelog)
+        # Select improvement task
+        tasks = self.WORK_AREAS['barbossa_self']['tasks']
+        selected_task = random.choice(tasks)
         
-        self.logger.info("Infrastructure improvements completed")
+        prompt = f"""You are improving the Barbossa Enhanced system itself.
+
+TASK: {selected_task}
+
+BARBOSSA COMPONENTS:
+1. Main System: ~/barbossa-engineer/barbossa_enhanced.py
+2. Server Manager: ~/barbossa-engineer/server_manager.py
+3. Web Portal: ~/barbossa-engineer/web_portal/enhanced_app.py
+4. Dashboard: ~/barbossa-engineer/web_portal/templates/enhanced_dashboard.html
+5. Security Guard: ~/barbossa-engineer/security_guard.py
+
+IMPROVEMENT AREAS:
+- Add new monitoring capabilities
+- Enhance dashboard visualizations
+- Implement new API endpoints
+- Optimize performance
+- Add automation features
+- Improve error handling
+- Enhance security measures
+
+REQUIREMENTS:
+1. Analyze current implementation
+2. Identify specific improvements for: {selected_task}
+3. Implement enhancements
+4. Test thoroughly
+5. Document changes
+
+IMPORTANT:
+- Maintain backward compatibility
+- Follow existing code patterns
+- Add comprehensive error handling
+- Create unit tests if applicable
+- Update documentation
+
+Complete the improvement and create a detailed report."""
+
+        prompt_file = self.work_dir / 'temp_prompt.txt'
+        with open(prompt_file, 'w') as f:
+            f.write(prompt)
+        
+        output_file = self.logs_dir / f"claude_self_improvement_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        
+        cmd = f"nohup claude --dangerously-skip-permissions < {prompt_file} > {output_file} 2>&1 &"
+        subprocess.Popen(cmd, shell=True, cwd=self.work_dir)
+        
+        self.logger.info(f"Self-improvement launched for: {selected_task}")
+        
+        self._create_changelog('barbossa_self', {
+            'task': selected_task,
+            'output_file': str(output_file)
+        })
     
     def execute_personal_project_development(self):
-        """Execute personal project feature development using Claude CLI"""
+        """Execute personal project development (inherited from original)"""
         self.logger.info("Executing personal project development...")
         
-        # Select a repository
         repos = self.WORK_AREAS['personal_projects']['repositories']
         selected_repo = random.choice(repos)
-        
         repo_url = f"https://github.com/{selected_repo}"
         
-        # CRITICAL: Validate repository access
+        # Validate repository access
         if not self.validate_repository_access(repo_url):
             self.logger.error("Repository access denied by security guard")
             return
         
         self.logger.info(f"Working on repository: {selected_repo}")
         
-        # Create prompt for Claude
-        prompt = f"""You are Barbossa, an autonomous software engineer working on personal projects.
+        timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+        prompt = f"""You are Barbossa Enhanced, working on personal project improvements.
 
-CRITICAL SECURITY RULE: You must NEVER access, clone, modify, or interact with ANY repositories under the Z-K-P-2-P organizations. Only work on ADWilkinson repositories.
-
-Your task is to improve the repository: {selected_repo}
-
-Repository URL: {repo_url}
+REPOSITORY: {selected_repo}
+URL: {repo_url}
 
 INSTRUCTIONS:
-1. Clone or update the repository to ~/barbossa-engineer/projects/
-2. Analyze the codebase thoroughly
-3. Choose ONE meaningful improvement:
-   - Add missing tests for critical functions
-   - Refactor complex code for better readability
-   - Fix any obvious bugs or issues
-   - Add missing documentation
-   - Improve error handling
-   - Optimize performance bottlenecks
-   - Update outdated dependencies (if safe)
+1. Clone repository to ~/barbossa-engineer/projects/ if not present, or navigate to existing clone
+2. Fetch latest changes: git fetch origin
+3. Checkout main/master branch: git checkout main (or master)
+4. Pull latest changes: git pull origin main (or master)
+5. Create new feature branch from updated main: git checkout -b feature/barbossa-improvement-{timestamp}
+6. Analyze codebase comprehensively
+7. Choose ONE significant improvement:
+   - Add comprehensive test coverage
+   - Implement new feature
+   - Refactor for better architecture
+   - Fix bugs and issues
+   - Optimize performance
+   - Update dependencies
+   - Improve documentation
 
-4. Implement the improvement completely
-5. If the project has build/test scripts, run them (check package.json or README)
-6. Create a new branch for your changes
-7. Commit with a clear message
-8. Create a PR to the main branch
+8. Implement the improvement completely
+9. Run tests if available
+10. Commit with clear message
+11. Push feature branch to origin
+12. Create detailed PR
 
-IMPORTANT:
-- Make REAL, meaningful improvements to the code
-- If tests exist, ensure they pass before committing
-- Write clean, well-documented code
-- Follow the project's existing code style
-- Create a detailed PR description
+REQUIREMENTS:
+- Make meaningful improvements
+- Follow project conventions
+- Ensure tests pass
+- Write clean code
+- Create comprehensive PR description
 
-GitHub is configured with token access. You can push branches and create PRs.
+Complete the task and create a PR."""
 
-Complete the task fully and create a PR for review."""
-
-        # Save prompt to file
         prompt_file = self.work_dir / 'temp_prompt.txt'
         with open(prompt_file, 'w') as f:
             f.write(prompt)
         
-        # Execute with Claude CLI in background
-        self.logger.info("Calling Claude CLI for personal project work...")
-        
-        # Create output file for Claude's results
         output_file = self.logs_dir / f"claude_personal_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
         
-        # Launch Claude in background
         cmd = f"nohup claude --dangerously-skip-permissions < {prompt_file} > {output_file} 2>&1 &"
         subprocess.Popen(cmd, shell=True, cwd=self.work_dir)
         
-        self.logger.info(f"Claude launched in background. Output will be saved to: {output_file}")
+        self.logger.info(f"Personal project development launched for: {selected_repo}")
         
-        # Save initial changelog
-        changelog = []
-        changelog.append(f"# Personal Project Development - {datetime.now().isoformat()}\n")
-        changelog.append(f"## Repository: {selected_repo}\n")
-        changelog.append("## Task Started\n")
-        changelog.append(f"Claude CLI launched in background for repository improvements.\n")
-        changelog.append(f"Output file: {output_file}\n")
-        changelog.append(f"Repository URL: {repo_url}\n")
-        changelog.append("\n### Potential Improvements:\n")
-        changelog.append("- Add missing tests\n")
-        changelog.append("- Refactor complex code\n")
-        changelog.append("- Fix bugs\n")
-        changelog.append("- Add documentation\n")
-        changelog.append("- Improve error handling\n")
-        
-        self._save_changelog('personal_projects', changelog)
-        
-        self.logger.info("Personal project development completed")
+        self._create_changelog('personal_projects', {
+            'repository': selected_repo,
+            'output_file': str(output_file)
+        })
     
     def execute_davy_jones_development(self):
-        """Execute Davy Jones Intern development using Claude CLI (without affecting production)"""
+        """Execute Davy Jones development (inherited from original)"""
         self.logger.info("Executing Davy Jones Intern development...")
-        self.logger.warning("REMINDER: Do not redeploy or affect production instance!")
         
         repo_url = "https://github.com/ADWilkinson/davy-jones-intern"
         
-        # CRITICAL: Validate repository access
         if not self.validate_repository_access(repo_url):
-            self.logger.error("Repository access denied by security guard")
+            self.logger.error("Repository access denied")
             return
         
-        # Create prompt for Claude
-        prompt = f"""You are Barbossa, an autonomous software engineer working on the Davy Jones Intern bot.
+        timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+        prompt = f"""You are Barbossa Enhanced, improving the Davy Jones Intern bot.
 
-CRITICAL SECURITY RULE: You must NEVER access, clone, modify, or interact with ANY repositories under the Z-K-P-2-P organizations. Only work on ADWilkinson/davy-jones-intern.
+CRITICAL: Production bot is running. DO NOT affect it.
 
-CRITICAL WARNING: The bot is currently RUNNING IN PRODUCTION. DO NOT:
-- Stop or restart the production service
-- Run docker-compose down or docker-compose restart
-- Modify any running containers
-- Change production configuration files
-- Deploy or redeploy anything
+REPOSITORY: {repo_url}
+WORK DIR: ~/barbossa-engineer/projects/davy-jones-intern
 
-Your task is to improve the Davy Jones Intern codebase at: {repo_url}
+INSTRUCTIONS:
+1. Navigate to ~/barbossa-engineer/projects/davy-jones-intern (clone if not present)
+2. Fetch latest changes: git fetch origin
+3. Checkout main branch: git checkout main
+4. Pull latest changes: git pull origin main
+5. Create new feature branch: git checkout -b feature/davy-jones-improvement-{timestamp}
 
-SAFE INSTRUCTIONS:
-1. Clone or update the repository to ~/barbossa-engineer/projects/davy-jones-intern
-2. Analyze the codebase for improvements
-3. Choose ONE meaningful improvement:
-   - Add comprehensive tests for untested functions
-   - Improve error handling and resilience
-   - Refactor complex code for maintainability
-   - Add better logging and debugging capabilities
-   - Optimize performance in bot responses
-   - Enhance Slack interaction features
-   - Improve Claude integration efficiency
+IMPROVEMENT AREAS:
+1. Add comprehensive test coverage
+2. Enhance error handling
+3. Improve Claude integration
+4. Add new Slack commands
+5. Optimize performance
+6. Enhance logging
+7. Improve GitHub integration
 
-4. Implement the improvement in a NEW FEATURE BRANCH
-5. If available, run tests and linting (check package.json for scripts)
-6. Verify your changes work correctly
-7. Create a detailed PR to main branch for review
+REQUIREMENTS:
+- Work in feature branch only
+- Do not touch production
+- Run tests locally
+- Create detailed PR
+- Document all changes
 
-PRODUCTION SAFETY:
-- Work ONLY in the cloned repository at ~/barbossa-engineer/projects/
-- Do NOT touch the running Docker container (davy-jones-intern)
-- Do NOT modify .env files in the production directory ~/projects/davy-jones-intern
-- Create all changes in a feature branch
-- The PR will be manually reviewed before any production deployment
+Select and implement ONE improvement completely."""
 
-The bot is accessible at https://webhook.eastindiaonchaincompany.xyz
-Current production directory: ~/projects/davy-jones-intern (DO NOT MODIFY)
-Your work directory: ~/barbossa-engineer/projects/davy-jones-intern
-
-Complete the improvement and create a PR for manual review."""
-
-        # Save prompt to file
         prompt_file = self.work_dir / 'temp_prompt.txt'
         with open(prompt_file, 'w') as f:
             f.write(prompt)
         
-        # Execute with Claude CLI in background
-        self.logger.info("Calling Claude CLI for Davy Jones development...")
-        
-        # Create output file for Claude's results
         output_file = self.logs_dir / f"claude_davy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
         
-        # Launch Claude in background
         cmd = f"nohup claude --dangerously-skip-permissions < {prompt_file} > {output_file} 2>&1 &"
         subprocess.Popen(cmd, shell=True, cwd=self.work_dir)
         
-        self.logger.info(f"Claude launched in background. Output will be saved to: {output_file}")
+        self.logger.info("Davy Jones development launched")
         
-        # Save initial changelog
-        changelog = []
-        changelog.append(f"# Davy Jones Intern Development - {datetime.now().isoformat()}\n")
-        changelog.append("## ⚠️ PRODUCTION SAFETY: Development only, no deployment\n")
-        changelog.append("## Task Started\n")
-        changelog.append(f"Claude CLI launched in background for Davy Jones improvements.\n")
-        changelog.append(f"Output file: {output_file}\n")
-        changelog.append(f"Repository: {repo_url}\n")
-        changelog.append("\n### Potential Improvements:\n")
-        changelog.append("- Add comprehensive tests\n")
-        changelog.append("- Improve error handling\n")
-        changelog.append("- Refactor for maintainability\n")
-        changelog.append("- Better logging capabilities\n")
-        changelog.append("- Optimize bot performance\n")
-        
-        self._save_changelog('davy_jones', changelog)
-        
-        self.logger.info("Davy Jones development completed (no production changes)")
+        self._create_changelog('davy_jones', {
+            'repository': repo_url,
+            'output_file': str(output_file)
+        })
     
-    def _save_changelog(self, area: str, content: List[str]):
-        """Save changelog for the work session"""
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        changelog_file = self.changelogs_dir / f"{area}_{timestamp}.md"
+    def validate_repository_access(self, repo_url: str) -> bool:
+        """Validate repository access through security guard"""
+        try:
+            self.logger.info(f"Security check for: {repo_url}")
+            security_guard.validate_operation('repository_access', repo_url)
+            self.logger.info("✓ Security check PASSED")
+            return True
+        except SecurityViolationError as e:
+            self.logger.error(f"✗ SECURITY VIOLATION: {e}")
+            return False
+        except Exception as e:
+            self.logger.error(f"Security check failed: {e}")
+            return False
+    
+    def _create_changelog(self, area: str, details: Dict):
+        """Create detailed changelog"""
+        timestamp = datetime.now()
+        changelog_file = self.changelogs_dir / f"{area}_{timestamp.strftime('%Y%m%d_%H%M%S')}.md"
+        
+        content = [
+            f"# {self.WORK_AREAS[area]['name']}\n",
+            f"**Date**: {timestamp.isoformat()}\n",
+            f"**Version**: Barbossa Enhanced v{self.VERSION}\n",
+            f"\n## Details\n"
+        ]
+        
+        for key, value in details.items():
+            content.append(f"- **{key.replace('_', ' ').title()}**: {value}\n")
+        
+        content.append(f"\n## Status\n")
+        content.append(f"Task initiated and running in background.\n")
         
         with open(changelog_file, 'w') as f:
             f.writelines(content)
         
-        self.logger.info(f"Changelog saved: {changelog_file}")
+        self.logger.info(f"Changelog created: {changelog_file}")
+    
+    def select_work_area(self) -> str:
+        """Select work area with enhanced weighting"""
+        # Calculate weights based on work history and current system state
+        weights = {}
+        
+        for area, config in self.WORK_AREAS.items():
+            base_weight = config['weight']
+            work_count = self.work_tally.get(area, 0)
+            
+            # Inverse weight for balance
+            adjusted_weight = base_weight * (1.0 / (work_count + 1))
+            
+            # Boost infrastructure if health issues exist
+            if area == 'infrastructure' and self.server_manager:
+                health = self.perform_system_health_check()
+                if health['status'] != 'healthy':
+                    adjusted_weight *= 2.0
+            
+            weights[area] = adjusted_weight
+        
+        # Normalize and select
+        total_weight = sum(weights.values())
+        probabilities = {k: v/total_weight for k, v in weights.items()}
+        
+        self.logger.info("Work area selection probabilities:")
+        for area, prob in probabilities.items():
+            self.logger.info(f"  {area}: {prob:.2%} (count: {self.work_tally.get(area, 0)})")
+        
+        selected = random.choices(
+            list(probabilities.keys()),
+            weights=list(probabilities.values()),
+            k=1
+        )[0]
+        
+        self.logger.info(f"SELECTED: {selected}")
+        return selected
     
     def execute_work(self, area: Optional[str] = None):
-        """
-        Execute work for the selected or provided area.
-        This is the main entry point for autonomous work execution.
-        """
+        """Execute work for selected area"""
         if not area:
             area = self.select_work_area()
         
-        self.logger.info(f"Starting work on: {self.WORK_AREAS[area]['name']}")
+        self.logger.info(f"Executing: {self.WORK_AREAS[area]['name']}")
         
-        # Track current work
+        # Track work
         current_work = {
             'area': area,
             'started': datetime.now().isoformat(),
@@ -457,22 +574,23 @@ Complete the improvement and create a PR for manual review."""
             json.dump(current_work, f, indent=2)
         
         try:
-            # Execute work based on area
+            # Execute based on area
             if area == 'infrastructure':
-                self.execute_infrastructure_improvements()
+                self.execute_infrastructure_management()
             elif area == 'personal_projects':
                 self.execute_personal_project_development()
             elif area == 'davy_jones':
                 self.execute_davy_jones_development()
+            elif area == 'barbossa_self':
+                self.execute_barbossa_self_improvement()
             else:
                 self.logger.error(f"Unknown work area: {area}")
                 return
             
-            # Update work tally
+            # Update tally
             self.work_tally[area] = self.work_tally.get(area, 0) + 1
             self._save_work_tally()
             
-            # Update current work status
             current_work['status'] = 'completed'
             current_work['completed'] = datetime.now().isoformat()
             
@@ -482,113 +600,126 @@ Complete the improvement and create a PR for manual review."""
             current_work['error'] = str(e)
         
         finally:
-            # Save final work status
             with open(current_work_file, 'w') as f:
                 json.dump(current_work, f, indent=2)
             
             self.logger.info("Work session completed")
-            self.logger.info("=" * 60)
+            self.logger.info("=" * 70)
     
-    def get_status(self) -> Dict:
-        """Get current Barbossa status"""
+    def get_comprehensive_status(self) -> Dict:
+        """Get comprehensive system and Barbossa status"""
         status = {
-            'version': '1.0.0',
-            'working_directory': str(self.work_dir),
+            'version': self.VERSION,
+            'timestamp': datetime.now().isoformat(),
             'work_tally': self.work_tally,
-            'security_status': 'ACTIVE - ZKP2P access BLOCKED',
-            'last_run': None,
-            'current_work': None
+            'system_info': self.system_info,
+            'health': self.perform_system_health_check() if self.server_manager else None,
+            'server_manager': 'active' if self.server_manager else 'inactive',
+            'security': 'MAXIMUM - ZKP2P blocked'
         }
         
-        # Get current work if exists
+        # Add current work
         current_work_file = self.work_tracking_dir / 'current_work.json'
         if current_work_file.exists():
             with open(current_work_file, 'r') as f:
                 status['current_work'] = json.load(f)
         
-        # Get last log file
-        log_files = sorted(self.logs_dir.glob('*.log'))
-        if log_files:
-            status['last_run'] = log_files[-1].stem.split('_')[1]
-        
-        # Get security audit summary
-        status['security_audit'] = security_guard.get_audit_summary()
+        # Add recent logs
+        if self.logs_dir.exists():
+            log_files = sorted(self.logs_dir.glob('*.log'), 
+                             key=lambda x: x.stat().st_mtime, reverse=True)[:5]
+            status['recent_logs'] = [
+                {
+                    'name': f.name,
+                    'size': f"{f.stat().st_size / 1024:.1f} KB",
+                    'modified': datetime.fromtimestamp(f.stat().st_mtime).isoformat()
+                }
+                for f in log_files
+            ]
         
         return status
+    
+    def cleanup(self):
+        """Cleanup resources on shutdown"""
+        if self.server_manager:
+            self.server_manager.stop_monitoring()
+            self.logger.info("Server monitoring stopped")
 
 
 def main():
-    """Main entry point for Barbossa"""
+    """Enhanced main entry point"""
     parser = argparse.ArgumentParser(
-        description='Barbossa - Autonomous Software Engineer'
+        description='Barbossa Enhanced - Comprehensive Server Management System'
     )
     parser.add_argument(
         '--area',
-        choices=['infrastructure', 'personal_projects', 'davy_jones'],
+        choices=['infrastructure', 'personal_projects', 'davy_jones', 'barbossa_self'],
         help='Specific work area to focus on'
-    )
-    parser.add_argument(
-        '--tally',
-        type=str,
-        help='JSON string of work tally (e.g., \'{"infrastructure": 2, "personal_projects": 1}\')'
     )
     parser.add_argument(
         '--status',
         action='store_true',
-        help='Show Barbossa status and exit'
+        help='Show comprehensive status and exit'
+    )
+    parser.add_argument(
+        '--health',
+        action='store_true',
+        help='Perform health check and exit'
     )
     parser.add_argument(
         '--test-security',
         action='store_true',
-        help='Test security guards and exit'
+        help='Test security system and exit'
+    )
+    parser.add_argument(
+        '--start-portal',
+        action='store_true',
+        help='Start the enhanced web portal'
     )
     
     args = parser.parse_args()
     
-    # Initialize Barbossa
-    barbossa = Barbossa()
+    # Initialize Enhanced Barbossa
+    barbossa = BarbossaEnhanced()
     
-    if args.status:
-        # Show status and exit
-        status = barbossa.get_status()
-        print(json.dumps(status, indent=2))
-        return
+    try:
+        if args.status:
+            # Show comprehensive status
+            status = barbossa.get_comprehensive_status()
+            print(json.dumps(status, indent=2))
+            
+        elif args.health:
+            # Perform health check
+            health = barbossa.perform_system_health_check()
+            print(json.dumps(health, indent=2))
+            
+        elif args.test_security:
+            # Test security
+            print("Testing Security System...")
+            test_repos = [
+                "https://github.com/ADWilkinson/barbossa-engineer",  # Should pass
+                "https://github.com/zkp2p/zkp2p-v2-contracts",  # Should fail
+                "https://github.com/ADWilkinson/davy-jones-intern",  # Should pass
+                "https://github.com/ZKP2P/something",  # Should fail
+            ]
+            
+            for repo in test_repos:
+                result = barbossa.validate_repository_access(repo)
+                status = "✓ ALLOWED" if result else "✗ BLOCKED"
+                print(f"{status}: {repo}")
+            
+        elif args.start_portal:
+            # Start web portal
+            print("Starting Enhanced Web Portal...")
+            portal_script = barbossa.work_dir / 'start_enhanced_portal.sh'
+            subprocess.run(['bash', str(portal_script)])
+            
+        else:
+            # Execute work
+            barbossa.execute_work(args.area)
     
-    if args.test_security:
-        # Test security system
-        print("Testing Barbossa Security System...")
-        print("=" * 60)
-        
-        test_repos = [
-            "https://github.com/ADWilkinson/barbossa-engineer",  # Should pass
-            "https://github.com/zkp2p/zkp2p-v2-contracts",  # Should fail
-            "https://github.com/ADWilkinson/davy-jones-intern",  # Should pass
-            "https://github.com/ZKP2P/something",  # Should fail
-        ]
-        
-        for repo in test_repos:
-            result = barbossa.validate_repository_access(repo)
-            status = "✓ ALLOWED" if result else "✗ BLOCKED"
-            print(f"{status}: {repo}")
-        
-        print("=" * 60)
-        print("Security test complete")
-        return
-    
-    # Parse work tally if provided
-    work_tally = None
-    if args.tally:
-        try:
-            work_tally = json.loads(args.tally)
-        except json.JSONDecodeError:
-            barbossa.logger.error(f"Invalid JSON for tally: {args.tally}")
-            sys.exit(1)
-    
-    if work_tally:
-        barbossa.work_tally.update(work_tally)
-    
-    # Execute work
-    barbossa.execute_work(args.area)
+    finally:
+        barbossa.cleanup()
 
 
 if __name__ == "__main__":
