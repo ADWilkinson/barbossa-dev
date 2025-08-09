@@ -1,0 +1,25 @@
+{
+  "allowed_owner": "ADWilkinson",
+  "allowed_repositories": [
+    "ADWilkinson/barbossa-engineer",
+    "ADWilkinson/davy-jones-intern",
+    "ADWilkinson/_save",
+    "ADWilkinson/chordcraft-app",
+    "ADWilkinson/piggyonchain",
+    "ADWilkinson/persona-website",
+    "ADWilkinson/saylor-memes",
+    "ADWilkinson/the-flying-dutchman-theme"
+  ],
+  "forbidden_organizations": [
+    "zkp2p",
+    "ZKP2P",
+    "zkp2p-org",
+    "ZKP2P-org",
+    "zkp2p-protocol",
+    "ZKP2P-protocol"
+  ],
+  "security_level": "MAXIMUM",
+  "audit_enabled": true,
+  "last_updated": "2025-08-09T00:00:00Z",
+  "notes": "This whitelist explicitly allows ONLY ADWilkinson repositories. Any attempt to access ZKP2P organization repositories will be blocked and logged as a security violation."
+}

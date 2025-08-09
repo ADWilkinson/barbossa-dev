@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barbossa Control Panel - East India Onchain Company</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            color: #ffd700;
+            font-size: 1.2em;
+        }
+        
+        .security-banner {
+            background: #ff4444;
+            padding: 10px;
+            text-align: center;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        
+        .card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .card h2 {
+            margin-bottom: 15px;
+            color: #ffd700;
+            font-size: 1.3em;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .status-value {
+            font-weight: bold;
+        }
+        
+        .status-running {
+            color: #4CAF50;
+        }
+        
+        .status-stopped {
+            color: #ff4444;
+        }
+        
+        .status-unknown {
+            color: #FFC107;
+        }
+        
+        .work-tally {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+        
+        .work-area {
+            text-align: center;
+            padding: 10px;
+        }
+        
+        .work-count {
+            font-size: 2em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        .work-label {
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .log-container {
+            background: rgba(0,0,0,0.3);
+            border-radius: 5px;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .refresh-btn {
+            background: #ffd700;
+            color: #1e3c72;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        
+        .refresh-btn:hover {
+            background: #ffed4e;
+        }
+        
+        .violation-alert {
+            background: #ff4444;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚓ Barbossa Control Panel</h1>
+            <div class="subtitle">East India Onchain Company - Autonomous Engineering Division</div>
+        </header>
+        
+        <div class="security-banner">
+            🛡️ SECURITY ACTIVE: ZKP2P Organization Access BLOCKED
+        </div>
+        
+        <div class="dashboard">
+            <div class="card">
+                <h2>Barbossa Status</h2>
+                <div id="barbossa-status">
+                    <div class="status-item">
+                        <span>Status:</span>
+                        <span class="status-value" id="barbossa-state">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Last Run:</span>
+                        <span class="status-value" id="last-run">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Current Work:</span>
+                        <span class="status-value" id="current-work">None</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>Work Tally</h2>
+                <div class="work-tally" id="work-tally">
+                    <div class="work-area">
+                        <div class="work-count" id="infra-count">0</div>
+                        <div class="work-label">Infrastructure</div>
+                    </div>
+                    <div class="work-area">
+                        <div class="work-count" id="projects-count">0</div>
+                        <div class="work-label">Personal Projects</div>
+                    </div>
+                    <div class="work-area">
+                        <div class="work-count" id="davy-count">0</div>
+                        <div class="work-label">Davy Jones</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>Services</h2>
+                <div id="services-status">
+                    <div class="status-item">
+                        <span>Davy Jones Intern:</span>
+                        <span class="status-value" id="davy-status">Checking...</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Docker:</span>
+                        <span class="status-value" id="docker-status">Checking...</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Cron Scheduler:</span>
+                        <span class="status-value" id="cron-status">Checking...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>Security Audit</h2>
+                <div id="security-audit">
+                    <div class="status-item">
+                        <span>Total Validations:</span>
+                        <span class="status-value" id="total-validations">0</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Blocked Attempts:</span>
+                        <span class="status-value" id="blocked-attempts">0</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Allowed Operations:</span>
+                        <span class="status-value" id="allowed-operations">0</span>
+                    </div>
+                </div>
+                <div id="violations-container"></div>
+            </div>
+            
+            <div class="card" style="grid-column: span 2;">
+                <h2>Recent Activity Log</h2>
+                <div class="log-container" id="activity-log">
+                    Loading logs...
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: center;">
+            <button class="refresh-btn" onclick="refreshDashboard()">🔄 Refresh Dashboard</button>
+        </div>
+        
+        <footer>
+            <p>Barbossa Autonomous Software Engineer v1.0.0</p>
+            <p>© 2025 East India Onchain Company - Sailing the Digital Seas</p>
+        </footer>
+    </div>
+    
+    <script>
+        async function fetchData(endpoint) {
+            try {
+                const response = await fetch(`/api/${endpoint}`);
+                return await response.json();
+            } catch (error) {
+                console.error(`Error fetching ${endpoint}:`, error);
+                return null;
+            }
+        }
+        
+        async function updateDashboard() {
+            // Update Barbossa status
+            const status = await fetchData('status');
+            if (status) {
+                // Barbossa status
+                if (status.barbossa) {
+                    document.getElementById('barbossa-state').textContent = 'Active';
+                    document.getElementById('barbossa-state').className = 'status-value status-running';
+                    document.getElementById('last-run').textContent = status.barbossa.last_run || 'Never';
+                    
+                    if (status.barbossa.current_work) {
+                        const work = status.barbossa.current_work;
+                        document.getElementById('current-work').textContent = 
+                            `${work.area} (${work.status})`;
+                    }
+                }
+                
+                // Services status
+                if (status.services) {
+                    const services = status.services;
+                    updateServiceStatus('davy-status', services.davy_jones_intern);
+                    updateServiceStatus('docker-status', services.docker);
+                    updateServiceStatus('cron-status', services.cron);
+                }
+                
+                // Security audit
+                if (status.security) {
+                    document.getElementById('total-validations').textContent = 
+                        status.security.total_validations;
+                    document.getElementById('blocked-attempts').textContent = 
+                        status.security.blocked_attempts;
+                    document.getElementById('allowed-operations').textContent = 
+                        status.security.allowed_operations;
+                    
+                    // Show recent violations
+                    if (status.security.recent_violations && status.security.recent_violations.length > 0) {
+                        const violationsHtml = status.security.recent_violations
+                            .slice(-3)
+                            .map(v => `<div class="violation-alert">⚠️ ${v}</div>`)
+                            .join('');
+                        document.getElementById('violations-container').innerHTML = violationsHtml;
+                    }
+                }
+            }
+            
+            // Update work tally
+            const tally = await fetchData('work-tally');
+            if (tally) {
+                document.getElementById('infra-count').textContent = tally.infrastructure || 0;
+                document.getElementById('projects-count').textContent = tally.personal_projects || 0;
+                document.getElementById('davy-count').textContent = tally.davy_jones || 0;
+            }
+            
+            // Update activity log
+            const logs = await fetchData('logs');
+            if (logs && logs.length > 0) {
+                const latestLog = logs[0];
+                document.getElementById('activity-log').textContent = 
+                    latestLog.content || 'No recent activity';
+            }
+        }
+        
+        function updateServiceStatus(elementId, status) {
+            const element = document.getElementById(elementId);
+            element.textContent = status;
+            element.className = `status-value status-${status}`;
+        }
+        
+        function refreshDashboard() {
+            updateDashboard();
+        }
+        
+        // Initial load and auto-refresh every 30 seconds
+        updateDashboard();
+        setInterval(updateDashboard, 30000);
+    </script>
+</body>
+</html>

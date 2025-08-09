@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.env
+
+# Logs
+logs/*.log
+*.log
+
+# Security
+security/audit.log
+security/security_violations.log
+
+# Work tracking
+work_tracking/work_tally.json
+work_tracking/current_work.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Credentials
+config/credentials.json
+*.key
+*.pem
+*.crt
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+
+# Web portal
+web_portal/node_modules/
+web_portal/.next/
+web_portal/build/
+web_portal/dist/
