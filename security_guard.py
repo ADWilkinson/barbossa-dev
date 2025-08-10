@@ -65,6 +65,15 @@ class RepositorySecurityGuard:
         # Load whitelist
         self.whitelist = self._load_whitelist()
         
+        # Initialize enhanced security if available
+        self.enhanced_security = None
+        if ENHANCED_SECURITY_AVAILABLE:
+            try:
+                self.enhanced_security = SecurityEnhanced()
+                self.audit_logger.info("Enhanced security features enabled")
+            except Exception as e:
+                self.audit_logger.warning(f"Could not enable enhanced security: {e}")
+        
     def _setup_logging(self):
         """Configure logging for security events"""
         # Audit logger - logs all repository access attempts
@@ -97,27 +106,33 @@ class RepositorySecurityGuard:
     
     def validate_repository_url(self, url: str) -> Tuple[bool, str]:
         """
-        Validate a repository URL against security rules.
+        Validate a repository URL against security rules with enhanced checks.
         
         Returns:
             Tuple of (is_valid, reason_if_invalid)
         """
         self.audit_logger.info(f"Validating repository URL: {url}")
         
+        # Enhanced security: Check for URL obfuscation attempts
+        if self.enhanced_security:
+            suspicious_patterns = self.enhanced_security.detect_suspicious_patterns(url)
+            if suspicious_patterns:
+                violation_msg = f"BLOCKED: URL contains suspicious patterns: {suspicious_patterns}"
+                self._log_violation(violation_msg, url)
+                return False, violation_msg
+        
         # Check for forbidden organizations
         for org in self.FORBIDDEN_ORGS:
             if org.lower() in url.lower():
                 violation_msg = f"BLOCKED: URL contains forbidden organization '{org}': {url}"
-                self.violations_logger.warning(violation_msg)
-                self.audit_logger.warning(violation_msg)
+                self._log_violation(violation_msg, url)
                 return False, violation_msg
         
         # Check forbidden patterns
         for pattern in self.FORBIDDEN_PATTERNS:
             if re.search(pattern, url, re.IGNORECASE):
                 violation_msg = f"BLOCKED: URL matches forbidden pattern '{pattern}': {url}"
-                self.violations_logger.warning(violation_msg)
-                self.audit_logger.warning(violation_msg)
+                self._log_violation(violation_msg, url)
                 return False, violation_msg
         
         # Extract owner from GitHub URL
@@ -130,8 +145,7 @@ class RepositorySecurityGuard:
             # Verify owner is allowed
             if owner.lower() != self.ALLOWED_OWNER.lower():
                 violation_msg = f"BLOCKED: Repository owner '{owner}' is not allowed. Only '{self.ALLOWED_OWNER}' is permitted: {url}"
-                self.violations_logger.warning(violation_msg)
-                self.audit_logger.warning(violation_msg)
+                self._log_violation(violation_msg, url)
                 return False, violation_msg
             
             # Check if repository is in whitelist
@@ -139,18 +153,41 @@ class RepositorySecurityGuard:
             if self.whitelist['allowed_repositories']:
                 if full_repo not in self.whitelist['allowed_repositories']:
                     violation_msg = f"BLOCKED: Repository '{full_repo}' not in whitelist"
-                    self.violations_logger.warning(violation_msg)
-                    self.audit_logger.warning(violation_msg)
+                    self._log_violation(violation_msg, url)
                     return False, violation_msg
+            
+            # Enhanced security: Verify repository checksum if available
+            if self.enhanced_security:
+                try:
+                    # Calculate repository identifier checksum
+                    repo_checksum = hashlib.sha256(full_repo.encode()).hexdigest()
+                    if not self.enhanced_security.validate_repository_checksum(full_repo, repo_checksum):
+                        violation_msg = f"BLOCKED: Repository checksum validation failed for '{full_repo}'"
+                        self._log_violation(violation_msg, url)
+                        return False, violation_msg
+                except Exception as e:
+                    self.audit_logger.warning(f"Could not verify repository checksum: {e}")
             
             self.audit_logger.info(f"ALLOWED: Repository '{full_repo}' passed all security checks")
             return True, f"Repository '{full_repo}' is allowed"
         
         # Non-GitHub URLs are blocked by default
         violation_msg = f"BLOCKED: Non-GitHub URL or unrecognized format: {url}"
+        self._log_violation(violation_msg, url)
+        return False, violation_msg
+    
+    def _log_violation(self, violation_msg: str, url: str):
+        """Log security violation with enhanced tracking"""
         self.violations_logger.warning(violation_msg)
         self.audit_logger.warning(violation_msg)
-        return False, violation_msg
+        
+        # Enhanced security logging
+        if self.enhanced_security:
+            self.enhanced_security.log_security_event(
+                'repository_access_violation',
+                'critical',
+                details={'message': violation_msg, 'url': url}
+            )
     
     def validate_directory_path(self, path: str) -> Tuple[bool, str]:
         """

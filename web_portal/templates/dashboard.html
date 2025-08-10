@@ -11,17 +11,28 @@
             box-sizing: border-box;
         }
         
+        @import url('https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap');
+        
         body {
-            font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
+            font-family: 'VT323', 'Share Tech Mono', 'Courier New', 'Consolas', 'Monaco', monospace;
             background: #000000;
-            color: #ffffff;
+            background-image: 
+                repeating-linear-gradient(
+                    0deg,
+                    rgba(0, 255, 0, 0.03),
+                    rgba(0, 255, 0, 0.03) 1px,
+                    transparent 1px,
+                    transparent 2px
+                );
+            color: #00ff00;
             min-height: 100vh;
-            line-height: 1.2;
-            font-size: 12px;
+            line-height: 1.4;
+            font-size: 14px;
             overflow-x: hidden;
+            text-shadow: 0 0 1px rgba(0, 255, 0, 0.5);
         }
         
-        /* Terminal scanline effect */
+        /* Terminal scanline effect with flicker */
         body::before {
             content: "";
             position: fixed;
@@ -29,11 +40,20 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background: 
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
             z-index: 2;
             background-size: 100% 2px, 3px 100%;
             pointer-events: none;
-            animation: scanline 10s linear infinite;
+            animation: scanline 10s linear infinite, flicker 0.15s infinite;
+        }
+        
+        @keyframes flicker {
+            0% { opacity: 0.97; }
+            5% { opacity: 1; }
+            10% { opacity: 0.98; }
+            100% { opacity: 1; }
         }
         
         @keyframes scanline {
@@ -55,13 +75,15 @@
         }
         
         .header h1 {
-            color: #ffffff;
-            font-size: 16px;
+            color: #00ff00;
+            font-size: 20px;
             font-weight: normal;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
             border-right: 2px solid #00ff00;
             padding-right: 10px;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+            animation: pulse 2s ease-in-out infinite;
         }
         
         @keyframes pulse {
@@ -116,38 +138,65 @@
         }
         
         .card {
-            background: #000000;
-            border: 1px solid #333333;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #00ff00;
             border-radius: 0;
             padding: 10px;
             position: relative;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 0, 0.1),
+                inset 0 0 20px rgba(0, 255, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            right: -1px;
+            bottom: -1px;
+            background: linear-gradient(45deg, #00ff00, transparent, #00ff00);
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
         
         .card:hover {
-            border-color: #666666;
+            border-color: #00ff00;
+            box-shadow: 
+                0 0 30px rgba(0, 255, 0, 0.3),
+                inset 0 0 30px rgba(0, 255, 0, 0.1);
+        }
+        
+        .card:hover::before {
+            opacity: 0.1;
         }
         
         .card h2 {
-            color: #ffffff;
+            color: #00ff00;
             margin-bottom: 10px;
-            font-size: 12px;
-            border-bottom: 1px solid #333333;
+            font-size: 14px;
+            border-bottom: 1px solid #00ff00;
             padding-bottom: 5px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
             position: relative;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
         }
         
         .card h2::before {
-            content: '[';
-            color: #666666;
+            content: '▓▓ ';
+            color: #00ff00;
             margin-right: 5px;
+            animation: blink 1s infinite;
         }
         
         .card h2::after {
-            content: ']';
-            color: #666666;
+            content: ' ▓▓';
+            color: #00ff00;
             margin-left: 5px;
+            animation: blink 1s infinite;
         }
 
         .stats-grid {
@@ -158,12 +207,19 @@
         }
         
         .stat-box {
-            background: #000;
-            border: 1px solid #333333;
+            background: rgba(0, 20, 0, 0.5);
+            border: 1px solid #00ff00;
             padding: 8px;
             text-align: center;
             position: relative;
             overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        
+        .stat-box:hover {
+            background: rgba(0, 40, 0, 0.7);
+            transform: scale(1.02);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
         }
         
         .stat-box::before {
@@ -183,10 +239,12 @@
         }
         
         .stat-box .value {
-            font-size: 14px;
-            font-weight: normal;
-            color: #ffffff;
-            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            color: #00ff00;
+            font-family: 'VT323', monospace;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.9);
+            letter-spacing: 1px;
         }
         
         .stat-box .label {
@@ -198,54 +256,67 @@
         }
 
         .log-viewer {
-            background: #000;
-            border: 1px solid #333333;
-            padding: 5px;
+            background: linear-gradient(180deg, rgba(0, 20, 0, 0.8) 0%, rgba(0, 10, 0, 0.9) 100%);
+            border: 1px solid #00ff00;
+            padding: 10px;
+            padding-top: 15px; /* Extra padding to prevent cropping */
             height: 200px;
             overflow-y: auto;
-            font-size: 11px;
-            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-family: 'Share Tech Mono', monospace;
             white-space: pre-wrap;
             word-wrap: break-word;
             overflow-wrap: break-word;
             position: relative;
+            box-shadow: inset 0 0 20px rgba(0, 255, 0, 0.1);
+            margin-top: 5px; /* Add margin to prevent overlap */
         }
         
         .log-viewer::before {
-            content: 'LOGS>';
+            content: '▓ LOGS ▓';
             position: absolute;
-            top: -8px;
+            top: -12px;
             left: 10px;
             background: #000;
-            padding: 0 5px;
-            color: #666666;
-            font-size: 10px;
+            padding: 0 8px;
+            color: #00ff00;
+            font-size: 12px;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
+            animation: pulse 2s infinite;
+            z-index: 10;
         }
         
         .log-entry {
-            padding: 2px 4px;
-            border-bottom: 1px solid #1a1a1a;
+            padding: 4px 6px;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.1);
             cursor: pointer;
             word-wrap: break-word;
             overflow-wrap: break-word;
-            margin: 0;
-            font-size: 10px;
-            font-family: 'Courier New', monospace;
+            margin: 2px 0;
+            font-size: 11px;
+            font-family: 'Share Tech Mono', monospace;
             position: relative;
-            transition: all 0.1s;
-            line-height: 1.3;
+            transition: all 0.2s;
+            line-height: 1.4;
+            color: #00ff00;
         }
         
         .log-entry::before {
-            content: '>';
-            color: #666666;
-            margin-right: 5px;
+            content: '▸';
+            color: #00ff00;
+            margin-right: 8px;
+            transition: transform 0.2s;
         }
         
         .log-entry:hover {
-            background: #111111;
-            padding-left: 10px;
-            border-left: 2px solid #666666;
+            background: rgba(0, 255, 0, 0.1);
+            padding-left: 15px;
+            border-left: 3px solid #00ff00;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.6);
+        }
+        
+        .log-entry:hover::before {
+            transform: rotate(90deg);
         }
         
         .log-entry.error { 
@@ -266,24 +337,27 @@
         }
 
         .button {
-            background: #000;
-            color: #ffffff;
-            border: 1px solid #666666;
-            padding: 5px 10px;
+            background: linear-gradient(180deg, rgba(0, 40, 0, 0.8) 0%, rgba(0, 20, 0, 0.9) 100%);
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 6px 12px;
             cursor: pointer;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
+            font-family: 'VT323', monospace;
+            font-size: 14px;
             font-weight: normal;
             text-transform: uppercase;
-            margin: 2px;
-            transition: all 0.1s;
+            margin: 3px;
+            transition: all 0.2s;
             position: relative;
             overflow: hidden;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.6);
+            letter-spacing: 1px;
         }
         
         .button::before {
-            content: '>';
-            margin-right: 5px;
+            content: '▶';
+            margin-right: 6px;
+            transition: transform 0.2s;
         }
         
         .button::after {
@@ -300,9 +374,21 @@
         }
         
         .button:hover {
-            background: #ffffff;
+            background: #00ff00;
             color: #000;
-            border-color: #ffffff;
+            border-color: #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+            transform: translateY(-1px);
+            text-shadow: none;
+        }
+        
+        .button:hover::before {
+            transform: translateX(3px);
+        }
+        
+        .button:active {
+            transform: translateY(0);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.6);
         }
         
         .button:active::after {
@@ -311,27 +397,32 @@
         }
         
         .button.danger {
-            background: #000;
+            background: linear-gradient(180deg, rgba(40, 0, 0, 0.8) 0%, rgba(20, 0, 0, 0.9) 100%);
             border-color: #ff0000;
             color: #ff0000;
+            text-shadow: 0 0 5px rgba(255, 0, 0, 0.6);
         }
         
         .button.danger:hover {
             background: #ff0000;
             color: #000;
-            box-shadow: 0 0 10px #ff0000;
+            box-shadow: 0 0 20px #ff0000;
+            text-shadow: none;
         }
         
         .button.secondary {
-            background: #000;
-            border-color: #444444;
+            background: linear-gradient(180deg, rgba(20, 20, 20, 0.8) 0%, rgba(10, 10, 10, 0.9) 100%);
+            border-color: #666666;
             color: #999999;
+            text-shadow: 0 0 3px rgba(150, 150, 150, 0.5);
         }
         
         .button.secondary:hover {
             background: #666666;
-            color: #fff;
-            border-color: #666666;
+            color: #00ff00;
+            border-color: #999999;
+            box-shadow: 0 0 15px rgba(150, 150, 150, 0.6);
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.6);
         }
 
         .process-list {
@@ -367,24 +458,59 @@
         
         .work-area {
             text-align: center;
-            padding: 8px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid #333;
+            padding: 10px;
+            background: linear-gradient(180deg, rgba(0, 40, 0, 0.3) 0%, rgba(0, 20, 0, 0.5) 100%);
+            border: 1px solid #00ff00;
             flex: 1;
-            margin: 0 2px;
+            margin: 0 3px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .work-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ff00, transparent);
+            animation: scan-work 3s linear infinite;
+        }
+        
+        @keyframes scan-work {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .work-area:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
+            background: linear-gradient(180deg, rgba(0, 60, 0, 0.4) 0%, rgba(0, 30, 0, 0.6) 100%);
         }
         
         .work-area .count {
-            font-size: 16px;
+            font-size: 20px;
             font-weight: bold;
-            color: #ffffff;
+            color: #00ff00;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.9);
+            font-family: 'VT323', monospace;
+            animation: pulse-number 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-number {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
         
         .work-area .name {
-            font-size: 10px;
-            color: #666666;
-            margin-top: 3px;
+            font-size: 11px;
+            color: #00aa00;
+            margin-top: 5px;
             text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: 'Share Tech Mono', monospace;
         }
 
         .tabs {
@@ -395,17 +521,19 @@
         }
         
         .tab {
-            padding: 8px 12px;
+            padding: 8px 14px;
             cursor: pointer;
-            background: #000;
-            border: 1px solid #333333;
+            background: rgba(0, 20, 0, 0.5);
+            border: 1px solid #00ff00;
             border-bottom: none;
-            color: #999999;
-            margin-right: 1px;
-            transition: all 0.1s;
-            font-size: 11px;
+            color: #666666;
+            margin-right: 2px;
+            transition: all 0.2s;
+            font-size: 12px;
             text-transform: uppercase;
             position: relative;
+            font-family: 'VT323', monospace;
+            letter-spacing: 1px;
         }
         
         .tab::before {
@@ -421,19 +549,23 @@
         }
         
         .tab:hover {
-            background: rgba(0,255,0,0.1);
-            color: #fff;
+            background: rgba(0, 255, 0, 0.1);
+            color: #00ff00;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.6);
         }
         
         .tab.active {
-            background: #111111;
-            color: #ffffff;
-            border-color: #666666;
-            border-bottom: 1px solid #000;
+            background: rgba(0, 40, 0, 0.8);
+            color: #00ff00;
+            border-color: #00ff00;
+            border-bottom: 1px solid transparent;
+            text-shadow: 0 0 8px rgba(0, 255, 0, 0.8);
+            box-shadow: 0 -2px 10px rgba(0, 255, 0, 0.3);
         }
         
         .tab-content {
             display: none;
+            padding-top: 10px; /* Add padding to prevent content overlap */
         }
         
         .tab-content.active {
@@ -442,20 +574,29 @@
 
         .search-box {
             width: 100%;
-            padding: 5px 8px;
-            background: #000;
-            border: 1px solid #333333;
-            color: #ffffff;
-            margin-bottom: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
+            padding: 6px 10px;
+            background: rgba(0, 20, 0, 0.5);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            margin-bottom: 10px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
             text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+        }
+        
+        .search-box::placeholder {
+            color: #006600;
+            opacity: 0.7;
         }
         
         .search-box:focus {
-            border-color: #666666;
+            border-color: #00ff00;
             outline: none;
-            background: #111111;
+            background: rgba(0, 40, 0, 0.6);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+            text-shadow: 0 0 3px rgba(0, 255, 0, 0.5);
         }
 
         .modal {
@@ -471,26 +612,37 @@
         
         .modal-content {
             position: relative;
-            background: #000;
+            background: linear-gradient(180deg, rgba(0, 20, 0, 0.95) 0%, #000 100%);
             margin: 30px auto;
-            padding: 15px;
+            padding: 20px;
             width: 90%;
             max-width: 1200px;
-            border: 1px solid #666666;
+            border: 2px solid #00ff00;
             max-height: 85vh;
             overflow-y: auto;
+            box-shadow: 
+                0 0 50px rgba(0, 255, 0, 0.4),
+                inset 0 0 30px rgba(0, 255, 0, 0.1);
+            animation: modal-glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes modal-glow {
+            0%, 100% { box-shadow: 0 0 50px rgba(0, 255, 0, 0.4), inset 0 0 30px rgba(0, 255, 0, 0.1); }
+            50% { box-shadow: 0 0 70px rgba(0, 255, 0, 0.6), inset 0 0 40px rgba(0, 255, 0, 0.15); }
         }
         
         .modal-content::before {
-            content: 'TERMINAL OUTPUT';
+            content: '╔═ TERMINAL OUTPUT ═╗';
             position: absolute;
-            top: -10px;
+            top: -12px;
             left: 20px;
             background: #000;
-            padding: 0 10px;
-            color: #999999;
-            font-size: 10px;
+            padding: 0 15px;
+            color: #00ff00;
+            font-size: 14px;
             letter-spacing: 2px;
+            font-family: 'VT323', monospace;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
         }
         
         .modal-log-content {
@@ -520,30 +672,108 @@
             color: #ffffff;
         }
 
+        /* ASCII Loading Spinner */
         .loading {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(0,255,0,0.3);
-            border-radius: 50%;
-            border-top-color: #00ff00;
-            animation: spin 1s ease-in-out infinite;
+            font-family: 'VT323', monospace;
+            font-size: 16px;
+            color: #00ff00;
+            animation: ascii-spin 0.8s steps(4) infinite;
+        }
+        
+        .loading::after {
+            content: '◐';
+            animation: ascii-rotate 0.8s steps(4) infinite;
+        }
+        
+        @keyframes ascii-rotate {
+            0% { content: '◐'; }
+            25% { content: '◓'; }
+            50% { content: '◑'; }
+            75% { content: '◒'; }
+            100% { content: '◐'; }
         }
         
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
 
+        /* Enhanced ASCII Art Elements */
+        .ascii-border {
+            font-family: 'VT323', monospace;
+            color: #00ff00;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.6);
+        }
+        
+        /* Data Stream Effect */
+        @keyframes data-stream {
+            0% {
+                background-position: 0 0;
+            }
+            100% {
+                background-position: 0 100%;
+            }
+        }
+        
+        .data-streaming {
+            background-image: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 255, 0, 0.03) 2px,
+                rgba(0, 255, 0, 0.03) 4px
+            );
+            background-size: 100% 20px;
+            animation: data-stream 2s linear infinite;
+        }
+        
+        /* Terminal Prompt Style */
+        .terminal-prompt::before {
+            content: 'root@barbossa:~# ';
+            color: #00ff00;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 11px;
+        }
+        
+        /* Matrix Rain Background (subtle) */
+        @keyframes matrix-fall {
+            0% {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh);
+                opacity: 0;
+            }
+        }
+        
         /* Additional terminal styling improvements */
         
         .service-status {
             display: inline-block;
-            width: 6px;
-            height: 6px;
+            width: 8px;
+            height: 8px;
             border-radius: 0;
-            margin-right: 8px;
+            margin-right: 10px;
             position: relative;
-            animation: blink 2s infinite;
+            animation: status-pulse 2s infinite;
+        }
+        
+        @keyframes status-pulse {
+            0%, 100% { 
+                opacity: 1; 
+                transform: scale(1);
+            }
+            50% { 
+                opacity: 0.7; 
+                transform: scale(1.2);
+            }
         }
         
         @keyframes blink {
@@ -552,13 +782,19 @@
         }
         
         .service-status.active {
-            background: #00ff00;
-            box-shadow: 0 0 8px #00ff00, inset 0 0 3px #00aa00;
+            background: radial-gradient(circle, #00ff00 0%, #00aa00 100%);
+            box-shadow: 
+                0 0 15px #00ff00, 
+                0 0 30px rgba(0, 255, 0, 0.5),
+                inset 0 0 5px #00ff00;
         }
         
         .service-status.inactive {
-            background: #ff0000;
-            box-shadow: 0 0 8px #ff0000, inset 0 0 3px #aa0000;
+            background: radial-gradient(circle, #ff0000 0%, #aa0000 100%);
+            box-shadow: 
+                0 0 15px #ff0000, 
+                0 0 30px rgba(255, 0, 0, 0.5),
+                inset 0 0 5px #ff0000;
         }
         
         .service-status.error {
@@ -593,22 +829,25 @@
         
         /* Scrollbar styling for terminal theme */
         ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+            width: 8px;
+            height: 8px;
         }
         
         ::-webkit-scrollbar-track {
             background: #000;
-            border: 1px solid #003300;
+            border: 1px solid #00ff00;
+            box-shadow: inset 0 0 5px rgba(0, 255, 0, 0.1);
         }
         
         ::-webkit-scrollbar-thumb {
-            background: #666666;
+            background: linear-gradient(180deg, #00ff00 0%, #00aa00 100%);
             border-radius: 0;
+            box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
         }
         
         ::-webkit-scrollbar-thumb:hover {
-            background: #999999;
+            background: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
         }
         
         ::-webkit-scrollbar-corner {
@@ -641,6 +880,7 @@
         /* Service tab content styling */
         .service-tab-content {
             display: none;
+            padding-top: 10px; /* Add padding to prevent content overlap */
         }
         
         .service-tab-content.active {
@@ -656,11 +896,11 @@
 </head>
 <body>
     <div class="header">
-        <h1>BARBOSSA_CONTROL_CENTER_V2.0</h1>
+        <h1>╔═ BARBOSSA_CONTROL_CENTER_V2.0 ═╗</h1>
         <div class="status-info">
-            <span id="system-time" style="color: #ffffff; font-family: 'Courier New', monospace; font-size: 11px;">{{ timestamp }}</span>
-            <span class="status-badge status-online" id="portal-status" style="font-size: 10px; text-transform: uppercase;">SYSTEM_ONLINE</span>
-            <span style="color: #999999; font-size: 11px;">USER:{{ username }}</span>
+            <span id="system-time" style="color: #00ff00; font-family: 'VT323', monospace; font-size: 14px; text-shadow: 0 0 3px rgba(0,255,0,0.6);">{{ timestamp }}</span>
+            <span class="status-badge status-online" id="portal-status" style="font-size: 12px; text-transform: uppercase;">▓ SYSTEM_ONLINE ▓</span>
+            <span style="color: #00aa00; font-size: 13px; font-family: 'VT323', monospace;">USER://{{ username }}</span>
         </div>
     </div>
 
@@ -757,7 +997,7 @@
             <div id="recent-logs" class="log-viewer" style="height: 250px;">
                 <!-- Populated by JS -->
             </div>
-            <div style="margin-top: 10px; text-align: right;">
+            <div style="margin-top: 12px; text-align: right; padding-top: 10px; border-top: 1px solid rgba(0,255,0,0.3);">
                 <button class="button secondary" onclick="showArchiveDialog()">ARCHIVE</button>
                 <button class="button danger" onclick="clearLogs(30)">PURGE_30D</button>
             </div>

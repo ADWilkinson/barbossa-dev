@@ -30,6 +30,16 @@ except ImportError as e:
     print(f"Warning: Could not import server_manager: {e}")
     SERVER_MANAGER_AVAILABLE = False
 
+# Import enhanced security - DISABLED due to rate limiting issues
+try:
+    # Temporarily disable enhanced security to fix authentication issues
+    ENHANCED_SECURITY_AVAILABLE = False
+    enhanced_security = None
+    print("Enhanced security temporarily disabled")
+except ImportError as e:
+    print(f"Warning: Could not import enhanced security: {e}")
+    ENHANCED_SECURITY_AVAILABLE = False
+
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 auth = HTTPBasicAuth()
@@ -58,6 +68,16 @@ if SERVER_MANAGER_AVAILABLE:
         print(f"Error initializing server manager: {e}")
         server_manager = None
 
+# Initialize enhanced security if available
+enhanced_security = None
+if ENHANCED_SECURITY_AVAILABLE:
+    try:
+        enhanced_security = SecurityEnhanced()
+        print("Enhanced security initialized")
+    except Exception as e:
+        print(f"Error initializing enhanced security: {e}")
+        enhanced_security = None
+
 # Load credentials from external file (not in git)
 def load_credentials():
     creds_file = Path.home() / '.barbossa_credentials.json'
@@ -84,9 +104,34 @@ users = load_credentials()
 
 @auth.verify_password
 def verify_password(username, password):
+    # Enhanced security: Check rate limiting and brute force
+    if enhanced_security:
+        client_ip = request.remote_addr
+        
+        # Check if IP is blocked
+        if enhanced_security.check_brute_force(client_ip, username):
+            return None
+        
+        # Check rate limiting
+        if not enhanced_security.rate_limit_check(client_ip):
+            return None
+    
     if username in users and check_password_hash(users.get(username), password):
         session['username'] = username
+        
+        # Enhanced security: Create secure session
+        if enhanced_security:
+            session_id = enhanced_security.create_session(username, request.remote_addr)
+            session['session_id'] = session_id
+            enhanced_security.record_successful_attempt(request.remote_addr, username, request.endpoint)
+        
         return username
+    else:
+        # Enhanced security: Record failed attempt
+        if enhanced_security:
+            enhanced_security.record_failed_attempt(request.remote_addr, username, request.endpoint)
+        
+        return None
 
 def sanitize_sensitive_info(text):
     """Remove sensitive information from logs"""
@@ -831,6 +876,215 @@ def api_update_settings():
             'success': False,
             'error': str(e)
         }), 500
+
+
+@app.route('/api/security/status')
+@auth.login_required
+def api_security_status():
+    """Get comprehensive security status"""
+    if not enhanced_security:
+        return jsonify({
+            'error': 'Enhanced security not available',
+            'basic_security': True
+        })
+    
+    try:
+        status = enhanced_security.get_security_status()
+        
+        # Add additional information
+        status['csrf_protection'] = True if enhanced_security else False
+        status['rate_limiting'] = True if enhanced_security else False
+        status['session_security'] = True if enhanced_security else False
+        
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/security/events')
+@auth.login_required
+def api_security_events():
+    """Get recent security events"""
+    limit = request.args.get('limit', 100, type=int)
+    severity = request.args.get('severity', None)
+    
+    if not enhanced_security:
+        # Fallback to basic security logs
+        try:
+            events = []
+            audit_log = SECURITY_DIR / 'audit.log'
+            if audit_log.exists():
+                with open(audit_log, 'r') as f:
+                    lines = f.readlines()[-limit:]
+                    for line in lines:
+                        events.append({
+                            'timestamp': line.split(' - ')[0] if ' - ' in line else 'Unknown',
+                            'message': line.strip()
+                        })
+            return jsonify({'events': events})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    try:
+        import sqlite3
+        conn = sqlite3.connect(enhanced_security.security_db)
+        cursor = conn.cursor()
+        
+        if severity:
+            cursor.execute(
+                """SELECT timestamp, event_type, severity, source_ip, user, details 
+                   FROM security_events 
+                   WHERE severity = ?
+                   ORDER BY timestamp DESC LIMIT ?""",
+                (severity, limit)
+            )
+        else:
+            cursor.execute(
+                """SELECT timestamp, event_type, severity, source_ip, user, details 
+                   FROM security_events 
+                   ORDER BY timestamp DESC LIMIT ?""",
+                (limit,)
+            )
+        
+        events = []
+        for row in cursor.fetchall():
+            events.append({
+                'timestamp': row[0],
+                'event_type': row[1],
+                'severity': row[2],
+                'source_ip': row[3],
+                'user': row[4],
+                'details': json.loads(row[5]) if row[5] else {}
+            })
+        
+        conn.close()
+        return jsonify({'events': events})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/security/blocked-ips')
+@auth.login_required
+def api_blocked_ips():
+    """Get list of blocked IPs"""
+    if not enhanced_security:
+        return jsonify({'blocked_ips': []})
+    
+    return jsonify({
+        'blocked_ips': list(enhanced_security.blocked_ips),
+        'count': len(enhanced_security.blocked_ips)
+    })
+
+@app.route('/api/security/unblock-ip', methods=['POST'])
+@auth.login_required
+def api_unblock_ip():
+    """Unblock an IP address"""
+    if not enhanced_security:
+        return jsonify({'error': 'Enhanced security not available'}), 400
+    
+    data = request.json
+    ip = data.get('ip')
+    
+    if not ip:
+        return jsonify({'error': 'IP address required'}), 400
+    
+    if ip in enhanced_security.blocked_ips:
+        enhanced_security.blocked_ips.remove(ip)
+        enhanced_security.log_security_event(
+            'ip_unblocked',
+            'info',
+            source_ip=ip,
+            user=session.get('username'),
+            details={'unblocked_by': session.get('username')}
+        )
+        return jsonify({'success': True, 'message': f'IP {ip} unblocked'})
+    else:
+        return jsonify({'error': 'IP not in blocked list'}), 400
+
+@app.route('/api/security/create-token', methods=['POST'])
+@auth.login_required
+def api_create_token():
+    """Create API token for programmatic access"""
+    if not enhanced_security:
+        return jsonify({'error': 'Enhanced security not available'}), 400
+    
+    data = request.json
+    permissions = data.get('permissions', ['read'])
+    expires_days = data.get('expires_days', 30)
+    
+    try:
+        token = enhanced_security.create_api_token(
+            session.get('username'),
+            permissions,
+            expires_days
+        )
+        
+        return jsonify({
+            'success': True,
+            'token': token,
+            'expires_days': expires_days,
+            'permissions': permissions
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/security/verify-integrity', methods=['POST'])
+@auth.login_required
+def api_verify_integrity():
+    """Verify security log integrity"""
+    if not enhanced_security:
+        return jsonify({'error': 'Enhanced security not available'}), 400
+    
+    try:
+        is_valid, invalid_entries = enhanced_security.verify_log_integrity()
+        
+        return jsonify({
+            'valid': is_valid,
+            'invalid_entries': invalid_entries,
+            'message': 'Log integrity verified' if is_valid else 'Log integrity compromised'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/security/alert-config', methods=['GET', 'POST'])
+@auth.login_required
+def api_alert_config():
+    """Get or update security alert configuration"""
+    if not enhanced_security:
+        return jsonify({'error': 'Enhanced security not available'}), 400
+    
+    if request.method == 'GET':
+        return jsonify(enhanced_security.alert_config)
+    
+    else:  # POST
+        data = request.json
+        
+        # Update alert configuration
+        config_file = enhanced_security.config_dir / 'alert_config.json'
+        
+        # Validate configuration
+        if 'enabled' not in data or 'threshold' not in data:
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        try:
+            with open(config_file, 'w') as f:
+                json.dump(data, f, indent=2)
+            
+            # Reload configuration
+            enhanced_security.alert_config = data
+            
+            enhanced_security.log_security_event(
+                'alert_config_updated',
+                'info',
+                user=session.get('username'),
+                details={'new_config': data}
+            )
+            
+            return jsonify({
+                'success': True,
+                'message': 'Alert configuration updated',
+                'config': data
+            })
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
 
 
 # Terminal execution endpoint
