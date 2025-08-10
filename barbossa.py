@@ -14,22 +14,88 @@ import subprocess
 import sys
 import threading
 import time
+import functools
+import concurrent.futures
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 import random
 import shutil
+import psutil
 
 # Import components
 from security_guard import security_guard, SecurityViolationError
 from server_manager import BarbossaServerManager
+
+class PerformanceProfiler:
+    """Performance profiling and monitoring for Barbossa operations"""
+    
+    def __init__(self):
+        self.metrics = {}
+        self.start_times = {}
+        self.lock = threading.Lock()
+    
+    def start_operation(self, operation_name: str):
+        """Start timing an operation"""
+        with self.lock:
+            self.start_times[operation_name] = time.time()
+    
+    def end_operation(self, operation_name: str):
+        """End timing an operation and store metrics"""
+        with self.lock:
+            if operation_name in self.start_times:
+                duration = time.time() - self.start_times[operation_name]
+                if operation_name not in self.metrics:
+                    self.metrics[operation_name] = []
+                self.metrics[operation_name].append({
+                    'duration': duration,
+                    'timestamp': datetime.now().isoformat(),
+                    'memory_mb': psutil.Process().memory_info().rss / 1024 / 1024
+                })
+                # Keep only last 100 measurements
+                self.metrics[operation_name] = self.metrics[operation_name][-100:]
+                del self.start_times[operation_name]
+    
+    def get_performance_summary(self) -> Dict:
+        """Get performance summary"""
+        with self.lock:
+            summary = {}
+            for operation, measurements in self.metrics.items():
+                if measurements:
+                    durations = [m['duration'] for m in measurements]
+                    summary[operation] = {
+                        'count': len(measurements),
+                        'avg_duration': sum(durations) / len(durations),
+                        'max_duration': max(durations),
+                        'min_duration': min(durations),
+                        'last_run': measurements[-1]['timestamp']
+                    }
+            return summary
+
+def performance_monitor(operation_name: str = None):
+    """Decorator for performance monitoring"""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs):
+            if hasattr(self, 'profiler'):
+                op_name = operation_name or f"{func.__name__}"
+                self.profiler.start_operation(op_name)
+                try:
+                    result = func(self, *args, **kwargs)
+                    return result
+                finally:
+                    self.profiler.end_operation(op_name)
+            else:
+                return func(self, *args, **kwargs)
+        return wrapper
+    return decorator
 
 class BarbossaEnhanced:
     """
     Enhanced Barbossa system with integrated server management capabilities
     """
     
-    VERSION = "2.0.0"
+    VERSION = "2.1.0"
     
     WORK_AREAS = {
         'infrastructure': {
@@ -88,6 +154,14 @@ class BarbossaEnhanced:
         self.changelogs_dir = self.work_dir / 'changelogs'
         self.work_tracking_dir = self.work_dir / 'work_tracking'
         self.metrics_db = self.work_dir / 'metrics.db'
+        
+        # Initialize performance profiler
+        self.profiler = PerformanceProfiler()
+        
+        # Initialize thread pool executor for async operations
+        self.executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=3, thread_name_prefix="BarbossaAsync"
+        )
         
         # Ensure directories exist
         for dir_path in [self.logs_dir, self.changelogs_dir, self.work_tracking_dir]:
@@ -182,6 +256,7 @@ class BarbossaEnhanced:
             json.dump(self.work_tally, f, indent=2)
         self.logger.info(f"Work tally saved: {self.work_tally}")
     
+    @performance_monitor("system_health_check")
     def perform_system_health_check(self) -> Dict:
         """Perform comprehensive system health check"""
         health = {
@@ -220,6 +295,7 @@ class BarbossaEnhanced:
         
         return health
     
+    @performance_monitor("infrastructure_management")
     def execute_infrastructure_management(self):
         """Execute advanced infrastructure management tasks"""
         self.logger.info("Executing infrastructure management...")
@@ -606,6 +682,7 @@ Select and implement ONE improvement completely."""
             self.logger.info("Work session completed")
             self.logger.info("=" * 70)
     
+    @performance_monitor("comprehensive_status")
     def get_comprehensive_status(self) -> Dict:
         """Get comprehensive system and Barbossa status"""
         status = {
@@ -615,7 +692,8 @@ Select and implement ONE improvement completely."""
             'system_info': self.system_info,
             'health': self.perform_system_health_check() if self.server_manager else None,
             'server_manager': 'active' if self.server_manager else 'inactive',
-            'security': 'MAXIMUM - ZKP2P blocked'
+            'security': 'MAXIMUM - ZKP2P blocked',
+            'performance': self.profiler.get_performance_summary()
         }
         
         # Add current work
@@ -644,6 +722,17 @@ Select and implement ONE improvement completely."""
         if self.server_manager:
             self.server_manager.stop_monitoring()
             self.logger.info("Server monitoring stopped")
+        
+        # Shutdown executor
+        self.executor.shutdown(wait=True)
+        self.logger.info("Thread pool executor shutdown")
+        
+        # Log final performance summary
+        performance_summary = self.profiler.get_performance_summary()
+        if performance_summary:
+            self.logger.info("Performance Summary:")
+            for operation, stats in performance_summary.items():
+                self.logger.info(f"  {operation}: avg={stats['avg_duration']:.3f}s, max={stats['max_duration']:.3f}s, count={stats['count']}")
 
 
 def main():

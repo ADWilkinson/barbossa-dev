@@ -11,11 +11,14 @@ import subprocess
 import re
 import time
 import sys
+import functools
+import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, send_file
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.middleware.profiler import ProfilerMiddleware
 import secrets
 import shutil
 
@@ -43,6 +46,55 @@ except ImportError as e:
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 auth = HTTPBasicAuth()
+
+# Global cache for API responses
+_cache = {}
+_cache_expiry = {}
+_cache_lock = threading.Lock()
+
+def cached_response(ttl: int = 60):
+    """Decorator to cache API responses"""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            cache_key = f"{func.__name__}_{hash(str(args))}{hash(str(kwargs))}"
+            
+            with _cache_lock:
+                if cache_key in _cache and cache_key in _cache_expiry:
+                    if time.time() < _cache_expiry[cache_key]:
+                        return _cache[cache_key]
+                    else:
+                        del _cache[cache_key]
+                        del _cache_expiry[cache_key]
+            
+            result = func(*args, **kwargs)
+            
+            with _cache_lock:
+                _cache[cache_key] = result
+                _cache_expiry[cache_key] = time.time() + ttl
+            
+            return result
+        return wrapper
+    return decorator
+
+def performance_monitor(func):
+    """Decorator to monitor API performance"""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        
+        duration = (end_time - start_time) * 1000  # Convert to milliseconds
+        if duration > 1000:  # Log slow requests (>1 second)
+            print(f"SLOW API: {func.__name__} took {duration:.2f}ms")
+        
+        return result
+    return wrapper
+
+# Add performance profiling in development
+if os.getenv('FLASK_ENV') == 'development':
+    app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 
 # Configuration
 BARBOSSA_DIR = Path.home() / 'barbossa-engineer'
@@ -273,13 +325,15 @@ def index():
 # New comprehensive status endpoint
 @app.route('/api/comprehensive-status')
 @auth.login_required
+@performance_monitor
+@cached_response(ttl=15)  # Cache for 15 seconds
 def api_comprehensive_status():
     """Get comprehensive server status including metrics, services, and alerts"""
     if server_manager:
         data = server_manager.get_dashboard_data()
         
-        # Add historical metrics
-        data['historical_metrics'] = server_manager.metrics_collector.get_historical_metrics(24)
+        # Add historical metrics (limit for performance)
+        data['historical_metrics'] = server_manager.metrics_collector.get_historical_metrics(24, limit=500)
         
         # Add Barbossa status
         data['barbossa'] = get_barbossa_status()
@@ -303,6 +357,8 @@ def api_comprehensive_status():
 # Network status endpoint
 @app.route('/api/network-status')
 @auth.login_required
+@performance_monitor
+@cached_response(ttl=30)  # Cache for 30 seconds
 def api_network_status():
     """Get network connections and open ports"""
     if server_manager:
@@ -316,6 +372,8 @@ def api_network_status():
 # Projects endpoint
 @app.route('/api/projects')
 @auth.login_required
+@performance_monitor
+@cached_response(ttl=60)  # Cache for 1 minute
 def api_projects():
     """Get project information"""
     if server_manager:
@@ -330,6 +388,8 @@ def api_projects():
 # Barbossa-specific status
 @app.route('/api/barbossa-status')
 @auth.login_required
+@performance_monitor
+@cached_response(ttl=10)  # Cache for 10 seconds
 def api_barbossa_status():
     """Get detailed Barbossa status"""
     return jsonify(get_barbossa_status())

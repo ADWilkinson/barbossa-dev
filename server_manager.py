@@ -21,6 +21,9 @@ from typing import Dict, List, Optional, Any, Tuple
 import hashlib
 import threading
 import queue
+import functools
+import concurrent.futures
+from contextlib import contextmanager
 
 # Import existing security guard
 from security_guard import security_guard, SecurityViolationError
@@ -33,14 +36,59 @@ class MetricsCollector:
         self.db_path = db_path
         self.metrics_queue = queue.Queue()
         self.running = False
+        self._cache = {}
+        self._cache_expiry = {}
+        self._cache_lock = threading.Lock()
+        self._connection_pool = queue.Queue(maxsize=5)
         self._init_database()
+        self._init_connection_pool()
+    
+    def _init_connection_pool(self):
+        """Initialize database connection pool"""
+        for _ in range(5):
+            conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+            self._connection_pool.put(conn)
+    
+    @contextmanager
+    def get_connection(self):
+        """Get database connection from pool"""
+        conn = self._connection_pool.get()
+        try:
+            yield conn
+        finally:
+            self._connection_pool.put(conn)
+    
+    def _get_cached(self, key: str, ttl: int = 60):
+        """Get cached value if not expired"""
+        with self._cache_lock:
+            if key in self._cache and key in self._cache_expiry:
+                if time.time() < self._cache_expiry[key]:
+                    return self._cache[key]
+                else:
+                    # Clean expired cache
+                    del self._cache[key]
+                    del self._cache_expiry[key]
+            return None
+    
+    def _set_cache(self, key: str, value: Any, ttl: int = 60):
+        """Set cached value with TTL"""
+        with self._cache_lock:
+            self._cache[key] = value
+            self._cache_expiry[key] = time.time() + ttl
         
     def _init_database(self):
-        """Initialize SQLite database for metrics storage"""
+        """Initialize SQLite database for metrics storage with optimizations"""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             
-            # System metrics table
+            # Enable performance optimizations
+            cursor.execute('PRAGMA journal_mode=WAL')
+            cursor.execute('PRAGMA synchronous=NORMAL')
+            cursor.execute('PRAGMA cache_size=10000')
+            cursor.execute('PRAGMA temp_store=MEMORY')
+            
+            # System metrics table with indexes
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS system_metrics (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,6 +110,7 @@ class MetricsCollector:
                     temperature REAL
                 )
             ''')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_system_metrics_timestamp ON system_metrics(timestamp)')
             
             # Service status table
             cursor.execute('''
@@ -76,6 +125,8 @@ class MetricsCollector:
                     pid INTEGER
                 )
             ''')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_service_status_timestamp ON service_status(timestamp)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_service_status_name ON service_status(service_name)')
             
             # Alert history table
             cursor.execute('''
@@ -89,6 +140,8 @@ class MetricsCollector:
                     acknowledged BOOLEAN DEFAULT 0
                 )
             ''')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_alerts_timestamp ON alerts(timestamp)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_alerts_acknowledged ON alerts(acknowledged)')
             
             # Barbossa work history table
             cursor.execute('''
@@ -104,6 +157,8 @@ class MetricsCollector:
                     changelog TEXT
                 )
             ''')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_work_history_timestamp ON work_history(timestamp)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_work_history_area ON work_history(work_area)')
             
             # Network connections table
             cursor.execute('''
@@ -119,38 +174,92 @@ class MetricsCollector:
                     pid INTEGER
                 )
             ''')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_network_connections_timestamp ON network_connections(timestamp)')
             
             conn.commit()
     
+    @functools.lru_cache(maxsize=128)
+    def _get_static_info(self):
+        """Get static system information that doesn't change frequently"""
+        return {
+            'cpu_count': psutil.cpu_count(),
+            'memory_total_mb': psutil.virtual_memory().total / (1024 * 1024),
+            'disk_total_gb': psutil.disk_usage('/').total / (1024 * 1024 * 1024),
+            'boot_time': psutil.boot_time()
+        }
+    
     def collect_metrics(self) -> Dict:
-        """Collect current system metrics"""
-        metrics = {}
+        """Collect current system metrics with caching optimization"""
+        # Check cache first for recent metrics
+        cache_key = 'current_metrics'
+        cached_metrics = self._get_cached(cache_key, ttl=10)  # 10 second cache
+        if cached_metrics:
+            return cached_metrics
         
-        # CPU metrics
-        metrics['cpu_percent'] = psutil.cpu_percent(interval=1)
-        metrics['cpu_count'] = psutil.cpu_count()
-        metrics['cpu_freq'] = psutil.cpu_freq().current if psutil.cpu_freq() else 0
+        metrics = {}
+        static_info = self._get_static_info()
+        
+        # CPU metrics (most expensive - use shorter interval when cached)
+        metrics['cpu_percent'] = psutil.cpu_percent(interval=0.1)
+        metrics['cpu_count'] = static_info['cpu_count']
+        try:
+            cpu_freq = psutil.cpu_freq()
+            metrics['cpu_freq'] = cpu_freq.current if cpu_freq else 0
+        except:
+            metrics['cpu_freq'] = 0
         
         # Memory metrics
         mem = psutil.virtual_memory()
         metrics['memory_percent'] = mem.percent
         metrics['memory_used_mb'] = mem.used / (1024 * 1024)
-        metrics['memory_total_mb'] = mem.total / (1024 * 1024)
+        metrics['memory_total_mb'] = static_info['memory_total_mb']
         metrics['memory_available_mb'] = mem.available / (1024 * 1024)
         
-        # Disk metrics
-        disk = psutil.disk_usage('/')
-        metrics['disk_percent'] = disk.percent
-        metrics['disk_used_gb'] = disk.used / (1024 * 1024 * 1024)
-        metrics['disk_total_gb'] = disk.total / (1024 * 1024 * 1024)
-        metrics['disk_free_gb'] = disk.free / (1024 * 1024 * 1024)
+        # Disk metrics (cache for 30 seconds as it's relatively stable)
+        disk_cache_key = 'disk_metrics'
+        disk_metrics = self._get_cached(disk_cache_key, ttl=30)
+        if not disk_metrics:
+            disk = psutil.disk_usage('/')
+            disk_metrics = {
+                'disk_percent': disk.percent,
+                'disk_used_gb': disk.used / (1024 * 1024 * 1024),
+                'disk_total_gb': static_info['disk_total_gb'],
+                'disk_free_gb': disk.free / (1024 * 1024 * 1024)
+            }
+            self._set_cache(disk_cache_key, disk_metrics, ttl=30)
+        metrics.update(disk_metrics)
         
-        # Network metrics
+        # Network metrics (calculate deltas)
+        net_cache_key = 'network_counters'
+        previous_net = self._get_cached(net_cache_key, ttl=300)  # 5 min cache
         net = psutil.net_io_counters()
+        
+        current_net = {
+            'bytes_sent': net.bytes_sent,
+            'bytes_recv': net.bytes_recv,
+            'packets_sent': net.packets_sent,
+            'packets_recv': net.packets_recv,
+            'timestamp': time.time()
+        }
+        
+        if previous_net:
+            time_delta = current_net['timestamp'] - previous_net['timestamp']
+            if time_delta > 0:
+                metrics['network_sent_mbps'] = (current_net['bytes_sent'] - previous_net['bytes_sent']) / (1024 * 1024 * time_delta)
+                metrics['network_recv_mbps'] = (current_net['bytes_recv'] - previous_net['bytes_recv']) / (1024 * 1024 * time_delta)
+            else:
+                metrics['network_sent_mbps'] = 0
+                metrics['network_recv_mbps'] = 0
+        else:
+            metrics['network_sent_mbps'] = 0
+            metrics['network_recv_mbps'] = 0
+        
         metrics['network_sent_mb'] = net.bytes_sent / (1024 * 1024)
         metrics['network_recv_mb'] = net.bytes_recv / (1024 * 1024)
         metrics['network_packets_sent'] = net.packets_sent
         metrics['network_packets_recv'] = net.packets_recv
+        
+        self._set_cache(net_cache_key, current_net, ttl=300)
         
         # System load
         load = os.getloadavg()
@@ -158,79 +267,162 @@ class MetricsCollector:
         metrics['load_5min'] = load[1]
         metrics['load_15min'] = load[2]
         
-        # Process count
-        metrics['process_count'] = len(psutil.pids())
+        # Process count (cache for 5 seconds)
+        proc_cache_key = 'process_count'
+        proc_count = self._get_cached(proc_cache_key, ttl=5)
+        if proc_count is None:
+            proc_count = len(psutil.pids())
+            self._set_cache(proc_cache_key, proc_count, ttl=5)
+        metrics['process_count'] = proc_count
         
-        # Docker containers count
-        try:
-            result = subprocess.run(['docker', 'ps', '-q'], capture_output=True, text=True)
-            metrics['docker_containers'] = len(result.stdout.strip().split('\n')) if result.stdout.strip() else 0
-        except:
-            metrics['docker_containers'] = 0
+        # Docker containers count (cache for 15 seconds)
+        docker_cache_key = 'docker_containers'
+        docker_count = self._get_cached(docker_cache_key, ttl=15)
+        if docker_count is None:
+            try:
+                result = subprocess.run(['docker', 'ps', '-q'], capture_output=True, text=True, timeout=5)
+                docker_count = len(result.stdout.strip().split('\n')) if result.stdout.strip() else 0
+            except:
+                docker_count = 0
+            self._set_cache(docker_cache_key, docker_count, ttl=15)
+        metrics['docker_containers'] = docker_count
         
-        # Temperature (if available)
-        try:
-            temps = psutil.sensors_temperatures()
-            if temps:
-                for name, entries in temps.items():
-                    for entry in entries:
-                        if entry.label in ['Core 0', 'CPU', 'Package']:
-                            metrics['temperature'] = entry.current
+        # Temperature (cache for 30 seconds)
+        temp_cache_key = 'temperature'
+        temperature = self._get_cached(temp_cache_key, ttl=30)
+        if temperature is None:
+            try:
+                temps = psutil.sensors_temperatures()
+                temperature = None
+                if temps:
+                    for name, entries in temps.items():
+                        for entry in entries:
+                            if entry.label in ['Core 0', 'CPU', 'Package']:
+                                temperature = entry.current
+                                break
+                        if temperature:
                             break
-        except:
-            metrics['temperature'] = None
+            except:
+                temperature = None
+            self._set_cache(temp_cache_key, temperature, ttl=30)
+        metrics['temperature'] = temperature
         
         # Uptime
-        boot_time = psutil.boot_time()
-        metrics['uptime_seconds'] = time.time() - boot_time
+        metrics['uptime_seconds'] = time.time() - static_info['boot_time']
+        
+        # Cache the complete metrics
+        self._set_cache(cache_key, metrics, ttl=10)
         
         return metrics
     
     def store_metrics(self, metrics: Dict):
-        """Store metrics in database"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO system_metrics (
-                    cpu_percent, memory_percent, memory_used_mb, memory_total_mb,
-                    disk_percent, disk_used_gb, disk_total_gb,
-                    network_sent_mb, network_recv_mb,
-                    load_1min, load_5min, load_15min,
-                    process_count, docker_containers, temperature
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                metrics.get('cpu_percent'),
-                metrics.get('memory_percent'),
-                metrics.get('memory_used_mb'),
-                metrics.get('memory_total_mb'),
-                metrics.get('disk_percent'),
-                metrics.get('disk_used_gb'),
-                metrics.get('disk_total_gb'),
-                metrics.get('network_sent_mb'),
-                metrics.get('network_recv_mb'),
-                metrics.get('load_1min'),
-                metrics.get('load_5min'),
-                metrics.get('load_15min'),
-                metrics.get('process_count'),
-                metrics.get('docker_containers'),
-                metrics.get('temperature')
-            ))
-            conn.commit()
+        """Store metrics in database using connection pool"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO system_metrics (
+                        cpu_percent, memory_percent, memory_used_mb, memory_total_mb,
+                        disk_percent, disk_used_gb, disk_total_gb,
+                        network_sent_mb, network_recv_mb,
+                        load_1min, load_5min, load_15min,
+                        process_count, docker_containers, temperature
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    metrics.get('cpu_percent'),
+                    metrics.get('memory_percent'),
+                    metrics.get('memory_used_mb'),
+                    metrics.get('memory_total_mb'),
+                    metrics.get('disk_percent'),
+                    metrics.get('disk_used_gb'),
+                    metrics.get('disk_total_gb'),
+                    metrics.get('network_sent_mb'),
+                    metrics.get('network_recv_mb'),
+                    metrics.get('load_1min'),
+                    metrics.get('load_5min'),
+                    metrics.get('load_15min'),
+                    metrics.get('process_count'),
+                    metrics.get('docker_containers'),
+                    metrics.get('temperature')
+                ))
+                conn.commit()
+        except Exception as e:
+            # Log error but don't crash the monitoring
+            logging.getLogger(__name__).error(f"Failed to store metrics: {e}")
     
-    def get_historical_metrics(self, hours: int = 24) -> List[Dict]:
-        """Get historical metrics for the specified time period"""
+    def store_metrics_batch(self, metrics_list: List[Dict]):
+        """Store multiple metrics in a single transaction for better performance"""
+        if not metrics_list:
+            return
+        
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                data = []
+                for metrics in metrics_list:
+                    data.append((
+                        metrics.get('cpu_percent'),
+                        metrics.get('memory_percent'),
+                        metrics.get('memory_used_mb'),
+                        metrics.get('memory_total_mb'),
+                        metrics.get('disk_percent'),
+                        metrics.get('disk_used_gb'),
+                        metrics.get('disk_total_gb'),
+                        metrics.get('network_sent_mb'),
+                        metrics.get('network_recv_mb'),
+                        metrics.get('load_1min'),
+                        metrics.get('load_5min'),
+                        metrics.get('load_15min'),
+                        metrics.get('process_count'),
+                        metrics.get('docker_containers'),
+                        metrics.get('temperature')
+                    ))
+                
+                cursor.executemany('''
+                    INSERT INTO system_metrics (
+                        cpu_percent, memory_percent, memory_used_mb, memory_total_mb,
+                        disk_percent, disk_used_gb, disk_total_gb,
+                        network_sent_mb, network_recv_mb,
+                        load_1min, load_5min, load_15min,
+                        process_count, docker_containers, temperature
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', data)
+                conn.commit()
+        except Exception as e:
+            logging.getLogger(__name__).error(f"Failed to store metrics batch: {e}")
+    
+    def get_historical_metrics(self, hours: int = 24, limit: int = 1000) -> List[Dict]:
+        """Get historical metrics for the specified time period with caching and optimization"""
+        cache_key = f'historical_metrics_{hours}h_{limit}'
+        cached_result = self._get_cached(cache_key, ttl=300)  # 5 min cache
+        if cached_result:
+            return cached_result
+        
         cutoff = datetime.now() - timedelta(hours=hours)
         
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT * FROM system_metrics 
-                WHERE timestamp > ? 
-                ORDER BY timestamp DESC
-            ''', (cutoff,))
-            
-            columns = [desc[0] for desc in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                # Use LIMIT for performance and select only needed columns
+                cursor.execute('''
+                    SELECT timestamp, cpu_percent, memory_percent, disk_percent, 
+                           network_sent_mb, network_recv_mb, load_1min, 
+                           process_count, docker_containers, temperature
+                    FROM system_metrics 
+                    WHERE timestamp > ? 
+                    ORDER BY timestamp DESC 
+                    LIMIT ?
+                ''', (cutoff, limit))
+                
+                columns = [desc[0] for desc in cursor.description]
+                result = [dict(zip(columns, row)) for row in cursor.fetchall()]
+                
+                # Cache the result
+                self._set_cache(cache_key, result, ttl=300)
+                return result
+        except Exception as e:
+            logging.getLogger(__name__).error(f"Failed to get historical metrics: {e}")
+            return []
     
     def cleanup_old_metrics(self, days: int = 30):
         """Clean up metrics older than specified days"""
@@ -251,18 +443,66 @@ class ServiceManager:
         self.metrics_db = metrics_db
         self.services = {}
         self.docker_containers = {}
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="ServiceManager")
+        self._cache = {}
+        self._cache_expiry = {}
+        self._cache_lock = threading.Lock()
         self._update_services()
     
+    def _get_cached(self, key: str, ttl: int = 60):
+        """Get cached value if not expired"""
+        with self._cache_lock:
+            if key in self._cache and key in self._cache_expiry:
+                if time.time() < self._cache_expiry[key]:
+                    return self._cache[key]
+                else:
+                    del self._cache[key]
+                    del self._cache_expiry[key]
+            return None
+    
+    def _set_cache(self, key: str, value: Any, ttl: int = 60):
+        """Set cached value with TTL"""
+        with self._cache_lock:
+            self._cache[key] = value
+            self._cache_expiry[key] = time.time() + ttl
+    
     def _update_services(self):
-        """Update service and container information"""
-        # Get systemd services
-        self.services = self._get_systemd_services()
+        """Update service and container information with parallel execution"""
+        # Check cache first
+        cache_key = 'all_services'
+        cached_services = self._get_cached(cache_key, ttl=30)
+        if cached_services:
+            self.services = cached_services.get('services', {})
+            self.docker_containers = cached_services.get('docker_containers', {})
+            self.tmux_sessions = cached_services.get('tmux_sessions', [])
+            return
         
-        # Get Docker containers
-        self.docker_containers = self._get_docker_containers()
+        # Submit tasks to executor for parallel execution
+        futures = {
+            'services': self.executor.submit(self._get_systemd_services),
+            'docker': self.executor.submit(self._get_docker_containers),
+            'tmux': self.executor.submit(self._get_tmux_sessions)
+        }
         
-        # Get tmux sessions
-        self.tmux_sessions = self._get_tmux_sessions()
+        # Wait for all tasks to complete
+        try:
+            self.services = futures['services'].result(timeout=10)
+            self.docker_containers = futures['docker'].result(timeout=10)
+            self.tmux_sessions = futures['tmux'].result(timeout=5)
+            
+            # Cache the results
+            all_services = {
+                'services': self.services,
+                'docker_containers': self.docker_containers,
+                'tmux_sessions': self.tmux_sessions
+            }
+            self._set_cache(cache_key, all_services, ttl=30)
+            
+        except concurrent.futures.TimeoutError:
+            # Fallback to cached data if available
+            for future in futures.values():
+                future.cancel()
+            logging.getLogger(__name__).warning("Service update timeout, using cached data")
     
     def _get_systemd_services(self) -> Dict:
         """Get status of important systemd services"""
