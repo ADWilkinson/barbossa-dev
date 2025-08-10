@@ -299,6 +299,20 @@ class ServiceManager:
             except:
                 services[service] = {'status': 'unknown', 'active': False}
         
+        # Special handling for cloudflared which runs in tmux
+        if 'cloudflared' in services and not services['cloudflared']['active']:
+            # Check if cloudflared is running in tmux
+            try:
+                result = subprocess.run(['pgrep', '-f', 'cloudflared tunnel'], capture_output=True, text=True)
+                if result.returncode == 0 and result.stdout.strip():
+                    services['cloudflared'] = {
+                        'status': 'active (tmux)',
+                        'active': True,
+                        'pid': int(result.stdout.strip().split()[0])
+                    }
+            except:
+                pass
+        
         return services
     
     def _get_docker_containers(self) -> Dict:

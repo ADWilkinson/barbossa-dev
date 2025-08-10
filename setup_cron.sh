@@ -6,10 +6,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "Setting up Enhanced Barbossa cron job..."
 
 # Create the cron job entry (runs every 4 hours)
-CRON_JOB="0 */4 * * * $SCRIPT_DIR/run_barbossa_enhanced.sh"
+CRON_JOB="0 */4 * * * $SCRIPT_DIR/run_barbossa.sh"
 
 # Check if cron job already exists
-if crontab -l 2>/dev/null | grep -q "run_barbossa_enhanced.sh"; then
+if crontab -l 2>/dev/null | grep -q "run_barbossa.sh"; then
     echo "Enhanced Barbossa cron job already exists"
 else
     # Add the cron job
