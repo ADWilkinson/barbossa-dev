@@ -101,16 +101,11 @@ class BarbossaEnhanced:
         'infrastructure': {
             'name': 'Server Infrastructure Management',
             'description': 'Comprehensive server monitoring, optimization, and maintenance',
-            'weight': 2.0,
+            'weight': 0.1,  # MINIMAL - Only for critical issues
             'tasks': [
-                'System performance optimization',
-                'Docker container management',
-                'Service health monitoring',
-                'Security hardening',
-                'Backup management',
-                'Log rotation and cleanup',
-                'Network optimization',
-                'Resource usage analysis'
+                'Critical security patches only',
+                'Emergency system fixes',
+                'Critical service failures'
             ]
         },
         'personal_projects': {
@@ -124,25 +119,21 @@ class BarbossaEnhanced:
                 'ADWilkinson/saylormemes',
                 'ADWilkinson/the-flying-dutchman-theme'
             ],
-            'weight': 1.5
+            'weight': 7.0  # HIGH - 70% weight (multiple projects)
         },
         'davy_jones': {
             'name': 'Davy Jones Intern Enhancement',
             'description': 'Bot improvements without affecting production',
             'repository': 'ADWilkinson/davy-jones-intern',
-            'weight': 1.0
+            'weight': 3.0  # MODERATE - 30% weight (single project)
         },
         'barbossa_self': {
             'name': 'Barbossa Self-Improvement',
             'description': 'Enhance Barbossa capabilities and features',
-            'weight': 1.5,
+            'weight': 0.2,  # LOW - Minimal priority
             'tasks': [
-                'Add new monitoring metrics',
-                'Improve dashboard UI/UX',
-                'Enhance security features',
-                'Add automation workflows',
-                'Implement new API endpoints',
-                'Optimize performance'
+                'Critical bug fixes only',
+                'Essential feature updates'
             ]
         }
     }
@@ -582,14 +573,14 @@ INSTRUCTIONS:
 4. Pull latest changes: git pull origin main (or master)
 5. Create new feature branch from updated main: git checkout -b feature/barbossa-improvement-{timestamp}
 6. Analyze codebase comprehensively
-7. Choose ONE significant improvement:
-   - Add comprehensive test coverage
-   - Implement new feature
-   - Refactor for better architecture
-   - Fix bugs and issues
-   - Optimize performance
-   - Update dependencies
-   - Improve documentation
+7. Choose ONE significant improvement (PRIORITIZE IN THIS ORDER):
+   - Implement new feature (HIGHEST PRIORITY)
+   - Refactor for better architecture and code quality
+   - Optimize performance and efficiency
+   - Fix critical bugs and issues
+   - Update critical dependencies
+   - Improve inline code documentation (minimal)
+   - Add tests ONLY if absolutely necessary (LOWEST PRIORITY)
 
 8. Implement the improvement completely
 9. Run tests if available

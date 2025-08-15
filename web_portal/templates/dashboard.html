@@ -1140,6 +1140,158 @@
             </div>
         </div>
 
+        <!-- NEW: Backup & Restore Card -->
+        <div class="card">
+            <h2>BACKUP_RESTORE</h2>
+            <div style="margin-bottom: 10px;">
+                <button class="button" onclick="createBackup('full')" style="width: 100%; margin-bottom: 5px;">▸ CREATE_FULL_BACKUP</button>
+                <button class="button secondary" onclick="createBackup('config')" style="width: 48%; margin-right: 2%;">CONFIG_ONLY</button>
+                <button class="button secondary" onclick="createBackup('data')" style="width: 48%;">DATA_ONLY</button>
+            </div>
+            <div class="log-viewer" id="backup-list" style="height: 150px; font-size: 10px;">
+                <!-- Backups populated by JS -->
+            </div>
+            <div style="margin-top: 10px;">
+                <button class="button secondary" onclick="refreshBackups()" style="width: 100%;">↻ REFRESH_BACKUPS</button>
+            </div>
+        </div>
+
+        <!-- NEW: Advanced Search Card -->
+        <div class="card">
+            <h2>ADVANCED_SEARCH</h2>
+            <input type="text" class="search-box" id="advanced-search-input" placeholder="SEARCH_ALL_SYSTEMS://" onkeypress="if(event.key==='Enter')performAdvancedSearch()">
+            <div class="tabs" style="margin-top: 10px;">
+                <button class="tab active" onclick="setSearchCategory('all')">ALL</button>
+                <button class="tab" onclick="setSearchCategory('projects')">PROJECTS</button>
+                <button class="tab" onclick="setSearchCategory('tasks')">TASKS</button>
+                <button class="tab" onclick="setSearchCategory('logs')">LOGS</button>
+                <button class="tab" onclick="setSearchCategory('config')">CONFIG</button>
+            </div>
+            <div class="log-viewer" id="search-results" style="height: 180px; margin-top: 10px;">
+                <div style="color: #666; text-align: center; padding: 20px;">Enter search query above...</div>
+            </div>
+        </div>
+
+        <!-- NEW: Performance Monitoring Card - Full Width -->
+        <div class="card" style="grid-column: span 2;">
+            <h2>PERFORMANCE_MONITORING</h2>
+            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 10px;">
+                <div class="stat-box">
+                    <div class="value" id="perf-cpu-usage">-</div>
+                    <div class="label">CPU_USAGE</div>
+                </div>
+                <div class="stat-box">
+                    <div class="value" id="perf-memory-usage">-</div>
+                    <div class="label">MEM_USAGE</div>
+                </div>
+                <div class="stat-box">
+                    <div class="value" id="perf-disk-io">-</div>
+                    <div class="label">DISK_IO</div>
+                </div>
+                <div class="stat-box">
+                    <div class="value" id="perf-network-io">-</div>
+                    <div class="label">NET_IO</div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button class="button" onclick="runBenchmark('quick')">▸ QUICK_BENCHMARK</button>
+                <button class="button" onclick="runBenchmark('full')">▸ FULL_BENCHMARK</button>
+                <button class="button secondary" onclick="getPerformanceRecommendations()">▸ GET_RECOMMENDATIONS</button>
+            </div>
+            <div class="log-viewer" id="performance-results" style="height: 200px;">
+                <!-- Performance data populated by JS -->
+            </div>
+        </div>
+
+        <!-- NEW: Database Management Card -->
+        <div class="card">
+            <h2>DATABASE_MANAGEMENT</h2>
+            <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 10px;">
+                <div class="stat-box">
+                    <div class="value" id="db-size">-</div>
+                    <div class="label">TOTAL_SIZE</div>
+                </div>
+                <div class="stat-box">
+                    <div class="value" id="db-records">-</div>
+                    <div class="label">RECORDS</div>
+                </div>
+            </div>
+            <div id="database-list" class="log-viewer" style="height: 120px; margin-bottom: 10px;">
+                <!-- Database info populated by JS -->
+            </div>
+            <div style="display: flex; gap: 5px;">
+                <button class="button" onclick="optimizeDatabase('all')">▸ OPTIMIZE_ALL</button>
+                <button class="button secondary" onclick="getDatabaseStats()">▸ REFRESH_STATS</button>
+            </div>
+        </div>
+
+        <!-- NEW: System Analytics Card -->
+        <div class="card">
+            <h2>SYSTEM_ANALYTICS</h2>
+            <div style="margin-bottom: 10px;">
+                <select id="analytics-period" class="search-box" onchange="updateAnalytics()" style="width: 100%; background: rgba(0, 20, 0, 0.5); border: 1px solid #00ff00; color: #00ff00;">
+                    <option value="7d">LAST_7_DAYS</option>
+                    <option value="30d" selected>LAST_30_DAYS</option>
+                    <option value="90d">LAST_90_DAYS</option>
+                    <option value="1y">LAST_YEAR</option>
+                </select>
+            </div>
+            <div id="analytics-summary" class="log-viewer" style="height: 200px;">
+                <!-- Analytics populated by JS -->
+            </div>
+        </div>
+
+        <!-- NEW: Alert Management Card - Full Width -->
+        <div class="card" style="grid-column: span 2;">
+            <h2>ALERT_MANAGEMENT</h2>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <input type="text" id="alert-name" placeholder="Alert name" class="search-box" style="flex: 1;">
+                <select id="alert-metric" class="search-box" style="flex: 1; background: rgba(0, 20, 0, 0.5); border: 1px solid #00ff00; color: #00ff00;">
+                    <option value="cpu">CPU</option>
+                    <option value="memory">MEMORY</option>
+                    <option value="disk">DISK</option>
+                    <option value="network">NETWORK</option>
+                </select>
+                <input type="number" id="alert-threshold" placeholder="Threshold %" class="search-box" style="width: 100px;">
+                <button class="button" onclick="createAlert()">+ ADD_ALERT</button>
+            </div>
+            <div id="alert-list" class="log-viewer" style="height: 150px;">
+                <!-- Alerts populated by JS -->
+            </div>
+        </div>
+
+        <!-- NEW: Integration Webhooks Card -->
+        <div class="card">
+            <h2>INTEGRATIONS</h2>
+            <div id="webhook-list" class="log-viewer" style="height: 150px; margin-bottom: 10px;">
+                <!-- Webhooks populated by JS -->
+            </div>
+            <button class="button" onclick="showWebhookDialog()" style="width: 100%;">+ ADD_WEBHOOK</button>
+        </div>
+
+        <!-- NEW: Real-time Monitoring Card -->
+        <div class="card">
+            <h2>REALTIME_MONITOR</h2>
+            <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 10px;">
+                <div class="stat-box">
+                    <div class="value" id="realtime-cpu">-</div>
+                    <div class="label">CPU_NOW</div>
+                </div>
+                <div class="stat-box">
+                    <div class="value" id="realtime-mem">-</div>
+                    <div class="label">MEM_NOW</div>
+                </div>
+            </div>
+            <div id="top-processes" class="log-viewer" style="height: 150px;">
+                <!-- Top processes populated by JS -->
+            </div>
+            <div style="margin-top: 10px;">
+                <label style="color: #666; font-size: 10px;">
+                    <input type="checkbox" id="auto-refresh-realtime" checked> AUTO_REFRESH (5s)
+                </label>
+            </div>
+        </div>
+
     </div>
 
     
@@ -1155,10 +1307,12 @@
     </div>
     <script>
         let currentData = {};
+        let searchCategory = 'all';
+        let realtimeInterval = null;
         
         async function fetchData() {
             try {
-                // Fetch data with better error handling
+                // Fetch data with better error handling - INCLUDING NEW V2 ENDPOINTS
                 const responses = await Promise.allSettled([
                     fetch('/api/status').then(r => r.ok ? r.json() : Promise.reject(`Status API failed: ${r.status}`)),
                     fetch('/api/changelogs').then(r => r.ok ? r.json() : Promise.reject(`Changelogs API failed: ${r.status}`)),
@@ -1167,23 +1321,32 @@
                     fetch('/api/services').then(r => r.ok ? r.json() : Promise.reject(`Services API failed: ${r.status}`)),
                     fetch('/api/comprehensive-status').then(r => r.ok ? r.json() : null),
                     fetch('/api/network-status').then(r => r.ok ? r.json() : null),
-                    fetch('/api/projects').then(r => r.ok ? r.json() : null)
+                    fetch('/api/projects').then(r => r.ok ? r.json() : null),
+                    // NEW V2 API ENDPOINTS
+                    fetch('/api/v2/backup/list').then(r => r.ok ? r.json() : null),
+                    fetch('/api/v2/database/stats').then(r => r.ok ? r.json() : null),
+                    fetch('/api/v2/monitoring/alerts').then(r => r.ok ? r.json() : null),
+                    fetch('/api/v2/integration/webhooks').then(r => r.ok ? r.json() : null),
+                    fetch('/api/v2/analytics/summary?period=30d').then(r => r.ok ? r.json() : null)
                 ]);
                 
                 // Process responses with fallbacks
-                const [status, changelogs, security, claude, services, comprehensive, network, projects] = responses.map((response, index) => {
+                const [status, changelogs, security, claude, services, comprehensive, network, projects, 
+                       backups, database, alerts, webhooks, analytics] = responses.map((response, index) => {
                     if (response.status === 'fulfilled') {
                         return response.value;
                     } else {
-                        const fallbacks = [{}, [], [], [], {}];
+                        const fallbacks = [{}, [], [], [], {}, null, null, null, null, null, null, null, null];
                         console.warn(`API ${index} failed:`, response.reason);
                         return fallbacks[index];
                     }
                 });
                 
-                currentData = { status, changelogs, security, claude, services, comprehensive, network, projects };
+                currentData = { status, changelogs, security, claude, services, comprehensive, network, projects,
+                              backups, database, alerts, webhooks, analytics };
                 updateUI();
                 updateComprehensiveData();
+                updateEnhancedFeatures();
                 
             } catch (error) {
                 console.error('Critical error fetching data:', error);
@@ -1913,6 +2076,617 @@
                 modal.style.display = 'none';
             }
         }
+
+        // ============================================================================
+        // NEW ENHANCED API V2 FUNCTIONS
+        // ============================================================================
+        
+        // Update all enhanced features with V2 API data
+        function updateEnhancedFeatures() {
+            // Update backups
+            if (currentData.backups) {
+                updateBackupList();
+            }
+            
+            // Update database stats
+            if (currentData.database) {
+                updateDatabaseInfo();
+            }
+            
+            // Update alerts
+            if (currentData.alerts) {
+                updateAlertsList();
+            }
+            
+            // Update webhooks
+            if (currentData.webhooks) {
+                updateWebhooksList();
+            }
+            
+            // Update analytics
+            if (currentData.analytics) {
+                updateAnalyticsSummary();
+            }
+        }
+        
+        // BACKUP & RESTORE FUNCTIONS
+        async function createBackup(type = 'full') {
+            const includeLogs = confirm('Include log files in backup?');
+            try {
+                const response = await fetch('/api/v2/backup/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        type: type,
+                        include_logs: includeLogs,
+                        compression: 'gzip'
+                    })
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert(`✅ Backup created: ${result.backup.name}\nSize: ${(result.backup.size / 1024 / 1024).toFixed(2)} MB`);
+                    refreshBackups();
+                } else {
+                    alert(`❌ Backup failed: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`❌ Error creating backup: ${error.message}`);
+            }
+        }
+        
+        async function refreshBackups() {
+            try {
+                const response = await fetch('/api/v2/backup/list');
+                const data = await response.json();
+                currentData.backups = data;
+                updateBackupList();
+            } catch (error) {
+                console.error('Failed to refresh backups:', error);
+            }
+        }
+        
+        function updateBackupList() {
+            const backupList = document.getElementById('backup-list');
+            if (!backupList || !currentData.backups) return;
+            
+            backupList.innerHTML = '';
+            if (currentData.backups.backups && currentData.backups.backups.length > 0) {
+                for (const backup of currentData.backups.backups.slice(0, 5)) {
+                    const sizeInMB = (backup.size / 1024 / 1024).toFixed(2);
+                    const date = new Date(backup.created_at).toLocaleString();
+                    backupList.innerHTML += `
+                        <div class="log-entry" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="color: #0f0;">[${backup.type.toUpperCase()}]</span>
+                                <span style="color: #999; font-size: 9px;">${date}</span>
+                                <span style="color: #666;">${sizeInMB} MB</span>
+                            </div>
+                            <div>
+                                <button class="button" onclick="restoreBackup('${backup.id}')" style="padding: 2px 6px; font-size: 9px;">RESTORE</button>
+                                <button class="button danger" onclick="deleteBackup('${backup.id}')" style="padding: 2px 6px; font-size: 9px;">DELETE</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            } else {
+                backupList.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">No backups available</div>';
+            }
+        }
+        
+        async function restoreBackup(backupId) {
+            if (!confirm('Are you sure you want to restore from this backup? Current data will be overwritten.')) return;
+            
+            try {
+                const response = await fetch(`/api/v2/backup/${backupId}/restore`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'config', force: false })
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert(`✅ Restore completed: ${result.restored_files.length} files restored`);
+                    location.reload();
+                } else {
+                    alert(`❌ Restore failed: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`❌ Error restoring backup: ${error.message}`);
+            }
+        }
+        
+        async function deleteBackup(backupId) {
+            if (!confirm('Delete this backup permanently?')) return;
+            
+            try {
+                const response = await fetch(`/api/v2/backup/${backupId}/delete`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert('✅ Backup deleted');
+                    refreshBackups();
+                } else {
+                    alert(`❌ Delete failed: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`❌ Error deleting backup: ${error.message}`);
+            }
+        }
+        
+        // ADVANCED SEARCH FUNCTIONS
+        function setSearchCategory(category) {
+            searchCategory = category;
+            document.querySelectorAll('.tabs .tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+        
+        async function performAdvancedSearch() {
+            const query = document.getElementById('advanced-search-input').value;
+            if (!query) return;
+            
+            const resultsDiv = document.getElementById('search-results');
+            resultsDiv.innerHTML = '<div style="color: #ff0; text-align: center; padding: 20px;">Searching...</div>';
+            
+            try {
+                const response = await fetch(`/api/v2/search?q=${encodeURIComponent(query)}&category=${searchCategory}&limit=20`);
+                const data = await response.json();
+                
+                resultsDiv.innerHTML = '';
+                
+                if (data.total_results === 0) {
+                    resultsDiv.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">No results found</div>';
+                    return;
+                }
+                
+                // Display results by category
+                if (data.results.projects && data.results.projects.length > 0) {
+                    resultsDiv.innerHTML += '<div style="color: #0f0; font-size: 10px; margin: 5px 0;">PROJECTS:</div>';
+                    for (const project of data.results.projects) {
+                        resultsDiv.innerHTML += `<div class="log-entry" style="font-size: 10px;">• ${project.name}: ${project.description}</div>`;
+                    }
+                }
+                
+                if (data.results.tasks && data.results.tasks.length > 0) {
+                    resultsDiv.innerHTML += '<div style="color: #0f0; font-size: 10px; margin: 5px 0;">TASKS:</div>';
+                    for (const task of data.results.tasks) {
+                        resultsDiv.innerHTML += `<div class="log-entry" style="font-size: 10px;">• ${task.title} (${task.project_name})</div>`;
+                    }
+                }
+                
+                if (data.results.logs && data.results.logs.length > 0) {
+                    resultsDiv.innerHTML += '<div style="color: #0f0; font-size: 10px; margin: 5px 0;">LOGS:</div>';
+                    for (const log of data.results.logs.slice(0, 5)) {
+                        resultsDiv.innerHTML += `<div class="log-entry" style="font-size: 10px;">• ${log.file}:${log.line_number} - ${log.preview}</div>`;
+                    }
+                }
+                
+                if (data.results.config && data.results.config.length > 0) {
+                    resultsDiv.innerHTML += '<div style="color: #0f0; font-size: 10px; margin: 5px 0;">CONFIG:</div>';
+                    for (const config of data.results.config) {
+                        resultsDiv.innerHTML += `<div class="log-entry" style="font-size: 10px;">• ${config.file}</div>`;
+                    }
+                }
+                
+                resultsDiv.innerHTML += `<div style="color: #666; font-size: 9px; margin-top: 10px; text-align: center;">Total: ${data.total_results} results</div>`;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div style="color: #f00; text-align: center; padding: 20px;">Search error: ${error.message}</div>`;
+            }
+        }
+        
+        // PERFORMANCE MONITORING FUNCTIONS
+        async function runBenchmark(type = 'quick') {
+            const perfResults = document.getElementById('performance-results');
+            perfResults.innerHTML = '<div style="color: #ff0; text-align: center; padding: 20px;">Running benchmark...</div>';
+            
+            try {
+                const response = await fetch('/api/v2/performance/benchmark', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: type,
+                        duration: type === 'quick' ? 30 : 60,
+                        tests: ['cpu', 'memory', 'disk']
+                    })
+                });
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    perfResults.innerHTML = '<div style="color: #0f0; font-size: 11px; margin-bottom: 10px;">BENCHMARK RESULTS:</div>';
+                    for (const test of data.benchmark_results.tests) {
+                        perfResults.innerHTML += `
+                            <div class="log-entry" style="margin: 5px 0;">
+                                <span style="color: #0f0;">[${test.type.toUpperCase()}]</span>
+                                <span style="color: #fff;">Avg: ${test.avg_usage?.toFixed(2) || 'N/A'}%</span>
+                                <span style="color: #999;">Max: ${test.max_usage?.toFixed(2) || 'N/A'}%</span>
+                                <span style="color: #666;">Duration: ${test.duration?.toFixed(1)}s</span>
+                            </div>
+                        `;
+                    }
+                    perfResults.innerHTML += `<div style="color: #666; font-size: 9px; margin-top: 10px;">Total duration: ${data.benchmark_results.total_duration.toFixed(1)}s</div>`;
+                } else {
+                    perfResults.innerHTML = `<div style="color: #f00;">Benchmark failed: ${data.error}</div>`;
+                }
+            } catch (error) {
+                perfResults.innerHTML = `<div style="color: #f00;">Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function getPerformanceRecommendations() {
+            const perfResults = document.getElementById('performance-results');
+            perfResults.innerHTML = '<div style="color: #ff0; text-align: center; padding: 20px;">Analyzing performance...</div>';
+            
+            try {
+                const response = await fetch('/api/v2/performance/recommendations');
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.recommendations) {
+                    perfResults.innerHTML = '<div style="color: #0f0; font-size: 11px; margin-bottom: 10px;">PERFORMANCE RECOMMENDATIONS:</div>';
+                    
+                    for (const rec of data.recommendations) {
+                        const severityColor = rec.severity === 'critical' ? '#f00' : 
+                                            rec.severity === 'high' ? '#ff0' : 
+                                            rec.severity === 'medium' ? '#fa0' : '#0f0';
+                        
+                        perfResults.innerHTML += `
+                            <div style="border: 1px solid ${severityColor}; padding: 5px; margin: 5px 0;">
+                                <div style="color: ${severityColor}; font-size: 10px;">[${rec.severity.toUpperCase()}] ${rec.title}</div>
+                                <div style="color: #fff; font-size: 9px; margin: 3px 0;">${rec.description}</div>
+                                <div style="color: #666; font-size: 9px;">Current: ${rec.current_value?.toFixed(1)}% | Threshold: ${rec.threshold}%</div>
+                            </div>
+                        `;
+                    }
+                    
+                    if (data.recommendations.length === 0) {
+                        perfResults.innerHTML += '<div style="color: #0f0; text-align: center; padding: 20px;">✅ System performance is optimal!</div>';
+                    }
+                } else {
+                    perfResults.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">No recommendations available</div>';
+                }
+            } catch (error) {
+                perfResults.innerHTML = `<div style="color: #f00;">Error: ${error.message}</div>`;
+            }
+        }
+        
+        // DATABASE MANAGEMENT FUNCTIONS
+        async function getDatabaseStats() {
+            try {
+                const response = await fetch('/api/v2/database/stats');
+                const data = await response.json();
+                currentData.database = data;
+                updateDatabaseInfo();
+            } catch (error) {
+                console.error('Failed to get database stats:', error);
+            }
+        }
+        
+        function updateDatabaseInfo() {
+            if (!currentData.database || !currentData.database.database_stats) return;
+            
+            const stats = currentData.database.database_stats;
+            document.getElementById('db-size').textContent = (stats.total_size / 1024 / 1024).toFixed(2) + ' MB';
+            document.getElementById('db-records').textContent = stats.total_records || '0';
+            
+            const dbList = document.getElementById('database-list');
+            if (dbList && stats.databases) {
+                dbList.innerHTML = '';
+                for (const db of stats.databases) {
+                    const sizeInKB = (db.size / 1024).toFixed(2);
+                    dbList.innerHTML += `
+                        <div class="log-entry" style="font-size: 10px;">
+                            <span style="color: #0f0;">${db.name}</span>
+                            <span style="color: #999;">Size: ${sizeInKB} KB</span>
+                            <span style="color: #666;">Tables: ${db.tables?.length || 0}</span>
+                            <span style="color: #666;">Records: ${db.total_records || 0}</span>
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        async function optimizeDatabase(database = 'all') {
+            if (!confirm(`Optimize ${database === 'all' ? 'all databases' : database}? This may take a few moments.`)) return;
+            
+            try {
+                const response = await fetch('/api/v2/database/optimize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        database: database,
+                        operations: ['vacuum', 'analyze']
+                    })
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    const savedMB = (result.total_space_saved / 1024 / 1024).toFixed(2);
+                    alert(`✅ Optimization complete!\nSpace saved: ${savedMB} MB`);
+                    getDatabaseStats();
+                } else {
+                    alert(`❌ Optimization failed: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`❌ Error: ${error.message}`);
+            }
+        }
+        
+        // ANALYTICS FUNCTIONS
+        async function updateAnalytics() {
+            const period = document.getElementById('analytics-period').value;
+            
+            try {
+                const response = await fetch(`/api/v2/analytics/summary?period=${period}`);
+                const data = await response.json();
+                currentData.analytics = data;
+                updateAnalyticsSummary();
+            } catch (error) {
+                console.error('Failed to update analytics:', error);
+            }
+        }
+        
+        function updateAnalyticsSummary() {
+            const summaryDiv = document.getElementById('analytics-summary');
+            if (!summaryDiv || !currentData.analytics || !currentData.analytics.analytics) return;
+            
+            const analytics = currentData.analytics.analytics;
+            summaryDiv.innerHTML = `
+                <div style="padding: 10px;">
+                    <div style="color: #0f0; font-size: 11px; margin-bottom: 10px;">PERIOD: ${analytics.period}</div>
+                    
+                    <div style="margin: 10px 0;">
+                        <div style="color: #999; font-size: 10px;">SYSTEM</div>
+                        <div style="color: #fff; font-size: 10px;">• Uptime: ${analytics.system?.uptime_days?.toFixed(1) || 0} days</div>
+                        <div style="color: #fff; font-size: 10px;">• Process Count: ${analytics.system?.process_count || 0}</div>
+                    </div>
+                    
+                    <div style="margin: 10px 0;">
+                        <div style="color: #999; font-size: 10px;">PROJECTS</div>
+                        <div style="color: #fff; font-size: 10px;">• Total: ${analytics.projects?.total || 0}</div>
+                        <div style="color: #fff; font-size: 10px;">• Active: ${analytics.projects?.by_status?.active || 0} (${analytics.projects?.active_percentage?.toFixed(1) || 0}%)</div>
+                    </div>
+                    
+                    <div style="margin: 10px 0;">
+                        <div style="color: #999; font-size: 10px;">TASKS</div>
+                        <div style="color: #fff; font-size: 10px;">• Total: ${analytics.tasks?.total || 0}</div>
+                        <div style="color: #fff; font-size: 10px;">• Completion Rate: ${analytics.tasks?.completion_rate?.toFixed(1) || 0}%</div>
+                    </div>
+                    
+                    <div style="margin: 10px 0;">
+                        <div style="color: #999; font-size: 10px;">SECURITY</div>
+                        <div style="color: #fff; font-size: 10px;">• Total Audits: ${analytics.security?.total_audits || 0}</div>
+                        <div style="color: ${analytics.security?.total_violations > 0 ? '#f00' : '#0f0'}; font-size: 10px;">• Violations: ${analytics.security?.total_violations || 0}</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // ALERT MANAGEMENT FUNCTIONS
+        async function createAlert() {
+            const name = document.getElementById('alert-name').value;
+            const metric = document.getElementById('alert-metric').value;
+            const threshold = document.getElementById('alert-threshold').value;
+            
+            if (!name || !threshold) {
+                alert('Please provide alert name and threshold');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/v2/monitoring/alerts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        metric: metric,
+                        threshold: parseFloat(threshold),
+                        severity: threshold > 90 ? 'critical' : threshold > 75 ? 'high' : 'medium',
+                        enabled: true
+                    })
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    alert('✅ Alert created successfully');
+                    document.getElementById('alert-name').value = '';
+                    document.getElementById('alert-threshold').value = '';
+                    refreshAlerts();
+                } else {
+                    alert(`❌ Failed to create alert: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`❌ Error: ${error.message}`);
+            }
+        }
+        
+        async function refreshAlerts() {
+            try {
+                const response = await fetch('/api/v2/monitoring/alerts');
+                const data = await response.json();
+                currentData.alerts = data;
+                updateAlertsList();
+            } catch (error) {
+                console.error('Failed to refresh alerts:', error);
+            }
+        }
+        
+        function updateAlertsList() {
+            const alertList = document.getElementById('alert-list');
+            if (!alertList || !currentData.alerts) return;
+            
+            alertList.innerHTML = '';
+            
+            if (currentData.alerts.active_alerts && currentData.alerts.active_alerts.length > 0) {
+                alertList.innerHTML += '<div style="color: #f00; font-size: 10px; margin-bottom: 5px;">ACTIVE ALERTS:</div>';
+                for (const alert of currentData.alerts.active_alerts) {
+                    alertList.innerHTML += `
+                        <div class="log-entry error" style="font-size: 10px;">
+                            ⚠ ${alert.name}: ${alert.current_value?.toFixed(1)}% (threshold: ${alert.threshold}%)
+                        </div>
+                    `;
+                }
+            }
+            
+            if (currentData.alerts.alerts && currentData.alerts.alerts.length > 0) {
+                alertList.innerHTML += '<div style="color: #0f0; font-size: 10px; margin: 10px 0 5px 0;">CONFIGURED ALERTS:</div>';
+                for (const alert of currentData.alerts.alerts) {
+                    const statusColor = alert.enabled ? '#0f0' : '#666';
+                    alertList.innerHTML += `
+                        <div class="log-entry" style="font-size: 10px;">
+                            <span style="color: ${statusColor};">[${alert.enabled ? 'ON' : 'OFF'}]</span>
+                            ${alert.name} - ${alert.metric} > ${alert.threshold}%
+                            <span style="color: #666;">(${alert.severity})</span>
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        // WEBHOOK INTEGRATION FUNCTIONS
+        function updateWebhooksList() {
+            const webhookList = document.getElementById('webhook-list');
+            if (!webhookList || !currentData.webhooks) return;
+            
+            webhookList.innerHTML = '';
+            
+            if (currentData.webhooks.webhooks && currentData.webhooks.webhooks.length > 0) {
+                for (const webhook of currentData.webhooks.webhooks) {
+                    const statusColor = webhook.status === 'healthy' ? '#0f0' : '#f00';
+                    const statusText = webhook.enabled ? 'ENABLED' : 'DISABLED';
+                    
+                    webhookList.innerHTML += `
+                        <div class="log-entry" style="font-size: 10px;">
+                            <span style="color: ${statusColor};">[${statusText}]</span>
+                            ${webhook.name}
+                            <span style="color: #666;">Calls: ${webhook.total_calls} (Failed: ${webhook.failed_calls})</span>
+                        </div>
+                    `;
+                }
+            } else {
+                webhookList.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">No webhooks configured</div>';
+            }
+        }
+        
+        function showWebhookDialog() {
+            const name = prompt('Webhook name:');
+            if (!name) return;
+            
+            const url = prompt('Webhook URL:');
+            if (!url) return;
+            
+            const events = prompt('Events (comma-separated, e.g., system.alert,backup.created):');
+            if (!events) return;
+            
+            createWebhook(name, url, events.split(',').map(e => e.trim()));
+        }
+        
+        async function createWebhook(name, url, events) {
+            try {
+                const response = await fetch('/api/v2/integration/webhooks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        url: url,
+                        events: events,
+                        enabled: true
+                    })
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    alert('✅ Webhook created successfully');
+                    location.reload();
+                } else {
+                    alert(`❌ Failed to create webhook: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`❌ Error: ${error.message}`);
+            }
+        }
+        
+        // REAL-TIME MONITORING FUNCTIONS
+        async function updateRealtimeMonitoring() {
+            try {
+                const response = await fetch('/api/v2/monitoring/realtime');
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.metrics) {
+                    const metrics = data.metrics;
+                    
+                    // Update realtime stats
+                    document.getElementById('realtime-cpu').textContent = 
+                        metrics.system?.cpu?.usage_percent?.toFixed(1) + '%' || '-';
+                    document.getElementById('realtime-mem').textContent = 
+                        metrics.system?.memory?.virtual?.percent?.toFixed(1) + '%' || '-';
+                    
+                    // Update performance monitoring stats
+                    document.getElementById('perf-cpu-usage').textContent = 
+                        metrics.system?.cpu?.usage_percent?.toFixed(1) + '%' || '-';
+                    document.getElementById('perf-memory-usage').textContent = 
+                        metrics.system?.memory?.virtual?.percent?.toFixed(1) + '%' || '-';
+                    
+                    if (metrics.system?.disk_usage && metrics.system.disk_usage[0]) {
+                        document.getElementById('perf-disk-io').textContent = 
+                            metrics.system.disk_usage[0].percent?.toFixed(1) + '%' || '-';
+                    }
+                    
+                    if (metrics.system?.network) {
+                        const sent = (metrics.system.network.bytes_sent / 1024 / 1024).toFixed(1);
+                        const recv = (metrics.system.network.bytes_recv / 1024 / 1024).toFixed(1);
+                        document.getElementById('perf-network-io').textContent = `↑${sent}M ↓${recv}M`;
+                    }
+                    
+                    // Update top processes
+                    const topProcesses = document.getElementById('top-processes');
+                    if (topProcesses && metrics.top_processes) {
+                        topProcesses.innerHTML = '<div style="color: #0f0; font-size: 10px; margin-bottom: 5px;">TOP PROCESSES:</div>';
+                        for (const proc of metrics.top_processes.slice(0, 5)) {
+                            topProcesses.innerHTML += `
+                                <div class="log-entry" style="font-size: 9px;">
+                                    <span style="color: #0f0;">[${proc.pid}]</span>
+                                    ${proc.name.substring(0, 20).padEnd(20, '.')}
+                                    CPU: ${proc.cpu_percent?.toFixed(1)}%
+                                    MEM: ${proc.memory_percent?.toFixed(1)}%
+                                </div>
+                            `;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to update realtime monitoring:', error);
+            }
+        }
+        
+        // Start realtime monitoring updates
+        function startRealtimeMonitoring() {
+            if (document.getElementById('auto-refresh-realtime').checked) {
+                updateRealtimeMonitoring();
+                if (realtimeInterval) clearInterval(realtimeInterval);
+                realtimeInterval = setInterval(updateRealtimeMonitoring, 5000);
+            } else {
+                if (realtimeInterval) {
+                    clearInterval(realtimeInterval);
+                    realtimeInterval = null;
+                }
+            }
+        }
+        
+        // Initialize realtime monitoring on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Start realtime monitoring
+            startRealtimeMonitoring();
+            
+            // Update analytics on load
+            updateAnalytics();
+            
+            // Refresh enhanced features
+            refreshBackups();
+            getDatabaseStats();
+            refreshAlerts();
+            
+            // Set up auto-refresh checkbox listener
+            document.getElementById('auto-refresh-realtime').addEventListener('change', startRealtimeMonitoring);
+        });
 
     </script>
 </body>

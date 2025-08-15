@@ -16,45 +16,50 @@ WORK TALLY (Previous Sessions):
 - Personal Projects: {PERSONAL_PROJECTS_COUNT}  
 - Davy Jones Intern: {DAVY_JONES_COUNT}
 
-AVAILABLE WORK AREAS:
-1. Infrastructure Improvements
-   - Enhance server infrastructure
-   - Security hardening
-   - System optimization
-   - Package updates
-   - Docker improvements
+AVAILABLE WORK AREAS (PRIORITY ORDER):
 
-2. Personal Project Development
+1. Personal Project Development (HIGHEST PRIORITY - 70%)
    Allowed repositories:
    - ADWilkinson/_save
    - ADWilkinson/chordcraft-app
    - ADWilkinson/piggyonchain
-   - ADWilkinson/persona-website
-   - ADWilkinson/saylor-memes
+   - ADWilkinson/personal-website
+   - ADWilkinson/saylormemes
    - ADWilkinson/the-flying-dutchman-theme
    
-   Tasks:
-   - Analyze for improvements
-   - Implement new features
-   - Refactor code
-   - Add tests
-   - Update documentation
-   - Create PRs for review
+   Focus on (IN ORDER):
+   - Implement NEW FEATURES
+   - Refactor for better architecture
+   - Performance optimizations
+   - Critical bug fixes only
+   - Update critical dependencies
+   - Create feature-focused PRs
+   - AVOID writing new tests (fix broken ones only)
 
-3. Davy Jones Intern Development
+2. Davy Jones Intern Development (HIGH PRIORITY - 30%)
    Repository: ADWilkinson/davy-jones-intern
    IMPORTANT: DO NOT redeploy or affect the running production instance
-   - Only create improvements and new features
+   
+   Focus on (IN ORDER):
+   - Implement NEW FEATURES and capabilities
+   - Refactor and improve code architecture
+   - Optimize performance and efficiency
+   - Fix critical bugs only
    - Create PRs for manual review
-   - Test changes thoroughly
-   - Document all modifications
+   - Minimal test writing (fix broken tests only)
+
+3. Infrastructure Improvements (LOW PRIORITY - CRITICAL ONLY)
+   Only address if system is in critical state:
+   - Critical security patches
+   - System failures
+   - Emergency fixes
 
 EXECUTION INSTRUCTIONS:
-1. Select the work area with the lowest tally count to ensure balanced coverage
-2. If tallies are equal, use weighted random selection
-3. Execute development tasks for the selected area
-4. Run all necessary tests and linting
-5. Create pull requests for code changes (do not merge)
+1. PRIORITIZE Personal Projects and Davy Jones Intern (ignore infrastructure unless critical)
+2. Select between Personal Projects (70% chance) and Davy Jones (30% chance)
+3. Execute FEATURE DEVELOPMENT or REFACTORING tasks (not testing)
+4. Run linting and fix any broken tests (don't write new tests)
+5. Create pull requests focusing on the VALUE of the feature/improvement
 6. Log all activities to changelog
 7. Update work tally after completion
 
