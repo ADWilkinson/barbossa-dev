@@ -2219,28 +2219,6 @@ def api_docker_containers():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Webhooks Management
-@app.route('/api/webhooks')
-@auth.login_required
-def api_webhooks():
-    """Get webhook configuration"""
-    webhooks = {
-        'github_push': {
-            'name': 'GitHub Push Events',
-            'url': 'https://webhook.eastindiaonchaincompany.xyz/github',
-            'active': True,
-            'events': ['push', 'pull_request']
-        },
-        'davy_jones': {
-            'name': 'Davy Jones Slack Bot',
-            'url': 'https://webhook.eastindiaonchaincompany.xyz/slack',
-            'active': True,
-            'events': ['message', 'command']
-        }
-    }
-    
-    return jsonify({'webhooks': webhooks})
-
 # System Anomalies Detection
 @app.route('/api/monitoring/anomalies')
 @auth.login_required
@@ -2952,7 +2930,7 @@ def api_auth_token_manage(token_id):
 # Webhook Management
 @app.route('/api/webhooks', methods=['GET', 'POST'])
 @auth.login_required  
-def api_webhooks():
+def api_webhooks_management():
     """Manage webhooks for external integrations"""
     webhooks_file = BARBOSSA_DIR / 'config' / 'webhooks.json'
     
