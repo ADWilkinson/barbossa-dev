@@ -49,8 +49,8 @@ class TestSecurityGuard(unittest.TestCase):
             "git@github.com:ADWilkinson/_save.git",
             "https://github.com/ADWilkinson/chordcraft-app",
             "https://github.com/ADWilkinson/piggyonchain",
-            "https://github.com/ADWilkinson/persona-website",
-            "https://github.com/ADWilkinson/saylor-memes",
+            "https://github.com/ADWilkinson/personal-website",
+            "https://github.com/ADWilkinson/saylormemes",
             "https://github.com/ADWilkinson/the-flying-dutchman-theme",
         ]
         
