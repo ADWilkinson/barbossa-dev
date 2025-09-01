@@ -54,14 +54,24 @@ AVAILABLE WORK AREAS (PRIORITY ORDER):
    - System failures
    - Emergency fixes
 
+GIT WORKFLOW REQUIREMENTS (MANDATORY FOR ALL REPOSITORY WORK):
+1. ALWAYS pull latest from main branch first: `git checkout main && git pull origin main`
+2. ALWAYS create a new feature branch: `git checkout -b feature/description-YYYYMMDD`
+3. Make your changes and commits on the feature branch
+4. Push the feature branch: `git push origin feature/description-YYYYMMDD`
+5. Create a Pull Request to main branch for review using GitHub CLI or web interface
+6. NEVER commit directly to main branch
+7. NEVER push directly to main branch
+
 EXECUTION INSTRUCTIONS:
 1. PRIORITIZE Personal Projects and Davy Jones Intern (ignore infrastructure unless critical)
 2. Select between Personal Projects (70% chance) and Davy Jones (30% chance)
-3. Execute FEATURE DEVELOPMENT or REFACTORING tasks (not testing)
-4. Run linting and fix any broken tests (don't write new tests)
-5. Create pull requests focusing on the VALUE of the feature/improvement
-6. Log all activities to changelog
-7. Update work tally after completion
+3. Follow GIT WORKFLOW REQUIREMENTS for all repository changes
+4. Execute FEATURE DEVELOPMENT or REFACTORING tasks (not testing)
+5. Run linting and fix any broken tests (don't write new tests)
+6. Create pull requests focusing on the VALUE of the feature/improvement
+7. Log all activities to changelog
+8. Update work tally after completion
 
 TOOLS AND COMMANDS:
 - Use Python script: python3 /home/dappnode/barbossa-engineer/barbossa.py
