@@ -26,6 +26,7 @@ import psutil
 # Import components
 from security_guard import security_guard, SecurityViolationError
 from server_manager import BarbossaServerManager
+from ticket_enrichment import TicketEnrichmentEngine
 
 class PerformanceProfiler:
     """Performance profiling and monitoring for Barbossa operations"""
@@ -172,6 +173,13 @@ class BarbossaEnhanced:
             self.server_manager.start_monitoring()
         except Exception as e:
             print(f"Warning: Could not initialize server manager: {e}")
+        
+        # Initialize ticket enrichment engine
+        self.ticket_engine = None
+        try:
+            self.ticket_engine = TicketEnrichmentEngine(self.work_dir)
+        except Exception as e:
+            print(f"Warning: Could not initialize ticket enrichment: {e}")
         
         # Set up logging
         self._setup_logging()

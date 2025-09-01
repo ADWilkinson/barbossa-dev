@@ -165,6 +165,47 @@
                 </div>
             </div>
 
+            <!-- Personal Assistant v4 Status -->
+            <div class="border border-terminal bg-black/90 p-3 terminal-border">
+                <h2 class="text-xs font-bold uppercase tracking-wider mb-3 pb-1 border-b border-terminal/50 glow-text">
+                    Personal Assistant v4
+                </h2>
+                <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+                    <div class="bg-terminal/5 border border-terminal/30 p-2 text-center">
+                        <div class="text-base font-bold" id="pa-mode">-</div>
+                        <div class="text-terminal-dim text-[10px] uppercase mt-1">Mode</div>
+                    </div>
+                    <div class="bg-terminal/5 border border-terminal/30 p-2 text-center">
+                        <div class="text-base font-bold" id="pa-next-run">-</div>
+                        <div class="text-terminal-dim text-[10px] uppercase mt-1">Next Run</div>
+                    </div>
+                    <div class="bg-terminal/5 border border-terminal/30 p-2 text-center">
+                        <div class="text-base font-bold" id="pa-tickets">0</div>
+                        <div class="text-terminal-dim text-[10px] uppercase mt-1">Tickets</div>
+                    </div>
+                    <div class="bg-terminal/5 border border-terminal/30 p-2 text-center">
+                        <div class="text-base font-bold" id="pa-improvements">0</div>
+                        <div class="text-terminal-dim text-[10px] uppercase mt-1">Improvements</div>
+                    </div>
+                </div>
+                
+                <!-- Assistant Controls -->
+                <div class="grid grid-cols-2 gap-1">
+                    <button onclick="runAssistantNow()" 
+                        class="text-[10px] px-2 py-1 border border-terminal bg-terminal/10 hover:bg-terminal/20 transition-colors uppercase">
+                        Run Now
+                    </button>
+                    <button onclick="toggleAssistantMode()" 
+                        class="text-[10px] px-2 py-1 border border-terminal bg-terminal/10 hover:bg-terminal/20 transition-colors uppercase">
+                        Toggle Mode
+                    </button>
+                    <button onclick="showAssistantDetails()" 
+                        class="text-[10px] px-2 py-1 border border-terminal bg-terminal/10 hover:bg-terminal/20 transition-colors uppercase col-span-2">
+                        View Details
+                    </button>
+                </div>
+            </div>
+
             <!-- System Health -->
             <div class="border border-terminal bg-black/90 p-3 terminal-border">
                 <h2 class="text-xs font-bold uppercase tracking-wider mb-3 pb-1 border-b border-terminal/50 glow-text">
@@ -249,6 +290,49 @@
                     <div>
                         <div class="text-[10px] text-terminal-dim uppercase mb-2">Active Sessions</div>
                         <div id="sessions-list" class="space-y-1 max-h-32 overflow-y-auto">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Linear Tickets Processed -->
+            <div class="border border-terminal bg-black/90 p-3 terminal-border md:col-span-2 lg:col-span-2">
+                <h2 class="text-xs font-bold uppercase tracking-wider mb-3 pb-1 border-b border-terminal/50 glow-text">
+                    Linear Tickets Enriched
+                </h2>
+                <div id="linear-tickets" class="space-y-1 text-xs font-mono max-h-48 overflow-y-auto">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="mt-2 pt-2 border-t border-terminal/20">
+                    <button onclick="clearAssistantState()" 
+                        class="text-[10px] px-2 py-1 border border-red-500/50 bg-red-500/10 hover:bg-red-500/20 transition-colors uppercase w-full">
+                        Clear Processing State
+                    </button>
+                </div>
+            </div>
+
+            <!-- Autonomous Improvements -->
+            <div class="border border-terminal bg-black/90 p-3 terminal-border md:col-span-2 lg:col-span-2">
+                <h2 class="text-xs font-bold uppercase tracking-wider mb-3 pb-1 border-b border-terminal/50 glow-text">
+                    Autonomous Improvements
+                </h2>
+                <div class="space-y-2">
+                    <div>
+                        <div class="text-[10px] text-terminal-dim uppercase mb-1">Davy Jones Intern</div>
+                        <div id="davy-improvements" class="space-y-1 text-xs font-mono max-h-20 overflow-y-auto bg-terminal/5 p-1 border border-terminal/20">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-terminal-dim uppercase mb-1">Barbossa</div>
+                        <div id="barbossa-improvements" class="space-y-1 text-xs font-mono max-h-20 overflow-y-auto bg-terminal/5 p-1 border border-terminal/20">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-terminal-dim uppercase mb-1">Infrastructure</div>
+                        <div id="infra-improvements" class="space-y-1 text-xs font-mono max-h-20 overflow-y-auto bg-terminal/5 p-1 border border-terminal/20">
                             <!-- Populated by JS -->
                         </div>
                     </div>
@@ -425,6 +509,9 @@
         </div>
     </div>
 
+    <!-- Enhanced Dashboard JavaScript -->
+    <script src="/static/enhanced_dashboard.js"></script>
+    
     <script>
         let currentData = {};
         let currentSessionId = null;
@@ -612,13 +699,15 @@
                     fetch('/api/webhooks').then(r => r.ok ? r.json() : Promise.reject('Webhooks failed')),
                     fetch('/api/integrations/github/repos').then(r => r.ok ? r.json() : Promise.reject('GitHub repos failed')),
                     fetch('/api/integrations/docker/containers').then(r => r.ok ? r.json() : Promise.reject('Docker containers failed')),
-                    fetch('/api/optimization/suggestions').then(r => r.ok ? r.json() : Promise.reject('Optimization failed'))
+                    fetch('/api/optimization/suggestions').then(r => r.ok ? r.json() : Promise.reject('Optimization failed')),
+                    fetch('/api/assistant/status').then(r => r.ok ? r.json() : Promise.reject('Assistant status failed')),
+                    fetch('/api/assistant/state-details').then(r => r.ok ? r.json() : Promise.reject('Assistant details failed'))
                 ]);
                 
                 const [statusRes, changelogsRes, securityRes, claudeRes, servicesRes, networkRes, backupRes,
                        comprehensiveRes, projectsRes, barbossaStatusRes, recentLogsRes, settingsRes,
                        analyticsRes, anomaliesRes, workflowsRes, integrationsRes, webhooksRes,
-                       githubReposRes, dockerContainersRes, optimizationRes] = responses;
+                       githubReposRes, dockerContainersRes, optimizationRes, assistantStatusRes, assistantDetailsRes] = responses;
                 
                 currentData = {
                     status: statusRes.status === 'fulfilled' ? statusRes.value : null,
@@ -640,7 +729,9 @@
                     webhooks: webhooksRes.status === 'fulfilled' ? webhooksRes.value : null,
                     githubRepos: githubReposRes.status === 'fulfilled' ? githubReposRes.value : null,
                     dockerContainers: dockerContainersRes.status === 'fulfilled' ? dockerContainersRes.value : null,
-                    optimization: optimizationRes.status === 'fulfilled' ? optimizationRes.value : null
+                    optimization: optimizationRes.status === 'fulfilled' ? optimizationRes.value : null,
+                    assistantStatus: assistantStatusRes.status === 'fulfilled' ? assistantStatusRes.value : null,
+                    assistantDetails: assistantDetailsRes.status === 'fulfilled' ? assistantDetailsRes.value : null
                 };
                 
                 console.log('Fetched all data:', currentData);
@@ -946,6 +1037,105 @@
                 anomaliesList.innerHTML = '<div class="text-terminal text-[10px]">✓ System normal</div>';
             }
             
+            // Update Personal Assistant v4
+            if (currentData.assistantStatus) {
+                const assistant = currentData.assistantStatus;
+                
+                // Update mode
+                const mode = assistant.settings?.mode || 'UNKNOWN';
+                const modeEl = document.getElementById('pa-mode');
+                modeEl.textContent = mode;
+                modeEl.className = mode === 'LIVE' ? 'text-base font-bold text-yellow-500' : 'text-base font-bold';
+                
+                // Update next run
+                if (assistant.cron?.enabled) {
+                    const nextRun = new Date();
+                    nextRun.setDate(nextRun.getDate() + (nextRun.getHours() >= 7 ? 1 : 0));
+                    nextRun.setHours(7, 0, 0, 0);
+                    const hoursUntil = Math.floor((nextRun - new Date()) / 1000 / 60 / 60);
+                    document.getElementById('pa-next-run').textContent = `${hoursUntil}h`;
+                } else {
+                    document.getElementById('pa-next-run').textContent = 'Manual';
+                }
+                
+                // Update counts
+                document.getElementById('pa-tickets').textContent = assistant.state?.tickets_processed || '0';
+                document.getElementById('pa-improvements').textContent = assistant.state?.improvements_found || '0';
+            }
+            
+            // Update Linear Tickets
+            const ticketsList = document.getElementById('linear-tickets');
+            ticketsList.innerHTML = '';
+            if (currentData.assistantDetails?.recent_tickets) {
+                currentData.assistantDetails.recent_tickets.forEach(ticket => {
+                    const item = document.createElement('div');
+                    item.className = 'text-[10px] text-terminal hover:text-terminal-bright cursor-pointer';
+                    item.onclick = () => showTicketDetails(ticket);
+                    item.innerHTML = `[${ticket.id}] ${ticket.title}`;
+                    ticketsList.appendChild(item);
+                });
+            } else {
+                ticketsList.innerHTML = '<div class="text-terminal-dim text-[10px]">No tickets processed yet</div>';
+            }
+            
+            // Update Improvements
+            if (currentData.assistantDetails?.recent_improvements) {
+                const improvements = currentData.assistantDetails.recent_improvements;
+                
+                // Group by project
+                const davyImprovements = improvements.filter(i => i.description?.toLowerCase().includes('davy'));
+                const barbossaImprovements = improvements.filter(i => i.description?.toLowerCase().includes('barbossa'));
+                const infraImprovements = improvements.filter(i => 
+                    !i.description?.toLowerCase().includes('davy') && 
+                    !i.description?.toLowerCase().includes('barbossa')
+                );
+                
+                // Update Davy Jones improvements
+                const davyList = document.getElementById('davy-improvements');
+                davyList.innerHTML = '';
+                if (davyImprovements.length > 0) {
+                    davyImprovements.forEach(imp => {
+                        const item = document.createElement('div');
+                        item.className = 'text-[10px] text-terminal hover:text-terminal-bright cursor-pointer';
+                        item.onclick = () => showImprovementDetails(imp);
+                        item.textContent = `• ${imp.description}`;
+                        davyList.appendChild(item);
+                    });
+                } else {
+                    davyList.innerHTML = '<div class="text-terminal-dim text-[10px]">No improvements yet</div>';
+                }
+                
+                // Update Barbossa improvements
+                const barbossaList = document.getElementById('barbossa-improvements');
+                barbossaList.innerHTML = '';
+                if (barbossaImprovements.length > 0) {
+                    barbossaImprovements.forEach(imp => {
+                        const item = document.createElement('div');
+                        item.className = 'text-[10px] text-terminal hover:text-terminal-bright cursor-pointer';
+                        item.onclick = () => showImprovementDetails(imp);
+                        item.textContent = `• ${imp.description}`;
+                        barbossaList.appendChild(item);
+                    });
+                } else {
+                    barbossaList.innerHTML = '<div class="text-terminal-dim text-[10px]">No improvements yet</div>';
+                }
+                
+                // Update Infrastructure improvements
+                const infraList = document.getElementById('infra-improvements');
+                infraList.innerHTML = '';
+                if (infraImprovements.length > 0) {
+                    infraImprovements.forEach(imp => {
+                        const item = document.createElement('div');
+                        item.className = 'text-[10px] text-terminal hover:text-terminal-bright cursor-pointer';
+                        item.onclick = () => showImprovementDetails(imp);
+                        item.textContent = `• ${imp.description}`;
+                        infraList.appendChild(item);
+                    });
+                } else {
+                    infraList.innerHTML = '<div class="text-terminal-dim text-[10px]">No improvements yet</div>';
+                }
+            }
+            
             // Update Integrations
             const integrationsList = document.getElementById('integrations-list');
             integrationsList.innerHTML = '';
@@ -1077,6 +1267,130 @@
         
         function closeModal() {
             document.getElementById('logModal').style.display = 'none';
+        }
+        
+        // Personal Assistant Functions
+        async function runAssistantNow() {
+            if (!confirm('Run Personal Assistant v4 now?')) return;
+            try {
+                const response = await fetch('/api/assistant/run-now', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert(`✅ ${result.message}`);
+                    setTimeout(fetchData, 2000);
+                } else {
+                    alert(`❌ Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error running assistant:', error);
+                alert('❌ Failed to run assistant');
+            }
+        }
+        
+        async function toggleAssistantMode() {
+            const currentMode = document.getElementById('pa-mode').textContent;
+            if (!confirm(`Switch from ${currentMode} mode?`)) return;
+            try {
+                const response = await fetch('/api/assistant/toggle-mode', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert(`✅ Switched to ${result.new_mode} mode`);
+                    setTimeout(fetchData, 1000);
+                } else {
+                    alert(`❌ Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error toggling mode:', error);
+                alert('❌ Failed to toggle mode');
+            }
+        }
+        
+        async function clearAssistantState() {
+            if (!confirm('⚠️ Clear all processing state? This will cause all tickets to be reprocessed!')) return;
+            try {
+                const response = await fetch('/api/assistant/clear-state', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert(`✅ ${result.message}`);
+                    setTimeout(fetchData, 1000);
+                } else {
+                    alert(`❌ Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error clearing state:', error);
+                alert('❌ Failed to clear state');
+            }
+        }
+        
+        function showAssistantDetails() {
+            const modal = document.getElementById('logModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalContent = document.getElementById('modalContent');
+            
+            modalTitle.textContent = 'Personal Assistant v4 Details';
+            
+            const details = currentData.assistantDetails || {};
+            const status = currentData.assistantStatus || {};
+            
+            let html = '<div class="space-y-4 text-xs">';
+            
+            // Status section
+            html += '<div class="border border-terminal/30 p-3">';
+            html += '<h3 class="text-terminal font-bold mb-2">Current Status</h3>';
+            html += `<div>Mode: ${status.settings?.mode || 'Unknown'}</div>`;
+            html += `<div>Cron: ${status.cron?.enabled ? 'Enabled (7 AM daily)' : 'Disabled'}</div>`;
+            html += `<div>Last Run: ${status.last_run || 'Never'}</div>`;
+            html += `<div>Total Runs: ${status.state?.statistics?.total_runs || 0}</div>`;
+            html += '</div>';
+            
+            // Tickets section
+            html += '<div class="border border-terminal/30 p-3">';
+            html += '<h3 class="text-terminal font-bold mb-2">Processed Tickets</h3>';
+            if (details.recent_tickets?.length > 0) {
+                details.recent_tickets.forEach(ticket => {
+                    html += `<div class="mb-2">`;
+                    html += `<div class="font-bold">[${ticket.id}] ${ticket.title}</div>`;
+                    html += `<div class="text-terminal-dim text-[10px]">Processed: ${ticket.processed_at}</div>`;
+                    html += `</div>`;
+                });
+            } else {
+                html += '<div class="text-terminal-dim">No tickets processed</div>';
+            }
+            html += '</div>';
+            
+            // Improvements section
+            html += '<div class="border border-terminal/30 p-3">';
+            html += '<h3 class="text-terminal font-bold mb-2">Autonomous Improvements</h3>';
+            if (details.recent_improvements?.length > 0) {
+                details.recent_improvements.forEach(imp => {
+                    html += `<div class="mb-2">`;
+                    html += `<div>${imp.description}</div>`;
+                    html += `<div class="text-terminal-dim text-[10px]">ID: ${imp.id}</div>`;
+                    html += `</div>`;
+                });
+            } else {
+                html += '<div class="text-terminal-dim">No improvements made</div>';
+            }
+            html += '</div>';
+            
+            html += '</div>';
+            
+            modalContent.innerHTML = html;
+            modal.style.display = 'block';
+        }
+        
+        function showTicketDetails(ticket) {
+            alert(`Ticket: ${ticket.title}\nID: ${ticket.id}\nProcessed: ${ticket.processed_at}`);
+        }
+        
+        function showImprovementDetails(improvement) {
+            alert(`Improvement: ${improvement.description}\nID: ${improvement.id}\nProcessed: ${improvement.processed_at}`);
         }
         
         // Initialize

@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barbossa Dashboard - Live Control Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #0a0a0a;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+        }
+        .terminal-green { color: #00ff00; }
+        .terminal-yellow { color: #ffff00; }
+        .terminal-red { color: #ff0000; }
+        .terminal-dim { color: #008800; }
+        .card {
+            background: rgba(0, 255, 0, 0.05);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .btn {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background: rgba(0, 255, 0, 0.2);
+        }
+        .btn-danger {
+            border-color: #ff0000;
+            color: #ff0000;
+        }
+        .btn-danger:hover {
+            background: rgba(255, 0, 0, 0.2);
+        }
+        .status-online { color: #00ff00; }
+        .status-offline { color: #ff0000; }
+        .status-idle { color: #ffff00; }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-4">
+        <!-- Header -->
+        <header class="mb-6">
+            <h1 class="text-3xl font-bold mb-2">BARBOSSA CONTROL CENTER</h1>
+            <div class="flex justify-between items-center">
+                <span id="system-status" class="text-lg">Loading...</span>
+                <span id="current-time" class="terminal-dim"></span>
+            </div>
+        </header>
+
+        <!-- Main Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            
+            <!-- Barbossa Status Card -->
+            <div class="card">
+                <h2 class="text-xl font-bold mb-3">BARBOSSA STATUS</h2>
+                <div class="mb-2">
+                    <span class="terminal-dim">Status:</span>
+                    <span id="barbossa-status" class="font-bold">--</span>
+                </div>
+                <div class="mb-2">
+                    <span class="terminal-dim">Claude Processes:</span>
+                    <span id="claude-count" class="font-bold">0</span>
+                </div>
+                <div class="mb-2">
+                    <span class="terminal-dim">Last Run:</span>
+                    <span id="last-run" class="text-sm">--</span>
+                </div>
+                <div class="mt-3">
+                    <h3 class="font-bold mb-2">Work Tally:</h3>
+                    <div id="work-tally" class="text-sm space-y-1"></div>
+                </div>
+                <div class="mt-3 space-y-2">
+                    <button onclick="triggerBarbossa('infrastructure')" class="btn w-full">
+                        Run Infrastructure Check
+                    </button>
+                    <button onclick="triggerBarbossa('davy_jones')" class="btn w-full">
+                        Work on Davy Jones
+                    </button>
+                </div>
+            </div>
+
+            <!-- System Resources Card -->
+            <div class="card">
+                <h2 class="text-xl font-bold mb-3">SYSTEM RESOURCES</h2>
+                <div class="mb-2">
+                    <span class="terminal-dim">CPU:</span>
+                    <span id="cpu-usage" class="font-bold">--</span>
+                </div>
+                <div class="mb-2">
+                    <span class="terminal-dim">Memory:</span>
+                    <span id="memory-usage" class="font-bold">--</span>
+                </div>
+                <div class="mb-2">
+                    <span class="terminal-dim">Disk:</span>
+                    <span id="disk-usage" class="font-bold">--</span>
+                </div>
+                <div class="mb-2">
+                    <span class="terminal-dim">Uptime:</span>
+                    <span id="uptime" class="font-bold">--</span>
+                </div>
+                <div class="mb-2">
+                    <span class="terminal-dim">Network:</span>
+                    <span id="network-conn" class="font-bold">--</span>
+                </div>
+                <div class="mt-3">
+                    <button onclick="refreshData()" class="btn w-full">
+                        Refresh Stats
+                    </button>
+                </div>
+            </div>
+
+            <!-- Next Runs Card -->
+            <div class="card">
+                <h2 class="text-xl font-bold mb-3">SCHEDULED RUNS</h2>
+                <div id="next-runs" class="space-y-2 text-sm"></div>
+                <div class="mt-3">
+                    <button onclick="viewCronSchedule()" class="btn w-full">
+                        View Full Schedule
+                    </button>
+                </div>
+            </div>
+
+            <!-- Services Status Card -->
+            <div class="card">
+                <h2 class="text-xl font-bold mb-3">SERVICES</h2>
+                <div id="services-list" class="space-y-2 text-sm"></div>
+                <div class="mt-3">
+                    <button onclick="restartPortal()" class="btn btn-danger w-full">
+                        Restart Portal
+                    </button>
+                </div>
+            </div>
+
+            <!-- Projects Card -->
+            <div class="card">
+                <h2 class="text-xl font-bold mb-3">PROJECTS</h2>
+                <div id="projects-list" class="space-y-2 text-sm max-h-48 overflow-y-auto"></div>
+            </div>
+
+            <!-- Recent Logs Card -->
+            <div class="card">
+                <h2 class="text-xl font-bold mb-3">RECENT ACTIVITY</h2>
+                <div id="logs-list" class="space-y-1 text-xs max-h-48 overflow-y-auto font-mono"></div>
+                <div class="mt-3">
+                    <button onclick="clearOldLogs()" class="btn w-full">
+                        Clear Old Logs
+                    </button>
+                </div>
+            </div>
+
+            <!-- Work Sessions Card -->
+            <div class="card lg:col-span-2">
+                <h2 class="text-xl font-bold mb-3">WORK SESSIONS</h2>
+                <div id="sessions-list" class="space-y-2 text-sm"></div>
+            </div>
+
+            <!-- Performance Card -->
+            <div class="card">
+                <h2 class="text-xl font-bold mb-3">PERFORMANCE</h2>
+                <div id="performance-metrics" class="space-y-2 text-sm"></div>
+            </div>
+
+            <!-- Barbossa Executions Card -->
+            <div class="card lg:col-span-2">
+                <h2 class="text-xl font-bold mb-3">BARBOSSA EXECUTIONS</h2>
+                <div id="barbossa-executions" class="space-y-2 text-sm">
+                    <div class="terminal-dim">Loading execution history...</div>
+                </div>
+            </div>
+
+            <!-- Cron Activity Card -->
+            <div class="card">
+                <h2 class="text-xl font-bold mb-3">CRON ACTIVITY</h2>
+                <div id="cron-activity" class="space-y-1 text-xs max-h-48 overflow-y-auto font-mono">
+                    <div class="terminal-dim">Loading cron logs...</div>
+                </div>
+            </div>
+
+            <!-- Personal Assistant Activity -->
+            <div class="card">
+                <h2 class="text-xl font-bold mb-3">PERSONAL ASSISTANT</h2>
+                <div class="mb-2">
+                    <span class="terminal-dim">Status:</span>
+                    <span id="pa-status" class="font-bold">--</span>
+                </div>
+                <div class="mb-2">
+                    <span class="terminal-dim">Tickets Enriched:</span>
+                    <span id="pa-tickets" class="font-bold">--</span>
+                </div>
+                <div class="mb-2">
+                    <span class="terminal-dim">Improvements:</span>
+                    <span id="pa-improvements" class="font-bold">--</span>
+                </div>
+                <div id="pa-activity" class="mt-2 text-xs space-y-1"></div>
+            </div>
+
+            <!-- Claude Work Summary -->
+            <div class="card lg:col-span-2">
+                <h2 class="text-xl font-bold mb-3">CLAUDE WORK SUMMARY</h2>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="text-center">
+                        <div id="claude-personal" class="text-2xl font-bold terminal-yellow">0</div>
+                        <div class="text-xs terminal-dim">Personal Projects</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="claude-infrastructure" class="text-2xl font-bold terminal-green">0</div>
+                        <div class="text-xs terminal-dim">Infrastructure</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="claude-davy" class="text-2xl font-bold terminal-red">0</div>
+                        <div class="text-xs terminal-dim">Davy Jones</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-8 text-center terminal-dim text-sm">
+            <p>Barbossa Enhanced Dashboard v2.0 | Auto-refresh: <span id="refresh-status">ON</span></p>
+        </footer>
+    </div>
+
+    <script>
+        // Global variables
+        let refreshInterval = null;
+        let dashboardData = {};
+
+        // Initialize dashboard
+        async function initDashboard() {
+            console.log('Initializing dashboard...');
+            updateTime();
+            setInterval(updateTime, 1000);
+            await refreshData();
+            startAutoRefresh();
+        }
+
+        // Update current time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toUTCString();
+        }
+
+        // Refresh all data
+        async function refreshData() {
+            try {
+                // Fetch main status
+                const statusResponse = await fetch('/api/dashboard/status');
+                const statusData = await statusResponse.json();
+                updateStatus(statusData);
+
+                // Fetch logs
+                const logsResponse = await fetch('/api/dashboard/logs?limit=10');
+                const logsData = await logsResponse.json();
+                updateLogs(logsData.logs);
+
+                // Fetch projects
+                const projectsResponse = await fetch('/api/dashboard/projects');
+                const projectsData = await projectsResponse.json();
+                updateProjects(projectsData.projects);
+
+                // Fetch Barbossa activity
+                const activityResponse = await fetch('/api/barbossa/activity');
+                const activityData = await activityResponse.json();
+                updateBarbossaActivity(activityData);
+
+                // Fetch recent logs with categories
+                const recentLogsResponse = await fetch('/api/logs/recent');
+                const recentLogsData = await recentLogsResponse.json();
+                updateCategorizedLogs(recentLogsData.logs);
+
+                // Fetch sessions
+                const sessionsResponse = await fetch('/api/dashboard/sessions');
+                const sessionsData = await sessionsResponse.json();
+                updateSessions(sessionsData.sessions);
+
+                // Fetch performance
+                const perfResponse = await fetch('/api/dashboard/performance');
+                const perfData = await perfResponse.json();
+                updatePerformance(perfData);
+
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                document.getElementById('system-status').textContent = 'Error loading data';
+                document.getElementById('system-status').className = 'text-lg terminal-red';
+            }
+        }
+
+        // Update status displays
+        function updateStatus(data) {
+            // Barbossa status
+            const barbossa = data.barbossa || {};
+            const statusEl = document.getElementById('barbossa-status');
+            statusEl.textContent = barbossa.status || 'unknown';
+            statusEl.className = barbossa.status === 'running' ? 'font-bold status-online' : 
+                                 barbossa.status === 'idle' ? 'font-bold status-idle' : 
+                                 'font-bold status-offline';
+            
+            document.getElementById('claude-count').textContent = barbossa.claude_processes || '0';
+            document.getElementById('last-run').textContent = barbossa.last_run ? 
+                new Date(barbossa.last_run).toLocaleString() : 'Never';
+            
+            // Work tally
+            const tallyDiv = document.getElementById('work-tally');
+            tallyDiv.innerHTML = '';
+            if (barbossa.work_tally) {
+                Object.entries(barbossa.work_tally).forEach(([area, count]) => {
+                    const div = document.createElement('div');
+                    div.innerHTML = `<span class="terminal-dim">${area}:</span> <span class="font-bold">${count}</span>`;
+                    tallyDiv.appendChild(div);
+                });
+            }
+            
+            // Next runs
+            const runsDiv = document.getElementById('next-runs');
+            runsDiv.innerHTML = '';
+            if (barbossa.next_runs) {
+                Object.entries(barbossa.next_runs).forEach(([task, time]) => {
+                    const div = document.createElement('div');
+                    div.innerHTML = `<span class="terminal-dim">${task}:</span> <span class="font-bold">${time}</span>`;
+                    runsDiv.appendChild(div);
+                });
+            }
+            
+            // System resources
+            const system = data.system || {};
+            document.getElementById('cpu-usage').textContent = system.cpu ? 
+                `${system.cpu.percent}% (${system.cpu.cores} cores)` : '--';
+            document.getElementById('memory-usage').textContent = system.memory ? 
+                `${system.memory.percent}% (${system.memory.used}/${system.memory.total})` : '--';
+            document.getElementById('disk-usage').textContent = system.disk ? 
+                `${system.disk.percent}% (${system.disk.free} free)` : '--';
+            document.getElementById('uptime').textContent = system.uptime || '--';
+            document.getElementById('network-conn').textContent = system.network ? 
+                `${system.network.connections} connections` : '--';
+            
+            // Services
+            const servicesDiv = document.getElementById('services-list');
+            servicesDiv.innerHTML = '';
+            if (data.services) {
+                Object.entries(data.services).forEach(([service, info]) => {
+                    const div = document.createElement('div');
+                    const status = typeof info === 'object' ? info.status : info;
+                    const statusClass = status === 'running' ? 'status-online' : 
+                                      status === 'stopped' ? 'status-offline' : 'terminal-yellow';
+                    div.innerHTML = `<span class="terminal-dim">${service}:</span> <span class="${statusClass} font-bold">${status}</span>`;
+                    
+                    if (typeof info === 'object' && info.containers !== undefined) {
+                        div.innerHTML += ` <span class="terminal-dim">(${info.containers} containers)</span>`;
+                    }
+                    if (typeof info === 'object' && info.sessions) {
+                        div.innerHTML += ` <span class="terminal-dim">(${info.sessions.length} sessions)</span>`;
+                    }
+                    
+                    servicesDiv.appendChild(div);
+                });
+            }
+            
+            // Update main status
+            document.getElementById('system-status').textContent = 
+                `System: ${barbossa.status === 'running' ? 'ACTIVE' : 'IDLE'} | CPU: ${system.cpu ? system.cpu.percent + '%' : '--'}`;
+            document.getElementById('system-status').className = 'text-lg status-online';
+        }
+
+        // Update logs display
+        function updateLogs(logs) {
+            const logsDiv = document.getElementById('logs-list');
+            logsDiv.innerHTML = '';
+            
+            if (logs && logs.length > 0) {
+                logs.forEach(log => {
+                    const div = document.createElement('div');
+                    const levelClass = log.level === 'ERROR' ? 'terminal-red' : 
+                                      log.level === 'WARNING' ? 'terminal-yellow' : 'terminal-dim';
+                    div.className = `${levelClass} break-all`;
+                    div.textContent = `[${log.level}] ${log.message.substring(0, 100)}...`;
+                    logsDiv.appendChild(div);
+                });
+            } else {
+                logsDiv.innerHTML = '<div class="terminal-dim">No recent logs</div>';
+            }
+        }
+
+        // Update projects display
+        function updateProjects(projects) {
+            const projectsDiv = document.getElementById('projects-list');
+            projectsDiv.innerHTML = '';
+            
+            if (projects && projects.length > 0) {
+                projects.forEach(project => {
+                    const div = document.createElement('div');
+                    const sizeInMB = (project.size / (1024 * 1024)).toFixed(1);
+                    div.innerHTML = `
+                        <div class="font-bold">${project.name}</div>
+                        <div class="terminal-dim text-xs">${project.files} files, ${sizeInMB}MB</div>
+                    `;
+                    projectsDiv.appendChild(div);
+                });
+            } else {
+                projectsDiv.innerHTML = '<div class="terminal-dim">No projects found</div>';
+            }
+        }
+
+        // Update sessions display
+        function updateSessions(sessions) {
+            const sessionsDiv = document.getElementById('sessions-list');
+            sessionsDiv.innerHTML = '';
+            
+            if (sessions && sessions.length > 0) {
+                sessions.forEach(session => {
+                    const div = document.createElement('div');
+                    const statusClass = session.status === 'running' ? 'status-online' : 
+                                       session.status === 'completed' ? 'terminal-green' : 'terminal-red';
+                    div.innerHTML = `
+                        <span class="font-bold">${session.id}</span>
+                        <span class="terminal-dim">Area: ${session.area}</span>
+                        <span class="${statusClass}">${session.status}</span>
+                    `;
+                    sessionsDiv.appendChild(div);
+                });
+            } else {
+                sessionsDiv.innerHTML = '<div class="terminal-dim">No recent sessions</div>';
+            }
+        }
+
+        // Update performance display
+        function updatePerformance(data) {
+            const perfDiv = document.getElementById('performance-metrics');
+            perfDiv.innerHTML = '';
+            
+            if (data.current) {
+                perfDiv.innerHTML = `
+                    <div><span class="terminal-dim">CPU:</span> ${data.current.cpu}%</div>
+                    <div><span class="terminal-dim">Memory:</span> ${data.current.memory}%</div>
+                    <div><span class="terminal-dim">Disk:</span> ${data.current.disk}%</div>
+                `;
+            }
+            
+            if (data.top_processes && data.top_processes.length > 0) {
+                perfDiv.innerHTML += '<div class="mt-2 font-bold">Top Processes:</div>';
+                data.top_processes.forEach(proc => {
+                    perfDiv.innerHTML += `<div class="text-xs terminal-dim">${proc.name}: ${proc.cpu_percent}%</div>`;
+                });
+            }
+        }
+
+        // Action functions
+        async function triggerBarbossa(area) {
+            if (!confirm(`Start Barbossa for ${area}?`)) return;
+            
+            try {
+                const response = await fetch('/api/dashboard/action', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: 'trigger_barbossa', params: {area}})
+                });
+                const result = await response.json();
+                alert(result.message);
+                setTimeout(refreshData, 2000);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function restartPortal() {
+            if (!confirm('Restart the web portal?')) return;
+            
+            try {
+                const response = await fetch('/api/dashboard/action', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: 'restart_service', params: {service: 'portal'}})
+                });
+                const result = await response.json();
+                alert(result.message);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function clearOldLogs() {
+            if (!confirm('Clear logs older than 7 days?')) return;
+            
+            try {
+                const response = await fetch('/api/dashboard/action', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: 'clear_logs'})
+                });
+                const result = await response.json();
+                alert(result.message);
+                setTimeout(refreshData, 1000);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function viewCronSchedule() {
+            const schedule = `
+BARBOSSA CRON SCHEDULE:
+━━━━━━━━━━━━━━━━━━━━━
+Daily:
+  09:00 UTC - Ticket Enrichment
+  23:00 UTC - Daily Summary
+
+Frequent:
+  Every 2h - Infrastructure Check  
+  Every 4h - Performance Monitor
+  Every 8h - Davy Jones Work
+
+Weekly:
+  Sunday 03:00 - Self Improvement
+            `;
+            alert(schedule);
+        }
+
+        // Update Barbossa activity data
+        function updateBarbossaActivity(activity) {
+            // Update executions with clickable log files
+            const executionsDiv = document.getElementById('barbossa-executions');
+            if (activity.recent_executions && activity.recent_executions.length > 0) {
+                executionsDiv.innerHTML = activity.recent_executions.map(exec => {
+                    const timestamp = new Date(exec.timestamp).toLocaleString();
+                    const modeClass = exec.mode === 'LIVE' ? 'terminal-red' : 'terminal-yellow';
+                    // Extract just the filename from the path if it's in a subdirectory
+                    const logFile = exec.file.includes('/') ? `barbossa/${exec.file.split('/').pop()}` : exec.file;
+                    return `
+                        <div class="border-l-2 border-green-500 pl-2 mb-2">
+                            <div class="flex justify-between">
+                                <span class="terminal-dim">${timestamp}</span>
+                                <span class="${modeClass} text-xs">${exec.mode}</span>
+                            </div>
+                            <div class="text-xs">
+                                📝 Tickets: ${exec.tickets_enriched} | 
+                                🔧 Improvements: ${exec.improvements_found}
+                            </div>
+                            <div class="terminal-dim text-xs" style="cursor: pointer; text-decoration: underline;" 
+                                 onclick="viewLog('${logFile}')" title="Click to view full log">
+                                📄 ${exec.file}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                executionsDiv.innerHTML = '<div class="terminal-dim">No recent executions</div>';
+            }
+
+            // Update cron activity with clickable logs
+            const cronDiv = document.getElementById('cron-activity');
+            if (activity.cron_status && activity.cron_status.length > 0) {
+                cronDiv.innerHTML = activity.cron_status.map(entry => 
+                    `<div class="terminal-yellow log-entry-clickable" style="cursor: pointer;" onclick="viewLogFromEntry('${entry}')">${entry}</div>`
+                ).join('');
+            } else {
+                cronDiv.innerHTML = '<div class="terminal-dim">No cron activity</div>';
+            }
+
+            // Update Personal Assistant status
+            if (activity.recent_executions && activity.recent_executions.length > 0) {
+                const latestExec = activity.recent_executions[0];
+                document.getElementById('pa-status').textContent = activity.current_status === 'running' ? 'Running' : 'Idle';
+                document.getElementById('pa-status').className = activity.current_status === 'running' ? 'font-bold terminal-green' : 'font-bold terminal-dim';
+                
+                // Calculate totals from all executions
+                let totalTickets = 0;
+                let totalImprovements = 0;
+                activity.recent_executions.forEach(exec => {
+                    totalTickets += exec.tickets_enriched || 0;
+                    totalImprovements += exec.improvements_found || 0;
+                });
+                document.getElementById('pa-tickets').textContent = totalTickets;
+                document.getElementById('pa-improvements').textContent = totalImprovements;
+            }
+
+            // Update PA activity
+            const paDiv = document.getElementById('pa-activity');
+            if (activity.personal_assistant_activity && activity.personal_assistant_activity.length > 0) {
+                paDiv.innerHTML = activity.personal_assistant_activity.map(item => 
+                    `<div class="terminal-dim">${item.file}</div>`
+                ).join('');
+            }
+
+            // Update Claude work summary
+            if (activity.work_summary) {
+                document.getElementById('claude-personal').textContent = activity.work_summary.personal || 0;
+                document.getElementById('claude-infrastructure').textContent = activity.work_summary.infrastructure || 0;
+                document.getElementById('claude-davy').textContent = activity.work_summary.davy_jones || 0;
+            }
+        }
+
+        // Update categorized logs with clickable entries
+        function updateCategorizedLogs(logs) {
+            if (!logs || logs.length === 0) return;
+            
+            // Group logs by category
+            const categorizedLogs = {
+                'barbossa_operations': [],
+                'barbossa_enhanced': [],
+                'claude_personal': [],
+                'claude_infrastructure': [],
+                'claude_davy_jones': [],
+                'cron': [],
+                'other': []
+            };
+            
+            logs.forEach(log => {
+                const category = log.type || 'other';
+                if (category.includes('barbossa_operations')) {
+                    categorizedLogs['barbossa_operations'].push(log);
+                } else if (category.includes('barbossa_enhanced')) {
+                    categorizedLogs['barbossa_enhanced'].push(log);
+                } else if (category.includes('claude_personal')) {
+                    categorizedLogs['claude_personal'].push(log);
+                } else if (category.includes('claude_infrastructure')) {
+                    categorizedLogs['claude_infrastructure'].push(log);
+                } else if (category.includes('claude_davy')) {
+                    categorizedLogs['claude_davy_jones'].push(log);
+                } else if (category.includes('cron')) {
+                    categorizedLogs['cron'].push(log);
+                } else {
+                    categorizedLogs['other'].push(log);
+                }
+            });
+            
+            // Update cron activity with latest cron logs
+            const cronLogs = categorizedLogs['cron'];
+            if (cronLogs.length > 0) {
+                const cronDiv = document.getElementById('cron-activity');
+                cronDiv.innerHTML = cronLogs.slice(0, 20).map(log => {
+                    const typeColor = log.type.includes('personal') ? 'terminal-yellow' : 'terminal-green';
+                    return `<div class="${typeColor} text-xs log-clickable" style="cursor: pointer;" onclick="viewLog('${log.file}')" title="Click to view full log">
+                        <span class="log-type-badge">[${log.type}]</span> ${log.file}: ${log.content.substring(0, 80)}...
+                    </div>`;
+                }).join('');
+            }
+        }
+        
+        // View full log content
+        async function viewLog(filename) {
+            try {
+                const response = await fetch(`/api/log/${encodeURIComponent(filename)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    showLogModal(filename, data.content, data.size);
+                } else {
+                    alert('Could not load log file');
+                }
+            } catch (error) {
+                alert('Error loading log: ' + error.message);
+            }
+        }
+        
+        // Show log content in modal
+        function showLogModal(filename, content, size) {
+            // Create modal overlay
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.9);
+                z-index: 10000;
+                padding: 20px;
+                overflow: auto;
+            `;
+            
+            // Create modal content
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = `
+                background: #000;
+                border: 2px solid #00ff00;
+                padding: 20px;
+                max-width: 90%;
+                margin: 0 auto;
+                font-family: monospace;
+                color: #00ff00;
+            `;
+            
+            modalContent.innerHTML = `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <h2 style="color: #00ff00; margin: 0;">Log: ${filename}</h2>
+                    <div>
+                        <span style="margin-right: 20px;">Size: ${size}</span>
+                        <button onclick="this.closest('div').parentElement.parentElement.remove()" 
+                                style="background: #00ff00; color: #000; border: none; padding: 5px 15px; cursor: pointer;">
+                            CLOSE
+                        </button>
+                    </div>
+                </div>
+                <pre style="white-space: pre-wrap; word-wrap: break-word; max-height: 80vh; overflow-y: auto; 
+                           background: #111; padding: 15px; border: 1px solid #00ff00; color: #00ff00;">
+${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                </pre>
+            `;
+            
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+            
+            // Close on ESC key
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+            
+            document.addEventListener('keydown', function closeOnEsc(e) {
+                if (e.key === 'Escape') {
+                    modal.remove();
+                    document.removeEventListener('keydown', closeOnEsc);
+                }
+            });
+        }
+
+        // Auto-refresh
+        function startAutoRefresh() {
+            if (refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(refreshData, 30000); // 30 seconds
+            document.getElementById('refresh-status').textContent = 'ON';
+        }
+
+        function stopAutoRefresh() {
+            if (refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = null;
+            document.getElementById('refresh-status').textContent = 'OFF';
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>

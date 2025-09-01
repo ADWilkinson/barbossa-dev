@@ -1,0 +1,29 @@
+{
+  "timestamp": "2025-08-29T13:34:57.411268",
+  "system": {
+    "cpu_percent": 13.6,
+    "memory_percent": 8.1,
+    "disk_usage_percent": 1.9,
+    "network_connections": 161,
+    "process_count": 403
+  },
+  "processes": {
+    "top_cpu": [],
+    "top_memory": [],
+    "zombies": [
+      {
+        "pid": 1948446,
+        "name": "git",
+        "status": "zombie"
+      },
+      {
+        "pid": 1948453,
+        "name": "bash",
+        "status": "zombie"
+      }
+    ]
+  },
+  "recommendations": [
+    "Kill zombie processes"
+  ]
+}

@@ -53,9 +53,14 @@ if ! command -v claude &> /dev/null; then
     exit 1
 fi
 
-# Execute Barbossa (let it select work area automatically)
-log_message "Executing Barbossa..."
-python3 "$SCRIPT_DIR/barbossa.py" >> "$LOG_FILE" 2>&1
+# Execute Barbossa with optional area argument
+if [ "$#" -gt 0 ]; then
+    log_message "Executing Barbossa with arguments: $@"
+    python3 "$SCRIPT_DIR/barbossa.py" "$@" >> "$LOG_FILE" 2>&1
+else
+    log_message "Executing Barbossa (auto-selecting work area)..."
+    python3 "$SCRIPT_DIR/barbossa.py" >> "$LOG_FILE" 2>&1
+fi
 
 log_message "Barbossa execution completed"
 

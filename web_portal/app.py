@@ -15,7 +15,7 @@ import functools
 import threading
 from datetime import datetime, timedelta
 from pathlib import Path
-from flask import Flask, render_template, jsonify, request, session, redirect, url_for, send_file
+from flask import Flask, render_template, jsonify, request, session, redirect, url_for, send_file, send_from_directory
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.profiler import ProfilerMiddleware
@@ -64,7 +64,7 @@ except ImportError as e:
     PROMPT_MANAGER_AVAILABLE = False
     ENHANCED_SECURITY_AVAILABLE = False
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.secret_key = secrets.token_hex(32)
 auth = HTTPBasicAuth()
 
@@ -72,6 +72,16 @@ auth = HTTPBasicAuth()
 if WORKFLOW_API_AVAILABLE:
     app.register_blueprint(workflow_api)
     print("Workflow API registered")
+
+# Register Personal Assistant v4 API
+try:
+    from personal_assistant_api import personal_assistant_api
+    app.register_blueprint(personal_assistant_api)
+    print("Personal Assistant v4 API registered")
+    PERSONAL_ASSISTANT_API_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Could not import Personal Assistant API: {e}")
+    PERSONAL_ASSISTANT_API_AVAILABLE = False
 
 # Register enhanced API blueprint
 try:
@@ -112,6 +122,26 @@ try:
 except ImportError as e:
     print(f"Warning: Could not import development tools API: {e}")
     DEVTOOLS_API_AVAILABLE = False
+
+# Register enhanced portal API v4 blueprint
+try:
+    from enhanced_portal_api import enhanced_portal_api
+    app.register_blueprint(enhanced_portal_api)
+    print("Enhanced Portal API v4 registered")
+    ENHANCED_PORTAL_API_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Could not import enhanced portal API: {e}")
+    ENHANCED_PORTAL_API_AVAILABLE = False
+
+# Register refactored dashboard API
+try:
+    from dashboard_api import dashboard_api
+    app.register_blueprint(dashboard_api)
+    print("Dashboard API (refactored) registered")
+    DASHBOARD_API_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Could not import dashboard API: {e}")
+    DASHBOARD_API_AVAILABLE = False
 
 # Enable JSON minification for better performance
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
@@ -409,12 +439,48 @@ def get_barbossa_status():
     
     return status
 
+def categorize_log_type(filename):
+    """Categorize log type based on filename"""
+    filename_lower = filename.lower()
+    
+    if 'barbossa' in filename_lower:
+        if 'operations' in filename_lower:
+            return 'barbossa_operations'
+        elif 'enhanced' in filename_lower:
+            return 'barbossa_enhanced'
+        return 'barbossa'
+    elif 'claude' in filename_lower:
+        if 'personal' in filename_lower:
+            return 'claude_personal'
+        elif 'infrastructure' in filename_lower:
+            return 'claude_infrastructure'
+        elif 'davy' in filename_lower:
+            return 'claude_davy_jones'
+        elif 'self' in filename_lower:
+            return 'claude_self_improvement'
+        return 'claude'
+    elif 'cron' in filename_lower:
+        if 'personal_assistant' in filename_lower:
+            return 'cron_personal_assistant'
+        elif 'ticket' in filename_lower:
+            return 'cron_ticket_enrichment'
+        elif 'daily' in filename_lower:
+            return 'cron_daily_summary'
+        return 'cron'
+    elif 'server_manager' in filename_lower:
+        return 'server_manager'
+    elif 'workflow' in filename_lower:
+        return 'workflow_engine'
+    else:
+        return 'general'
+
 # Main dashboard route (consolidated)
 @app.route('/')
 @auth.login_required
 def index():
     """Main Barbossa dashboard with all features"""
-    return render_template('dashboard.html', 
+    # Use refactored dashboard for better functionality
+    return render_template('dashboard_refactored.html', 
                          username=session.get('username'),
                          timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC'))
 
@@ -570,27 +636,44 @@ def api_container_control():
 @app.route('/api/logs/recent')
 @auth.login_required
 def api_recent_logs():
-    """Get recent log entries"""
+    """Get recent log entries including all Barbossa-related logs"""
     logs = []
     
-    # Get most recent log files
+    # Get most recent log files from main logs directory
     if LOGS_DIR.exists():
-        log_files = sorted(LOGS_DIR.glob('*.log'), key=lambda x: x.stat().st_mtime, reverse=True)[:5]
+        # Include all log types
+        log_patterns = [
+            '*.log',  # Regular logs
+            'barbossa/*.log',  # Barbossa subdirectory logs
+            'barbossa_*.log',  # Barbossa prefixed logs
+            'cron_*.log',  # Cron execution logs
+            'claude_*.log',  # Claude output logs
+            '*_cron.log',  # Service-specific cron logs
+        ]
+        
+        all_log_files = []
+        for pattern in log_patterns:
+            all_log_files.extend(LOGS_DIR.glob(pattern))
+        
+        # Sort by modification time
+        log_files = sorted(all_log_files, key=lambda x: x.stat().st_mtime, reverse=True)[:10]
         
         for log_file in log_files:
             try:
                 with open(log_file, 'r') as f:
                     lines = f.readlines()[-20:]  # Last 20 lines
                     for line in lines:
-                        logs.append({
-                            'timestamp': datetime.fromtimestamp(log_file.stat().st_mtime).isoformat(),
-                            'file': log_file.name,
-                            'content': sanitize_sensitive_info(line.strip())
-                        })
+                        if line.strip():  # Skip empty lines
+                            logs.append({
+                                'timestamp': datetime.fromtimestamp(log_file.stat().st_mtime).isoformat(),
+                                'file': log_file.name if log_file.parent == LOGS_DIR else f"{log_file.parent.name}/{log_file.name}",
+                                'content': sanitize_sensitive_info(line.strip()),
+                                'type': categorize_log_type(log_file.name)
+                            })
             except Exception as e:
                 print(f"Error reading log {log_file}: {e}")
     
-    return jsonify({'logs': logs[-100:]})  # Return last 100 log entries
+    return jsonify({'logs': logs[-200:]})  # Return last 200 log entries
 
 # Original API endpoints (preserved for compatibility)
 @app.route('/api/status')
@@ -602,6 +685,104 @@ def api_status():
         'system': get_system_stats(),
         'timestamp': datetime.now().isoformat()
     })
+
+@app.route('/api/barbossa/activity')
+@auth.login_required
+@cached_response(ttl=30)
+def api_barbossa_activity():
+    """Get comprehensive Barbossa activity logs"""
+    activity = {
+        'recent_executions': [],
+        'cron_status': [],
+        'work_summary': {},
+        'personal_assistant_activity': [],
+        'current_status': 'idle'
+    }
+    
+    # Check Barbossa subdirectory logs
+    barbossa_logs_dir = LOGS_DIR / 'barbossa'
+    if barbossa_logs_dir.exists():
+        # Get operations logs
+        operations_logs = sorted(barbossa_logs_dir.glob('barbossa_operations_*.log'), 
+                                key=lambda x: x.stat().st_mtime, reverse=True)[:5]
+        
+        for log_file in operations_logs:
+            try:
+                with open(log_file, 'r') as f:
+                    content = f.read()
+                    # Extract key information
+                    mode = 'LIVE' if 'Mode: LIVE' in content else 'DRY RUN'
+                    tickets_enriched = re.search(r'(\d+) enriched', content)
+                    improvements = re.search(r'(\d+) new improvements', content)
+                    
+                    activity['recent_executions'].append({
+                        'timestamp': datetime.fromtimestamp(log_file.stat().st_mtime).isoformat(),
+                        'file': log_file.name,
+                        'mode': mode,
+                        'tickets_enriched': int(tickets_enriched.group(1)) if tickets_enriched else 0,
+                        'improvements_found': int(improvements.group(1)) if improvements else 0
+                    })
+            except Exception as e:
+                print(f"Error reading operations log {log_file}: {e}")
+        
+        # Check cron log
+        cron_log = barbossa_logs_dir / 'cron.log'
+        if cron_log.exists():
+            try:
+                with open(cron_log, 'r') as f:
+                    lines = f.readlines()[-50:]  # Last 50 lines
+                    for line in lines:
+                        if 'Starting Barbossa' in line or 'Completed' in line:
+                            activity['cron_status'].append(sanitize_sensitive_info(line.strip()))
+            except Exception as e:
+                print(f"Error reading cron log: {e}")
+    
+    # Check main cron logs
+    main_cron_logs = sorted(LOGS_DIR.glob('cron_*.log'), 
+                           key=lambda x: x.stat().st_mtime, reverse=True)[:5]
+    
+    for log_file in main_cron_logs:
+        try:
+            with open(log_file, 'r') as f:
+                content = f.read()
+                if 'Barbossa' in content:
+                    timestamp = datetime.fromtimestamp(log_file.stat().st_mtime)
+                    activity['cron_status'].append(f"[{timestamp.strftime('%Y-%m-%d %H:%M')}] {log_file.name}: Barbossa execution logged")
+        except Exception as e:
+            print(f"Error reading cron log {log_file}: {e}")
+    
+    # Check Claude execution logs
+    claude_logs = sorted(LOGS_DIR.glob('claude_*.log'), 
+                        key=lambda x: x.stat().st_mtime, reverse=True)[:10]
+    
+    work_areas = {'personal': 0, 'infrastructure': 0, 'davy_jones': 0}
+    for log_file in claude_logs:
+        area = categorize_log_type(log_file.name)
+        if 'personal' in area:
+            work_areas['personal'] += 1
+        elif 'infrastructure' in area:
+            work_areas['infrastructure'] += 1
+        elif 'davy' in area:
+            work_areas['davy_jones'] += 1
+    
+    activity['work_summary'] = work_areas
+    
+    # Check if Barbossa is currently running
+    result = subprocess.run(['pgrep', '-f', 'barbossa'], capture_output=True, text=True)
+    if result.returncode == 0:
+        activity['current_status'] = 'running'
+    
+    # Get personal assistant specific logs
+    pa_logs = LOGS_DIR / 'personal_assistant'
+    if pa_logs.exists():
+        summaries = sorted(pa_logs.glob('*.md'), key=lambda x: x.stat().st_mtime, reverse=True)[:3]
+        for summary in summaries:
+            activity['personal_assistant_activity'].append({
+                'file': summary.name,
+                'timestamp': datetime.fromtimestamp(summary.stat().st_mtime).isoformat()
+            })
+    
+    return jsonify(activity)
 
 @app.route('/api/changelogs')
 @auth.login_required
