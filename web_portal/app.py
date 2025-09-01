@@ -559,15 +559,40 @@ def api_network_status():
 @performance_monitor
 @cached_response(ttl=60)  # Cache for 1 minute
 def api_projects():
-    """Get project information"""
-    if server_manager:
-        server_manager.project_manager._scan_projects()  # Refresh project info
-        return jsonify({
-            'projects': server_manager.project_manager.projects,
-            'stats': server_manager.project_manager.get_project_stats()
-        })
-    else:
-        return jsonify({'projects': {}, 'stats': {}})
+    """Get project information - returns array for dashboard"""
+    projects_list = []
+    
+    # Define the projects to monitor
+    project_paths = [
+        {'name': 'Barbossa Engineer', 'path': str(BARBOSSA_DIR)},
+        {'name': 'Davy Jones Intern', 'path': str(BARBOSSA_DIR / 'projects' / 'davy-jones-intern')},
+        {'name': 'Saylor Memes', 'path': str(BARBOSSA_DIR / 'projects' / 'saylormemes')},
+        {'name': 'Flying Dutchman Theme', 'path': str(BARBOSSA_DIR / 'projects' / 'the-flying-dutchman-theme')},
+    ]
+    
+    for project in project_paths:
+        project_info = {
+            'name': project['name'],
+            'path': project['path'],
+            'has_changes': False
+        }
+        
+        # Check git status for each project
+        try:
+            result = subprocess.run(
+                ['git', 'status', '--porcelain'],
+                cwd=project['path'],
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            project_info['has_changes'] = bool(result.stdout.strip())
+        except:
+            pass
+        
+        projects_list.append(project_info)
+    
+    return jsonify(projects_list)
 
 # Logs endpoint
 @app.route('/api/logs')
