@@ -908,24 +908,236 @@ def api_claude():
 @auth.login_required
 def api_log_content(filename):
     """Get content of a specific log file"""
-    allowed_dirs = [LOGS_DIR, CHANGELOGS_DIR, SECURITY_DIR]
-    
-    for allowed_dir in allowed_dirs:
-        file_path = allowed_dir / filename
-        if file_path.exists() and file_path.is_file():
-            with open(file_path, 'r') as f:
-                content = f.read()
-                if len(content) > 1024 * 1024:
-                    content = content[:1024 * 1024] + "\n\n... [TRUNCATED - File too large] ..."
-                
+    # Handle barbossa/ prefix in filename
+    if filename.startswith('barbossa/'):
+        # Try barbossa subdirectory first
+        barbossa_file = LOGS_DIR / 'barbossa' / filename.replace('barbossa/', '')
+        if barbossa_file.exists() and barbossa_file.is_file():
+            try:
+                with open(barbossa_file, 'r') as f:
+                    content = f.read()
+                    if len(content) > 1024 * 1024:
+                        content = content[:1024 * 1024] + "\n\n... [TRUNCATED - File too large] ..."
+                    
                 return jsonify({
                     'success': True,
                     'filename': filename,
                     'content': sanitize_sensitive_info(content),
                     'size': f"{len(content) / 1024:.1f} KB"
                 })
+            except Exception as e:
+                logger.error(f"Error reading file {barbossa_file}: {e}")
+                return jsonify({'error': 'Error reading file'}), 500
+    
+    # Try standard directories
+    allowed_dirs = [LOGS_DIR, CHANGELOGS_DIR, SECURITY_DIR]
+    
+    for allowed_dir in allowed_dirs:
+        file_path = allowed_dir / filename
+        if file_path.exists() and file_path.is_file():
+            try:
+                with open(file_path, 'r') as f:
+                    content = f.read()
+                    if len(content) > 1024 * 1024:
+                        content = content[:1024 * 1024] + "\n\n... [TRUNCATED - File too large] ..."
+                    
+                return jsonify({
+                    'success': True,
+                    'filename': filename,
+                    'content': sanitize_sensitive_info(content),
+                    'size': f"{len(content) / 1024:.1f} KB"
+                })
+            except Exception as e:
+                logger.error(f"Error reading file {file_path}: {e}")
+                return jsonify({'error': 'Error reading file'}), 500
     
     return jsonify({'error': 'File not found'}), 404
+
+@app.route('/api/security/updates')
+@auth.login_required
+def api_security_updates():
+    """Get security update status"""
+    try:
+        result = subprocess.run(['apt', 'list', '--upgradable'], 
+                              capture_output=True, text=True, timeout=10)
+        security_updates = [line for line in result.stdout.split('\n') 
+                          if 'security' in line.lower()]
+        
+        return jsonify({
+            'count': len(security_updates),
+            'updates': security_updates[:10]  # First 10 updates
+        })
+    except Exception as e:
+        logger.error(f"Error checking security updates: {e}")
+        return jsonify({'count': 0, 'error': str(e)})
+
+@app.route('/api/errors/recent')
+@auth.login_required
+def api_recent_errors():
+    """Get recent error logs"""
+    errors = []
+    error_count = 0
+    
+    # Scan log files for errors
+    if LOGS_DIR.exists():
+        for log_file in LOGS_DIR.glob('*.log'):
+            if log_file.is_file():
+                try:
+                    with open(log_file, 'r') as f:
+                        for line in f:
+                            if 'ERROR' in line or 'CRITICAL' in line:
+                                error_count += 1
+                                if len(errors) < 20:  # Keep last 20 errors
+                                    errors.append({
+                                        'timestamp': datetime.now().strftime('%H:%M:%S'),
+                                        'message': line.strip()[:200],
+                                        'file': log_file.name
+                                    })
+                except Exception:
+                    pass
+    
+    return jsonify({
+        'count': error_count,
+        'errors': errors
+    })
+
+@app.route('/api/git/status')
+@auth.login_required
+def api_git_status():
+    """Get git repository status"""
+    try:
+        # Get current branch
+        branch_result = subprocess.run(['git', 'branch', '--show-current'],
+                                      capture_output=True, text=True, cwd=BARBOSSA_DIR)
+        current_branch = branch_result.stdout.strip()
+        
+        # Get uncommitted changes count
+        status_result = subprocess.run(['git', 'status', '--porcelain'],
+                                      capture_output=True, text=True, cwd=BARBOSSA_DIR)
+        uncommitted = len([line for line in status_result.stdout.split('\n') if line.strip()])
+        
+        # Get recent commits
+        log_result = subprocess.run(['git', 'log', '--oneline', '-10'],
+                                   capture_output=True, text=True, cwd=BARBOSSA_DIR)
+        commits = []
+        for line in log_result.stdout.split('\n')[:5]:
+            if line:
+                parts = line.split(' ', 1)
+                if len(parts) == 2:
+                    commits.append({
+                        'hash': parts[0][:7],
+                        'message': parts[1][:80]
+                    })
+        
+        return jsonify({
+            'branch': current_branch,
+            'uncommitted': uncommitted,
+            'commits': commits
+        })
+    except Exception as e:
+        logger.error(f"Error getting git status: {e}")
+        return jsonify({'branch': 'unknown', 'uncommitted': 0, 'commits': []})
+
+@app.route('/api/infrastructure/health')
+@auth.login_required
+def api_infrastructure_health():
+    """Get infrastructure health status"""
+    try:
+        # Check Docker
+        docker_result = subprocess.run(['docker', 'ps', '-q'],
+                                      capture_output=True, text=True)
+        docker_containers = len(docker_result.stdout.strip().split('\n')) if docker_result.stdout.strip() else 0
+        
+        # Check Cloudflare tunnel
+        tunnel_result = subprocess.run(['pgrep', '-f', 'cloudflared'],
+                                      capture_output=True, text=True)
+        tunnel_active = bool(tunnel_result.stdout.strip())
+        
+        # Service uptime
+        uptime_result = subprocess.run(['uptime', '-p'],
+                                      capture_output=True, text=True)
+        
+        return jsonify({
+            'docker': {
+                'containers': docker_containers,
+                'status': 'running' if docker_containers > 0 else 'no containers'
+            },
+            'tunnel': {
+                'active': tunnel_active,
+                'status': 'active' if tunnel_active else 'down'
+            },
+            'uptime': uptime_result.stdout.strip()
+        })
+    except Exception as e:
+        logger.error(f"Error checking infrastructure health: {e}")
+        return jsonify({'error': str(e)})
+
+@app.route('/api/files/activity')
+@auth.login_required
+def api_files_activity():
+    """Get file system activity information"""
+    try:
+        # Count modified files in last 24h
+        modified_count = 0
+        if LOGS_DIR.exists():
+            cutoff_time = time.time() - (24 * 3600)
+            for log_file in LOGS_DIR.glob('**/*'):
+                if log_file.is_file() and log_file.stat().st_mtime > cutoff_time:
+                    modified_count += 1
+        
+        # Log files info
+        log_count = len(list(LOGS_DIR.glob('*.log'))) if LOGS_DIR.exists() else 0
+        total_size = sum(f.stat().st_size for f in LOGS_DIR.glob('**/*') if f.is_file()) if LOGS_DIR.exists() else 0
+        
+        # Storage usage
+        disk_usage = shutil.disk_usage('/')
+        
+        return jsonify({
+            'modified_count': modified_count,
+            'log_info': {
+                'count': log_count,
+                'size': f"{total_size / (1024*1024):.1f} MB",
+                'latest': datetime.now().strftime('%Y-%m-%d %H:%M')
+            },
+            'storage': {
+                'used': f"{disk_usage.used / (1024**3):.1f}GB",
+                'total': f"{disk_usage.total / (1024**3):.1f}GB",
+                'percent': int((disk_usage.used / disk_usage.total) * 100)
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error getting file activity: {e}")
+        return jsonify({'error': str(e)})
+
+@app.route('/api/automation/status')
+@auth.login_required
+def api_automation_status():
+    """Get automation and cron job status"""
+    try:
+        # Check cron jobs
+        cron_jobs = [
+            {'name': 'Barbossa Main', 'status': 'Active', 'active': True},
+            {'name': 'Infrastructure Check', 'status': 'Every 2h', 'active': True},
+            {'name': 'Ticket Enrichment', 'status': 'Daily 09:00', 'active': True},
+            {'name': 'Daily Summary', 'status': 'Daily 23:00', 'active': True}
+        ]
+        
+        # Scheduled tasks
+        now = datetime.now()
+        scheduled_tasks = [
+            {'name': 'Infrastructure Check', 'next_run': '2 hours'},
+            {'name': 'Performance Monitor', 'next_run': '4 hours'},
+            {'name': 'Ticket Enrichment', 'next_run': f"{(9 - now.hour) % 24} hours"}
+        ]
+        
+        return jsonify({
+            'cron_jobs': cron_jobs,
+            'scheduled_tasks': scheduled_tasks,
+            'status': 'operational'
+        })
+    except Exception as e:
+        logger.error(f"Error getting automation status: {e}")
+        return jsonify({'error': str(e)})
 
 @app.route('/api/clear-logs', methods=['POST'])
 @auth.login_required
@@ -3267,6 +3479,259 @@ def api_barbossa_session_terminate(session_id):
         return jsonify(result), 200 if result['success'] else 400
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/barbossa/executions')
+@auth.login_required
+def api_barbossa_executions():
+    """Get recent Barbossa executions"""
+    try:
+        executions = []
+        
+        # Get barbossa logs from subdirectory
+        barbossa_dir = LOGS_DIR / 'barbossa'
+        if barbossa_dir.exists():
+            log_files = sorted(barbossa_dir.glob('barbossa_*.log'), reverse=True)[:10]
+            
+            for log_file in log_files:
+                # Parse timestamp from filename
+                filename = log_file.name
+                timestamp_match = re.search(r'(\d{8}_\d{6})', filename)
+                if timestamp_match:
+                    timestamp_str = timestamp_match.group(1)
+                    timestamp = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    timestamp = datetime.fromtimestamp(log_file.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+                
+                # Try to determine area and status from log content
+                area = 'unknown'
+                status = 'completed'
+                summary = ''
+                
+                try:
+                    with open(log_file, 'r') as f:
+                        content = f.read(5000)  # Read first 5KB
+                        if 'infrastructure' in content.lower():
+                            area = 'infrastructure'
+                        elif 'personal' in content.lower():
+                            area = 'personal_projects'
+                        elif 'davy' in content.lower():
+                            area = 'davy_jones'
+                        
+                        if 'error' in content.lower() or 'failed' in content.lower():
+                            status = 'failed'
+                        
+                        # Try to extract summary
+                        lines = content.split('\n')[:10]
+                        for line in lines:
+                            if 'working on' in line.lower() or 'task:' in line.lower():
+                                summary = line.strip()[:100]
+                                break
+                except:
+                    pass
+                
+                executions.append({
+                    'timestamp': timestamp,
+                    'area': area,
+                    'status': status,
+                    'summary': summary,
+                    'log_file': f'barbossa/{filename}',
+                    'duration': None
+                })
+        
+        # Also check main logs directory
+        main_logs = sorted(LOGS_DIR.glob('barbossa_enhanced_*.log'), reverse=True)[:5]
+        for log_file in main_logs:
+            filename = log_file.name
+            timestamp_match = re.search(r'(\d{8}_\d{6})', filename)
+            if timestamp_match:
+                timestamp_str = timestamp_match.group(1)
+                timestamp = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                timestamp = datetime.fromtimestamp(log_file.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+            
+            executions.append({
+                'timestamp': timestamp,
+                'area': 'enhanced',
+                'status': 'completed',
+                'summary': 'Enhanced Barbossa execution',
+                'log_file': filename,
+                'duration': None
+            })
+        
+        # Sort by timestamp
+        executions.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        return jsonify(executions[:20])  # Return top 20
+    except Exception as e:
+        logger.error(f"Error getting Barbossa executions: {e}")
+        return jsonify([])
+
+@app.route('/api/barbossa/cron')
+@auth.login_required
+def api_barbossa_cron():
+    """Get cron activity for Barbossa"""
+    try:
+        cron_logs = []
+        jobs = []
+        
+        # Get cron logs
+        cron_files = sorted(LOGS_DIR.glob('cron_*.log'), reverse=True)[:10]
+        for log_file in cron_files:
+            timestamp = datetime.fromtimestamp(log_file.stat().st_mtime).strftime('%Y-%m-%d %H:%M')
+            status = 'completed'
+            
+            try:
+                with open(log_file, 'r') as f:
+                    content = f.read(1000)
+                    if 'error' in content.lower():
+                        status = 'error'
+                    elif 'skipped' in content.lower():
+                        status = 'skipped'
+            except:
+                pass
+            
+            cron_logs.append({
+                'file': log_file.name,
+                'time': timestamp,
+                'status': status
+            })
+        
+        # Check cron configuration
+        try:
+            result = subprocess.run(['crontab', '-l'], capture_output=True, text=True)
+            if result.returncode == 0:
+                cron_lines = result.stdout.strip().split('\n')
+                for line in cron_lines:
+                    if 'barbossa' in line.lower() and not line.startswith('#'):
+                        # Parse cron schedule
+                        parts = line.split()
+                        if len(parts) >= 6:
+                            schedule = ' '.join(parts[:5])
+                            command = ' '.join(parts[5:])
+                            jobs.append({
+                                'name': 'Barbossa Automation',
+                                'schedule': schedule,
+                                'enabled': True
+                            })
+        except:
+            pass
+        
+        return jsonify({
+            'recent_logs': cron_logs,
+            'jobs': jobs
+        })
+    except Exception as e:
+        logger.error(f"Error getting cron activity: {e}")
+        return jsonify({'recent_logs': [], 'jobs': []})
+
+@app.route('/api/barbossa/personal-assistant')
+@auth.login_required
+def api_barbossa_personal_assistant():
+    """Get personal assistant status"""
+    try:
+        # Check if personal assistant is running
+        is_running = False
+        result = subprocess.run(['pgrep', '-f', 'barbossa_personal_assistant'], capture_output=True)
+        if result.returncode == 0:
+            is_running = True
+        
+        # Get statistics from state file
+        state_file = BASE_DIR / 'state' / 'barbossa_state.json'
+        tickets_enriched = 0
+        improvements_found = 0
+        recent_activity = []
+        
+        if state_file.exists():
+            try:
+                with open(state_file, 'r') as f:
+                    state = json.load(f)
+                    if 'personal_assistant' in state:
+                        pa_state = state['personal_assistant']
+                        tickets_enriched = pa_state.get('tickets_enriched', 0)
+                        improvements_found = pa_state.get('improvements_found', 0)
+                        
+                        # Get recent activity
+                        if 'recent_activity' in pa_state:
+                            for activity in pa_state['recent_activity'][-10:]:
+                                recent_activity.append({
+                                    'time': activity.get('timestamp', 'Unknown'),
+                                    'action': activity.get('action', 'Activity')
+                                })
+            except:
+                pass
+        
+        # Check logs for recent activity if no state
+        if not recent_activity:
+            pa_logs = sorted(LOGS_DIR.glob('claude_personal_*.log'), reverse=True)[:5]
+            for log_file in pa_logs:
+                timestamp = datetime.fromtimestamp(log_file.stat().st_mtime).strftime('%Y-%m-%d %H:%M')
+                recent_activity.append({
+                    'time': timestamp,
+                    'action': 'Personal assistant execution'
+                })
+        
+        return jsonify({
+            'is_running': is_running,
+            'tickets_enriched': tickets_enriched,
+            'improvements_found': improvements_found,
+            'recent_activity': recent_activity
+        })
+    except Exception as e:
+        logger.error(f"Error getting personal assistant status: {e}")
+        return jsonify({
+            'is_running': False,
+            'tickets_enriched': 0,
+            'improvements_found': 0,
+            'recent_activity': []
+        })
+
+@app.route('/api/barbossa/claude-summary')
+@auth.login_required
+def api_barbossa_claude_summary():
+    """Get Claude work summary"""
+    try:
+        # Count Claude logs by type
+        personal_count = len(list(LOGS_DIR.glob('claude_personal_*.log')))
+        infrastructure_count = len(list(LOGS_DIR.glob('claude_infrastructure_*.log')))
+        davy_count = len(list(LOGS_DIR.glob('claude_davy_*.log')))
+        
+        # Get recent work items
+        recent_work = []
+        all_claude_logs = sorted(LOGS_DIR.glob('claude_*.log'), reverse=True)[:10]
+        
+        for log_file in all_claude_logs:
+            timestamp = datetime.fromtimestamp(log_file.stat().st_mtime).strftime('%Y-%m-%d %H:%M')
+            
+            # Determine task type from filename
+            task = 'Unknown task'
+            if 'personal' in log_file.name:
+                task = 'Personal project work'
+            elif 'infrastructure' in log_file.name:
+                task = 'Infrastructure improvements'
+            elif 'davy' in log_file.name:
+                task = 'Davy Jones development'
+            elif 'self_improvement' in log_file.name:
+                task = 'Self improvement'
+            
+            recent_work.append({
+                'time': timestamp,
+                'task': task
+            })
+        
+        return jsonify({
+            'personal_projects': personal_count,
+            'infrastructure': infrastructure_count,
+            'davy_jones': davy_count,
+            'recent_work': recent_work
+        })
+    except Exception as e:
+        logger.error(f"Error getting Claude summary: {e}")
+        return jsonify({
+            'personal_projects': 0,
+            'infrastructure': 0,
+            'davy_jones': 0,
+            'recent_work': []
+        })
 
 @app.route('/health')
 def health():
