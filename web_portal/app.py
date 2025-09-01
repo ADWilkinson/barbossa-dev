@@ -562,12 +562,11 @@ def api_projects():
     """Get project information - returns array for dashboard"""
     projects_list = []
     
-    # Define the projects to monitor
+    # Define the projects to monitor - only those Barbossa works on
     project_paths = [
         {'name': 'Barbossa Engineer', 'path': str(BARBOSSA_DIR)},
         {'name': 'Davy Jones Intern', 'path': str(BARBOSSA_DIR / 'projects' / 'davy-jones-intern')},
-        {'name': 'Saylor Memes', 'path': str(BARBOSSA_DIR / 'projects' / 'saylormemes')},
-        {'name': 'Flying Dutchman Theme', 'path': str(BARBOSSA_DIR / 'projects' / 'the-flying-dutchman-theme')},
+        {'name': 'Infrastructure', 'path': '/home/dappnode'},  # Monitor home directory for infra changes
     ]
     
     for project in project_paths:
