@@ -23,9 +23,14 @@ import secrets
 import shutil
 import gzip
 import io
+import psutil
+import logging
 
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 # Import the server manager
 try:
@@ -214,6 +219,7 @@ if os.getenv('FLASK_ENV') == 'development':
 
 # Configuration
 BARBOSSA_DIR = Path.home() / 'barbossa-engineer'
+BASE_DIR = BARBOSSA_DIR  # Add BASE_DIR for compatibility
 LOGS_DIR = BARBOSSA_DIR / 'logs'
 CHANGELOGS_DIR = BARBOSSA_DIR / 'changelogs'
 SECURITY_DIR = BARBOSSA_DIR / 'security'
@@ -563,6 +569,124 @@ def api_projects():
     else:
         return jsonify({'projects': {}, 'stats': {}})
 
+# Logs endpoint
+@app.route('/api/logs')
+@auth.login_required  
+def api_logs():
+    """Get recent log files for dashboard"""
+    logs = []
+    log_dirs = [LOGS_DIR, LOGS_DIR / 'barbossa', CHANGELOGS_DIR]
+    
+    for log_dir in log_dirs:
+        if log_dir.exists():
+            for log_file in sorted(log_dir.glob('*.log'), reverse=True)[:20]:
+                try:
+                    stat = log_file.stat()
+                    size = stat.st_size
+                    
+                    # Format size
+                    if size > 1024 * 1024:
+                        size_str = f"{size / (1024 * 1024):.1f} MB"
+                    elif size > 1024:
+                        size_str = f"{size / 1024:.1f} KB"
+                    else:
+                        size_str = f"{size} B"
+                    
+                    # Determine log type
+                    log_type = 'info'
+                    if 'error' in log_file.name.lower():
+                        log_type = 'error'
+                    elif 'warning' in log_file.name.lower():
+                        log_type = 'warning'
+                    elif 'success' in log_file.name.lower():
+                        log_type = 'success'
+                    
+                    # Get relative path for file parameter
+                    if log_file.parent == LOGS_DIR / 'barbossa':
+                        file_param = f"barbossa/{log_file.name}"
+                    else:
+                        file_param = log_file.name
+                    
+                    logs.append({
+                        'name': log_file.name,
+                        'file': file_param,
+                        'size': size_str,
+                        'time': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M'),
+                        'type': log_type
+                    })
+                except Exception as e:
+                    print(f"Error processing log {log_file}: {e}")
+    
+    # Sort by time (most recent first)
+    logs.sort(key=lambda x: x['time'], reverse=True)
+    
+    return jsonify(logs[:50])  # Return top 50 logs
+
+# Next runs endpoint
+@app.route('/api/next-runs')
+@auth.login_required
+def api_next_runs():
+    """Get next scheduled runs for Barbossa"""
+    next_runs = []
+    
+    try:
+        # Check crontab for scheduled runs
+        result = subprocess.run(['crontab', '-l'], capture_output=True, text=True)
+        if result.returncode == 0:
+            cron_lines = result.stdout.strip().split('\n')
+            
+            # Parse cron entries
+            for line in cron_lines:
+                if line and not line.startswith('#') and 'barbossa' in line.lower():
+                    # Extract schedule pattern (first 5 fields)
+                    parts = line.split()
+                    if len(parts) >= 6:
+                        minute, hour, day, month, dow = parts[:5]
+                        
+                        # Simple interpretation of next run
+                        now = datetime.now()
+                        task_name = 'Barbossa Automation'
+                        
+                        if 'infrastructure' in line.lower():
+                            task_name = 'Infrastructure Check'
+                        elif 'personal' in line.lower():
+                            task_name = 'Personal Projects'
+                        elif 'davy' in line.lower():
+                            task_name = 'Davy Jones Work'
+                        
+                        # Calculate next run (simplified)
+                        if hour != '*':
+                            next_hour = int(hour)
+                            next_time = now.replace(hour=next_hour, minute=0 if minute == '0' else int(minute), second=0)
+                            if next_time <= now:
+                                next_time += timedelta(days=1)
+                            
+                            next_runs.append({
+                                'time': next_time.strftime('%H:%M'),
+                                'task': task_name
+                            })
+        
+        # If no cron jobs, show default schedule
+        if not next_runs:
+            current_hour = datetime.now().hour
+            for hours_ahead in [4, 8, 12]:
+                next_hour = (current_hour + hours_ahead) % 24
+                next_runs.append({
+                    'time': f"{next_hour:02d}:00",
+                    'task': 'Barbossa Automation'
+                })
+    
+    except Exception as e:
+        print(f"Error getting next runs: {e}")
+        # Return default schedule on error
+        next_runs = [
+            {'time': '00:00', 'task': 'Daily Automation'},
+            {'time': '04:00', 'task': 'Infrastructure Check'},
+            {'time': '08:00', 'task': 'Personal Projects'}
+        ]
+    
+    return jsonify(next_runs[:5])  # Return up to 5 next runs
+
 # Barbossa-specific status
 @app.route('/api/barbossa-status')
 @auth.login_required
@@ -685,6 +809,56 @@ def api_status():
         'system': get_system_stats(),
         'timestamp': datetime.now().isoformat()
     })
+
+@app.route('/api/stats')
+@auth.login_required
+def api_stats():
+    """Get system statistics for dashboard"""
+    try:
+        # CPU usage
+        cpu_percent = psutil.cpu_percent(interval=1)
+        
+        # Memory usage
+        memory = psutil.virtual_memory()
+        memory_percent = memory.percent
+        
+        # Disk usage
+        disk = psutil.disk_usage('/')
+        disk_percent = disk.percent
+        
+        # Uptime
+        boot_time = datetime.fromtimestamp(psutil.boot_time())
+        uptime = datetime.now() - boot_time
+        days = uptime.days
+        hours = uptime.seconds // 3600
+        minutes = (uptime.seconds % 3600) // 60
+        
+        if days > 0:
+            uptime_str = f"{days}d {hours}h {minutes}m"
+        elif hours > 0:
+            uptime_str = f"{hours}h {minutes}m"
+        else:
+            uptime_str = f"{minutes}m"
+        
+        # Network connections
+        connections = len(psutil.net_connections())
+        
+        return jsonify({
+            'cpu': round(cpu_percent, 1),
+            'memory': round(memory_percent, 1),
+            'disk': round(disk_percent, 1),
+            'uptime': uptime_str,
+            'network_connections': connections
+        })
+    except Exception as e:
+        logger.error(f"Error getting system stats: {e}")
+        return jsonify({
+            'cpu': 0,
+            'memory': 0,
+            'disk': 0,
+            'uptime': 'Unknown',
+            'network_connections': 0
+        })
 
 @app.route('/api/barbossa/activity')
 @auth.login_required
@@ -1220,40 +1394,13 @@ def api_kill_claude():
 @app.route('/api/services')
 @auth.login_required
 def api_services():
-    """Get status of related services with improved parsing"""
-    services = {
-        'processes': {},
-        'systemd': {},
-        'docker': {},
-        'tmux_sessions': []
-    }
-    
-    # Check Docker containers
-    try:
-        result = subprocess.run(['docker', 'ps', '-a', '--format', '{{.Names}}\t{{.Status}}\t{{.Image}}'], capture_output=True, text=True, timeout=10)
-        if result.returncode == 0 and result.stdout.strip():
-            for line in result.stdout.strip().split('\n'):
-                if line and '\t' in line:
-                    parts = line.split('\t')
-                    if len(parts) >= 2:
-                        name = parts[0]
-                        status = parts[1]
-                        image = parts[2] if len(parts) > 2 else 'unknown'
-                        services['docker'][name] = {
-                            'status': 'running' if 'Up' in status else 'stopped',
-                            'full_status': status,
-                            'image': image
-                        }
-    except Exception as e:
-        services['docker'] = {'error': str(e)}
+    """Get status of related services - returns simple flat structure for dashboard"""
+    services = {}
     
     # Check important processes
     process_checks = {
-        'barbossa_portal': 'web_portal/app.py',
-        'cloudflared': 'cloudflared',
-        'claude': 'claude',
-        'dockerd': 'dockerd',
-        'redis': 'redis-server'
+        'Cloudflare Tunnel': 'cloudflared',
+        'Docker': 'dockerd',
     }
     
     try:
@@ -1261,67 +1408,34 @@ def api_services():
         if ps_result.returncode == 0:
             for name, search_term in process_checks.items():
                 is_running = search_term in ps_result.stdout
-                services['processes'][name] = {
-                    'status': 'active' if is_running else 'inactive',
-                    'name': name.replace('_', ' ').title()
-                }
+                services[name] = 'running' if is_running else 'stopped'
+            
+            # Special check for Web Portal (check for python running app.py)
+            web_portal_running = ('app.py' in ps_result.stdout and 'python' in ps_result.stdout)
+            services['Web Portal'] = 'running' if web_portal_running else 'stopped'
     except Exception as e:
         for name in process_checks.keys():
-            services['processes'][name] = {
-                'status': 'error',
-                'name': name.replace('_', ' ').title()
-            }
+            services[name] = 'error'
+        services['Web Portal'] = 'error'
     
-    # Check systemd services
-    systemd_services = ['cloudflared', 'redis', 'docker']
-    for service in systemd_services:
-        try:
-            result = subprocess.run(['systemctl', 'is-active', service], capture_output=True, text=True, timeout=5)
-            services['systemd'][service] = {
-                'status': 'active' if result.stdout.strip() == 'active' else 'inactive',
-                'name': service.title()
-            }
-        except:
-            services['systemd'][service] = {
-                'status': 'unknown',
-                'name': service.title()
-            }
     
-    # Check tmux sessions with better parsing
+    # Check tmux sessions
     try:
         result = subprocess.run(['tmux', 'ls'], capture_output=True, text=True, timeout=5)
         if result.returncode == 0 and result.stdout.strip():
-            for line in result.stdout.strip().split('\n'):
-                if line and ':' in line:
-                    # Parse: session_name: windows (created date) (attached/not attached)
-                    parts = line.split(':', 1)
-                    session_name = parts[0].strip()
-                    session_info = parts[1].strip() if len(parts) > 1 else ''
-                    
-                    # Extract window count
-                    windows = '1'
-                    if session_info:
-                        try:
-                            # Look for pattern like "1 windows"
-                            import re
-                            match = re.search(r'(\d+)\s+windows?', session_info)
-                            if match:
-                                windows = match.group(1)
-                        except:
-                            windows = '1'
-                    
-                    # Check if attached
-                    attached = 'attached' in session_info.lower()
-                    
-                    services['tmux_sessions'].append({
-                        'name': session_name,
-                        'windows': windows,
-                        'attached': attached,
-                        'status': 'attached' if attached else 'detached',
-                        'info': session_info
-                    })
-    except Exception as e:
-        services['tmux_sessions'] = []
+            tmux_count = len(result.stdout.strip().split('\n'))
+            services['Tmux Sessions'] = f'{tmux_count} active' if tmux_count > 0 else 'none'
+        else:
+            services['Tmux Sessions'] = 'none'
+    except:
+        services['Tmux Sessions'] = 'none'
+    
+    # Check if Barbossa is running
+    try:
+        result = subprocess.run(['pgrep', '-f', 'barbossa.py'], capture_output=True, text=True)
+        services['Barbossa'] = 'running' if result.returncode == 0 else 'stopped'
+    except:
+        services['Barbossa'] = 'stopped'
     
     return jsonify(services)
 
