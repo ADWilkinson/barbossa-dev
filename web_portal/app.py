@@ -108,6 +108,18 @@ except ImportError as e:
     print(f"Warning: Could not import advanced API: {e}")
     ADVANCED_API_AVAILABLE = False
 
+# Register enhanced activity API
+try:
+    from activity_api import activity_api, auth as activity_auth
+    # Share the same auth instance
+    activity_auth.verify_password = auth.verify_password
+    app.register_blueprint(activity_api)
+    print("Enhanced Activity API registered")
+    ACTIVITY_API_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Could not import activity API: {e}")
+    ACTIVITY_API_AVAILABLE = False
+
 # Register monitoring API blueprint
 try:
     from monitoring_api import monitoring_api

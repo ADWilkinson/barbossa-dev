@@ -1,0 +1,169 @@
+{
+  "timestamp": "2025-09-08T12:30:01.904870",
+  "system": {
+    "cpu_percent": 0.0,
+    "memory_percent": 5.8,
+    "disk_usage_percent": 2.0,
+    "network_connections": 88,
+    "process_count": 422
+  },
+  "processes": {
+    "top_cpu": [],
+    "top_memory": [],
+    "zombies": [
+      {
+        "pid": 97113,
+        "name": "npm exec @notio",
+        "status": "zombie"
+      },
+      {
+        "pid": 97779,
+        "name": "git",
+        "status": "zombie"
+      },
+      {
+        "pid": 97786,
+        "name": "bash",
+        "status": "zombie"
+      },
+      {
+        "pid": 97840,
+        "name": "git",
+        "status": "zombie"
+      },
+      {
+        "pid": 97847,
+        "name": "bash",
+        "status": "zombie"
+      },
+      {
+        "pid": 97873,
+        "name": "git",
+        "status": "zombie"
+      },
+      {
+        "pid": 97880,
+        "name": "bash",
+        "status": "zombie"
+      },
+      {
+        "pid": 97902,
+        "name": "git",
+        "status": "zombie"
+      },
+      {
+        "pid": 97909,
+        "name": "bash",
+        "status": "zombie"
+      },
+      {
+        "pid": 97962,
+        "name": "git",
+        "status": "zombie"
+      },
+      {
+        "pid": 97969,
+        "name": "bash",
+        "status": "zombie"
+      },
+      {
+        "pid": 101624,
+        "name": "git",
+        "status": "zombie"
+      },
+      {
+        "pid": 101631,
+        "name": "bash",
+        "status": "zombie"
+      },
+      {
+        "pid": 101677,
+        "name": "git",
+        "status": "zombie"
+      },
+      {
+        "pid": 101684,
+        "name": "bash",
+        "status": "zombie"
+      },
+      {
+        "pid": 105241,
+        "name": "git",
+        "status": "zombie"
+      },
+      {
+        "pid": 105248,
+        "name": "bash",
+        "status": "zombie"
+      },
+      {
+        "pid": 106837,
+        "name": "git",
+        "status": "zombie"
+      },
+      {
+        "pid": 106844,
+        "name": "bash",
+        "status": "zombie"
+      },
+      {
+        "pid": 111973,
+        "name": "git",
+        "status": "zombie"
+      },
+      {
+        "pid": 111980,
+        "name": "bash",
+        "status": "zombie"
+      },
+      {
+        "pid": 112371,
+        "name": "git",
+        "status": "zombie"
+      },
+      {
+        "pid": 112378,
+        "name": "bash",
+        "status": "zombie"
+      },
+      {
+        "pid": 112600,
+        "name": "npm exec @notio",
+        "status": "zombie"
+      },
+      {
+        "pid": 112756,
+        "name": "npm exec @notio",
+        "status": "zombie"
+      },
+      {
+        "pid": 112828,
+        "name": "git",
+        "status": "zombie"
+      },
+      {
+        "pid": 112836,
+        "name": "git",
+        "status": "zombie"
+      },
+      {
+        "pid": 113150,
+        "name": "git",
+        "status": "zombie"
+      },
+      {
+        "pid": 113158,
+        "name": "git",
+        "status": "zombie"
+      },
+      {
+        "pid": 113253,
+        "name": "git",
+        "status": "zombie"
+      }
+    ]
+  },
+  "recommendations": [
+    "Kill zombie processes"
+  ]
+}

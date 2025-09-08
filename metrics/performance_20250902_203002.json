@@ -1,0 +1,1924 @@
+{
+  "timestamp": "2025-09-02T20:30:01.696168",
+  "system": {
+    "cpu_percent": 0.0,
+    "memory_percent": 4.4,
+    "disk_usage_percent": 1.9,
+    "network_connections": 86,
+    "process_count": 766
+  },
+  "processes": {
+    "top_cpu": [],
+    "top_memory": [],
+    "zombies": [
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 3207
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 3214
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 3371
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 3378
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 3533
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 3540
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 3671
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 3678
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 3789
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 3796
+      },
+      {
+        "name": "npm exec @notio",
+        "status": "zombie",
+        "pid": 3907
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 3961
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 3968
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4075
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4082
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4110
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4117
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4148
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4155
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4178
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4185
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4306
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4313
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4340
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4347
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4369
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4376
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4399
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4406
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4425
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4432
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4457
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4464
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4487
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4494
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4562
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4569
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4590
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4597
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4619
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4626
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4645
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4652
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4674
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4681
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4702
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4709
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4732
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4739
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4774
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4781
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4814
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4821
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4834
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4841
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4857
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4864
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4882
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4889
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4902
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4909
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4922
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4929
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4943
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4950
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4964
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4971
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 4989
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 4996
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5009
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5016
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5029
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5036
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5050
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5057
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5079
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5086
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5100
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5107
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5134
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5141
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5159
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5166
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5179
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5186
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5199
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5206
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5222
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5229
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5248
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5255
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5269
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5276
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5289
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5296
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5315
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5322
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5337
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5344
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5357
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5364
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5378
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5385
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5402
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5409
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5423
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5430
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5444
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5451
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5464
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5471
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5487
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5494
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5508
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5515
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5528
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5535
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5550
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5557
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 5573
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 5580
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 6221
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 6228
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 6466
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 6473
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 6486
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 6493
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 6508
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 6515
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 7400
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 7407
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 7442
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 7449
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 8730
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 8737
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 9696
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 9703
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 9729
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 9736
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 10489
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 10496
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11174
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11181
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11195
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11202
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11216
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11223
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11239
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11246
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11263
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11270
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11283
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11290
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11306
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11313
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11327
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11334
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11349
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11356
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11374
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11381
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11394
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11401
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11414
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11421
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11435
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11442
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11456
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11463
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11479
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11486
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11501
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11508
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11521
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11528
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11548
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11555
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11569
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11576
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11591
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11598
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11626
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11633
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11650
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11657
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11670
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11677
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11694
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11701
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11719
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11726
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11739
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11746
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11759
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11766
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11786
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11793
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11808
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11815
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11828
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11835
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11849
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11856
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11873
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11880
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11893
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11900
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11915
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11922
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11935
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11942
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11956
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11963
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 11979
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 11986
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12000
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12007
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12021
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12028
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12044
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12051
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12070
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12077
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12090
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12097
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12111
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12118
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12132
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12139
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12152
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12159
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12176
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12183
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12196
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12203
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12217
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12224
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12238
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12245
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12259
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12266
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12284
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12291
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12304
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12311
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12325
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12332
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12348
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12355
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12373
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12380
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12394
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12401
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12419
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12426
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12440
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12447
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12462
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12469
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12486
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12493
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12506
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12513
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12527
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12534
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12547
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12554
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12568
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12575
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12591
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12598
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12611
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12618
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12633
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12640
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12654
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12661
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12681
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12688
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12701
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12708
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12721
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12728
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12765
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12772
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12789
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12796
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12810
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12817
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12851
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12858
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12873
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12880
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12897
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12904
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12917
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12924
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12941
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12948
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12966
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12973
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 12986
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 12993
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13006
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13013
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13028
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13035
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13053
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13060
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13073
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13080
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13093
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13100
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13115
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13122
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13260
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13267
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13283
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13290
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13303
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13310
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13326
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13333
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13347
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13354
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13394
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13401
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13416
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13423
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13447
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13454
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13467
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13474
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13491
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13498
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13511
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13518
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13532
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13539
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13552
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13559
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13573
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13580
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13598
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13605
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13618
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13625
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13639
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13646
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13682
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13689
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13704
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13711
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13728
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13735
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13748
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13755
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13772
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13779
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13793
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13800
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13813
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13820
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13838
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13845
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13858
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13865
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13879
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13886
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13900
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13907
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13923
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13930
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13944
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13951
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13965
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13972
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 13986
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 13993
+      },
+      {
+        "name": "git",
+        "status": "zombie",
+        "pid": 14010
+      },
+      {
+        "name": "bash",
+        "status": "zombie",
+        "pid": 14017
+      }
+    ]
+  },
+  "recommendations": [
+    "Kill zombie processes"
+  ]
+}

@@ -58,25 +58,7 @@ else
     fi
 fi
 
-# Check for PostgreSQL (multiple possible service names)
-PG_RUNNING=false
-for pg_service in postgresql postgresql@14-main postgresql@15-main postgres; do
-    if systemctl is-active --quiet $pg_service 2>/dev/null; then
-        echo "✓ PostgreSQL service ($pg_service): Active"
-        PG_RUNNING=true
-        break
-    fi
-done
-
-if [ "$PG_RUNNING" = false ]; then
-    # Check if postgres is running as a process
-    if pgrep -f "postgres" > /dev/null; then
-        echo "✓ PostgreSQL: Running (non-systemd)"
-    else
-        echo "⚠️  WARNING: PostgreSQL service not found or not running"
-        echo "[$(date)] WARNING: PostgreSQL not detected" >> logs/infrastructure_alerts.log
-    fi
-fi
+# PostgreSQL check removed - not used in this infrastructure
 
 # Check for security updates
 SECURITY_UPDATES=$(apt list --upgradable 2>/dev/null | grep -i security | wc -l)

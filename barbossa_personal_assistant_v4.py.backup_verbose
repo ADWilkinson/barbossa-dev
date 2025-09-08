@@ -350,97 +350,183 @@ class DevelopmentEnrichmentService:
         desc_lower = (description or '').lower()
         combined = f"{title_lower} {desc_lower}"
         
-        # Quick type detection
+        # Determine ticket type
         ticket_type = "Feature"
-        if any(word in combined for word in ['bug', 'fix', 'broken', 'error']):
-            ticket_type = "Bug"
-        elif any(word in combined for word in ['test', 'testing']):
-            ticket_type = "Test"
+        if any(word in combined for word in ['bug', 'fix', 'broken', 'error', 'crash', 'issue']):
+            ticket_type = "Bug Fix"
+        elif any(word in combined for word in ['refactor', 'cleanup', 'improve', 'optimize']):
+            ticket_type = "Refactor"
+        elif any(word in combined for word in ['test', 'testing', 'coverage', 'spec']):
+            ticket_type = "Testing"
+        elif any(word in combined for word in ['doc', 'readme', 'comment', 'documentation']):
+            ticket_type = "Documentation"
         
         context_parts.append(f"**Type:** {ticket_type}")
         
-        # Relevant files based on actual ZKP2P structure
-        context_parts.append("\n### 📁 Relevant Files")
+        # Estimate complexity
+        complexity = "Medium"
+        estimated_hours = "2-4"
+        if any(word in title_lower for word in ['simple', 'quick', 'small', 'minor', 'tiny']):
+            complexity = "Low"
+            estimated_hours = "1-2"
+        elif any(word in title_lower for word in ['complex', 'major', 'architecture', 'redesign', 'large']):
+            complexity = "High"
+            estimated_hours = "4-8"
         
-        # Frontend Components (zkp2p-v2-client)
-        if any(word in combined for word in ['modal', 'dialog', 'popup']):
-            context_parts.append("- `src/components/Modals/` - Modal components")
-            context_parts.append("- `src/hooks/useModal.tsx` - Modal hook")
+        context_parts.append(f"**Complexity:** {complexity}")
+        context_parts.append(f"**Estimated Time:** {estimated_hours} hours")
         
-        elif any(word in combined for word in ['deposit', 'fund']):
-            context_parts.append("- `src/components/Deposit/` - Deposit flow")
-            context_parts.append("- `src/contexts/Deposits/` - Deposit state")
-            context_parts.append("- `src/hooks/useDeposit.tsx` - Deposit logic")
+        # Implementation approach based on type
+        context_parts.append("\n### 🎯 Implementation Steps")
         
-        elif any(word in combined for word in ['registration', 'register', 'onboard']):
-            context_parts.append("- `src/components/Registration/` - User registration")
-            context_parts.append("- `src/contexts/registration.tsx` - Registration state")
+        if ticket_type == "Bug Fix":
+            context_parts.append("1. **Reproduce** - Set up environment to reproduce the issue")
+            context_parts.append("2. **Debug** - Use browser DevTools/logging to identify root cause")
+            context_parts.append("3. **Fix** - Implement minimal fix avoiding side effects")
+            context_parts.append("4. **Test** - Verify fix resolves issue completely")
+            context_parts.append("5. **Regression** - Add test to prevent recurrence")
+        elif ticket_type == "Feature":
+            context_parts.append("1. **Design** - Plan component structure and data flow")
+            context_parts.append("2. **Implement** - Build core functionality incrementally")
+            context_parts.append("3. **Integrate** - Connect with existing systems/APIs")
+            context_parts.append("4. **Test** - Add unit and integration tests")
+            context_parts.append("5. **Document** - Update docs and inline comments")
+        elif ticket_type == "Refactor":
+            context_parts.append("1. **Analyze** - Map current implementation")
+            context_parts.append("2. **Plan** - Design improved structure")
+            context_parts.append("3. **Refactor** - Make changes incrementally")
+            context_parts.append("4. **Verify** - Ensure all tests pass")
+            context_parts.append("5. **Benchmark** - Measure performance impact")
         
-        elif any(word in combined for word in ['proof', 'zk', 'verify']):
-            context_parts.append("- `src/helpers/generateProof.tsx` - Proof generation")
-            context_parts.append("- `src/workers/` - Web workers for proofs")
+        # Technical context based on keywords
+        context_parts.append("\n### 🔧 Technical Details")
         
-        elif any(word in combined for word in ['swap', 'liquidity', 'order']):
-            context_parts.append("- `src/components/Swap/` - Swap interface")
-            context_parts.append("- `src/components/LiquidityProviders/` - LP views")
+        # Component-specific guidance
+        if any(word in title_lower for word in ['modal', 'dialog', 'popup']):
+            context_parts.append("**Component:** Modal/Dialog System")
+            context_parts.append("**Files:** `src/components/modals/`, `src/hooks/useModal.ts`")
+            context_parts.append("**Stack:** React, MUI Dialog, Portal rendering")
+            context_parts.append("**Key Considerations:**")
+            context_parts.append("- Focus management and keyboard navigation (ESC to close)")
+            context_parts.append("- Backdrop click handling")
+            context_parts.append("- Mobile responsiveness")
+            context_parts.append("- Z-index stacking context")
+            context_parts.append("- Animation/transition states")
+            
+        elif any(word in title_lower for word in ['deposit', 'fund']):
+            context_parts.append("**Feature:** Deposit Flow")
+            context_parts.append("**Files:** `src/components/Deposit/`, `src/contexts/DepositContext.tsx`")
+            context_parts.append("**APIs:** Deposit service, blockchain interactions")
+            context_parts.append("**Critical Points:**")
+            context_parts.append("- Amount validation (min/max limits)")
+            context_parts.append("- Network/chain verification")
+            context_parts.append("- Gas estimation")
+            context_parts.append("- Transaction status tracking")
+            context_parts.append("- Error recovery flows")
+            
+        elif any(word in title_lower for word in ['swap', 'exchange', 'trade']):
+            context_parts.append("**Feature:** Swap/Exchange")
+            context_parts.append("**Files:** `src/components/Swap/`, `src/hooks/useSwap.ts`")
+            context_parts.append("**Dependencies:** Rate calculations, liquidity pools")
+            context_parts.append("**Implementation Notes:**")
+            context_parts.append("- Real-time rate updates")
+            context_parts.append("- Slippage tolerance settings")
+            context_parts.append("- Price impact warnings")
+            context_parts.append("- Transaction deadline")
+            context_parts.append("- Failed swap recovery")
+            
+        elif any(word in title_lower for word in ['relay', 'relayer']):
+            context_parts.append("**System:** Relay Infrastructure")
+            context_parts.append("**Files:** `src/services/relay/`, `src/api/relayClient.ts`")
+            context_parts.append("**Protocol:** WebSocket + REST fallback")
+            context_parts.append("**Architecture:**")
+            context_parts.append("- Connection pooling")
+            context_parts.append("- Automatic reconnection")
+            context_parts.append("- Message queuing")
+            context_parts.append("- Rate limiting")
+            context_parts.append("- Circuit breaker pattern")
+            
+        elif any(word in title_lower for word in ['proof', 'zk', 'zero-knowledge']):
+            context_parts.append("**Feature:** Zero-Knowledge Proofs")
+            context_parts.append("**Files:** `src/services/proof/`, `src/workers/proofWorker.ts`")
+            context_parts.append("**Stack:** snarkjs, circom, Web Workers")
+            context_parts.append("**Performance Notes:**")
+            context_parts.append("- CPU intensive - use Web Worker")
+            context_parts.append("- Show progress indicators")
+            context_parts.append("- Cache generated proofs")
+            context_parts.append("- Handle WASM loading")
+            context_parts.append("- Browser compatibility checks")
         
-        # Backend Services
-        if 'curator' in combined or 'api' in combined:
-            context_parts.append("\n**Backend: Curator Service**")
-            context_parts.append("- `curator/src/routes/` - API endpoints")
-            context_parts.append("- `curator/prisma/schema.prisma` - Database schema")
+        elif any(word in title_lower for word in ['wallet', 'connect', 'web3']):
+            context_parts.append("**Feature:** Web3 Wallet Integration")
+            context_parts.append("**Files:** `src/hooks/useWallet.ts`, `src/providers/WalletProvider.tsx`")
+            context_parts.append("**Libraries:** wagmi v2, viem, ethers.js")
+            context_parts.append("**Requirements:**")
+            context_parts.append("- Multi-wallet support (MetaMask, WalletConnect, Coinbase)")
+            context_parts.append("- Chain switching logic")
+            context_parts.append("- Account change handling")
+            context_parts.append("- Connection persistence")
+            context_parts.append("- Mobile wallet support")
         
-        elif 'relayer' in combined or 'gas' in combined:
-            context_parts.append("\n**Backend: Relayer Service**")
-            context_parts.append("- `relayer/src/` - Gas sponsorship logic")
+        # Testing requirements
+        context_parts.append("\n### 🧪 Testing Checklist")
         
-        # Smart Contracts
-        if 'contract' in combined or 'escrow' in combined:
-            context_parts.append("\n**Smart Contracts**")
-            context_parts.append("- `zkp2p-v2-contracts/contracts/Escrow.sol`")
-            context_parts.append("- `zkp2p-v2-contracts/contracts/reclaimVerifiers/`")
-        
-        # Extension
-        if 'extension' in combined:
-            context_parts.append("\n**Browser Extension**")
-            context_parts.append("- `zkp2p-v2-extension/src/background/` - Service worker")
-            context_parts.append("- `zkp2p-v2-extension/src/content/` - Content scripts")
-        
-        # Quick implementation guide
-        context_parts.append("\n### 🚀 Quick Start")
-        
-        if ticket_type == "Bug":
-            context_parts.append("1. Reproduce locally: `yarn dev`")
-            context_parts.append("2. Check browser console for errors")
-            context_parts.append("3. Fix and test: `yarn test`")
+        if ticket_type == "Bug Fix":
+            context_parts.append("- [ ] Reproduce bug before fix")
+            context_parts.append("- [ ] Verify fix resolves issue")
+            context_parts.append("- [ ] Add regression test")
+            context_parts.append("- [ ] Test edge cases")
+            context_parts.append("- [ ] Check for side effects")
         else:
-            context_parts.append("1. Start dev server: `yarn dev`")
-            context_parts.append("2. Make changes and hot-reload will update")
-            context_parts.append("3. Run tests: `yarn test`")
-            context_parts.append("4. Type check: `yarn typecheck`")
+            context_parts.append("- [ ] Unit tests for new functions")
+            context_parts.append("- [ ] Integration tests for workflows")
+            context_parts.append("- [ ] E2E tests for critical paths")
+            context_parts.append("- [ ] Update snapshots if needed")
+            context_parts.append("- [ ] Coverage > 80%")
         
-        # Common patterns for specific features
-        if 'wallet' in combined or 'connect' in combined:
-            context_parts.append("\n**Wallet Integration**")
-            context_parts.append("- Uses Privy for authentication")
-            context_parts.append("- Wagmi v2 for wallet connections")
-            context_parts.append("- Check `src/contexts/account.tsx`")
+        # Add relevant files
+        if analysis.get('relevant_files'):
+            context_parts.append("\n### 📁 Related Files")
+            for f in analysis['relevant_files'][:8]:
+                context_parts.append(f"- `{f}`")
         
-        elif 'payment' in combined and any(provider in combined for provider in ['venmo', 'cashapp', 'revolut']):
-            context_parts.append("\n**Payment Provider**")
-            context_parts.append("- Reclaim protocol for proof generation")
-            context_parts.append("- Provider-specific verifiers in contracts")
-            context_parts.append("- Extension handles proof extraction")
+        # Common pitfalls
+        context_parts.append("\n### ⚠️ Watch Out For")
         
-        # Testing reminders for common areas
-        if any(word in combined for word in ['deposit', 'swap', 'proof']):
-            context_parts.append("\n### ⚠️ Testing Notes")
-            context_parts.append("- Test on Base Sepolia first")
-            context_parts.append("- Use test payment accounts")
-            context_parts.append("- Check gas estimates")
+        if 'modal' in title_lower or 'dialog' in title_lower:
+            context_parts.append("- Memory leaks from event listeners")
+            context_parts.append("- Portal rendering issues")
+            context_parts.append("- Scroll locking on body")
+        elif 'wallet' in title_lower:
+            context_parts.append("- Race conditions on connection")
+            context_parts.append("- Chain mismatch errors")
+            context_parts.append("- Mobile wallet deep linking")
+        elif 'proof' in title_lower:
+            context_parts.append("- Memory constraints on mobile")
+            context_parts.append("- WASM loading failures")
+            context_parts.append("- Proof generation timeouts")
+        elif 'swap' in title_lower:
+            context_parts.append("- Insufficient liquidity errors")
+            context_parts.append("- Deadline too short")
+            context_parts.append("- Price impact calculations")
+        else:
+            context_parts.append("- State synchronization issues")
+            context_parts.append("- Race conditions")
+            context_parts.append("- Error boundary coverage")
         
-        return '\n'.join(context_parts) if context_parts else "Analyzing ticket..."
-
+        # Resources
+        context_parts.append("\n### 📚 Resources")
+        if 'zkp2p' in project.lower():
+            context_parts.append("- [Frontend Architecture](/docs/frontend-architecture.md)")
+            context_parts.append("- [State Management Guide](/docs/state-management.md)")
+            context_parts.append("- [Testing Guide](/docs/testing.md)")
+        
+        context_parts.append("- Run `yarn dev` to start development server")
+        context_parts.append("- Run `yarn test` to execute test suite")
+        context_parts.append("- Run `yarn typecheck` for TypeScript validation")
+        
+        return '\n'.join(context_parts) if context_parts else "No specific context generated"
+    
     async def analyze_codebase_for_ticket(self, ticket: Dict) -> Dict:
         """Analyze codebase to find relevant files and dependencies"""
         analysis = {'relevant_files': [], 'dependencies': [], 'documentation': [], 'related_tickets': []}

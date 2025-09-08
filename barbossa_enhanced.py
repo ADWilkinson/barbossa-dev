@@ -22,10 +22,235 @@ from typing import Dict, List, Optional, Tuple, Any
 import random
 import shutil
 import psutil
+import re
 
 # Import components
 from security_guard import security_guard, SecurityViolationError
 from server_manager import BarbossaServerManager
+
+class AnomalyDetector:
+    """AI-powered anomaly detection for system metrics"""
+    
+    def __init__(self):
+        self.baseline_models = {}
+        self.anomaly_history = []
+        self.learning_window = 100
+        self.sensitivity = 2.0  # Standard deviations for anomaly threshold
+        
+    def update_baseline(self, metric_name: str, value: float):
+        """Update baseline model for a metric"""
+        if metric_name not in self.baseline_models:
+            self.baseline_models[metric_name] = {
+                'values': [],
+                'mean': 0.0,
+                'std': 0.0,
+                'count': 0
+            }
+        
+        model = self.baseline_models[metric_name]
+        model['values'].append(value)
+        
+        # Keep only recent values for baseline
+        if len(model['values']) > self.learning_window:
+            model['values'] = model['values'][-self.learning_window:]
+        
+        # Update statistics
+        if len(model['values']) >= 5:
+            model['mean'] = sum(model['values']) / len(model['values'])
+            variance = sum((x - model['mean']) ** 2 for x in model['values']) / len(model['values'])
+            model['std'] = variance ** 0.5
+            model['count'] = len(model['values'])
+    
+    def detect_anomaly(self, metric_name: str, value: float) -> Dict:
+        """Detect if current value is an anomaly"""
+        if metric_name not in self.baseline_models:
+            self.update_baseline(metric_name, value)
+            return {'is_anomaly': False, 'reason': 'insufficient_data'}
+        
+        model = self.baseline_models[metric_name]
+        if model['count'] < 10 or model['std'] == 0:
+            self.update_baseline(metric_name, value)
+            return {'is_anomaly': False, 'reason': 'building_baseline'}
+        
+        # Calculate z-score
+        z_score = abs(value - model['mean']) / model['std']
+        is_anomaly = z_score > self.sensitivity
+        
+        anomaly_info = {
+            'is_anomaly': is_anomaly,
+            'z_score': z_score,
+            'threshold': self.sensitivity,
+            'current_value': value,
+            'expected_range': [
+                model['mean'] - self.sensitivity * model['std'],
+                model['mean'] + self.sensitivity * model['std']
+            ],
+            'severity': self._calculate_severity(z_score)
+        }
+        
+        if is_anomaly:
+            self.anomaly_history.append({
+                'timestamp': time.time(),
+                'metric': metric_name,
+                'value': value,
+                'z_score': z_score
+            })
+            # Keep only recent anomalies
+            self.anomaly_history = self.anomaly_history[-50:]
+        
+        self.update_baseline(metric_name, value)
+        return anomaly_info
+    
+    def _calculate_severity(self, z_score: float) -> str:
+        """Calculate anomaly severity based on z-score"""
+        if z_score > 4.0:
+            return 'critical'
+        elif z_score > 3.0:
+            return 'high'
+        elif z_score > 2.5:
+            return 'medium'
+        else:
+            return 'low'
+    
+    def get_anomaly_summary(self) -> Dict:
+        """Get summary of recent anomalies"""
+        if not self.anomaly_history:
+            return {'count': 0, 'metrics_affected': [], 'recent_anomalies': []}
+        
+        recent_anomalies = [a for a in self.anomaly_history if time.time() - a['timestamp'] < 3600]  # Last hour
+        metrics_affected = list(set(a['metric'] for a in recent_anomalies))
+        
+        return {
+            'count': len(recent_anomalies),
+            'metrics_affected': metrics_affected,
+            'recent_anomalies': recent_anomalies[-10:],  # Last 10
+            'severity_breakdown': self._get_severity_breakdown(recent_anomalies)
+        }
+    
+    def _get_severity_breakdown(self, anomalies: List[Dict]) -> Dict:
+        """Get breakdown of anomalies by severity"""
+        breakdown = {'critical': 0, 'high': 0, 'medium': 0, 'low': 0}
+        for anomaly in anomalies:
+            severity = self._calculate_severity(anomaly['z_score'])
+            breakdown[severity] += 1
+        return breakdown
+
+class IntelligentAlertManager:
+    """Intelligent alert management with context-aware notifications"""
+    
+    def __init__(self):
+        self.alert_history = []
+        self.suppression_rules = {}
+        self.alert_correlations = {}
+        self.notification_channels = []
+        
+    def should_alert(self, alert_type: str, context: Dict) -> Dict:
+        """Determine if an alert should be sent based on intelligent rules"""
+        current_time = time.time()
+        
+        # Check suppression rules
+        if self._is_suppressed(alert_type, current_time):
+            return {'should_alert': False, 'reason': 'suppressed'}
+        
+        # Check for alert storms (too many similar alerts)
+        recent_similar = [
+            a for a in self.alert_history[-20:]  # Last 20 alerts
+            if a['type'] == alert_type and current_time - a['timestamp'] < 300  # Last 5 minutes
+        ]
+        
+        if len(recent_similar) > 5:
+            self._add_suppression_rule(alert_type, current_time + 1800)  # Suppress for 30 minutes
+            return {'should_alert': False, 'reason': 'alert_storm_protection'}
+        
+        # Check correlation with other metrics
+        correlation_score = self._calculate_correlation_score(alert_type, context)
+        
+        # Determine alert priority
+        priority = self._calculate_priority(alert_type, context, correlation_score)
+        
+        alert_decision = {
+            'should_alert': True,
+            'priority': priority,
+            'correlation_score': correlation_score,
+            'suppression_time': self._get_suppression_time(priority),
+            'context': context
+        }
+        
+        # Record alert
+        self.alert_history.append({
+            'timestamp': current_time,
+            'type': alert_type,
+            'priority': priority,
+            'context': context
+        })
+        
+        # Keep only recent history
+        self.alert_history = self.alert_history[-100:]
+        
+        return alert_decision
+    
+    def _is_suppressed(self, alert_type: str, current_time: float) -> bool:
+        """Check if alert type is currently suppressed"""
+        if alert_type in self.suppression_rules:
+            if current_time < self.suppression_rules[alert_type]:
+                return True
+            else:
+                del self.suppression_rules[alert_type]
+        return False
+    
+    def _add_suppression_rule(self, alert_type: str, until_time: float):
+        """Add suppression rule for alert type"""
+        self.suppression_rules[alert_type] = until_time
+    
+    def _calculate_correlation_score(self, alert_type: str, context: Dict) -> float:
+        """Calculate correlation with other recent alerts and metrics"""
+        score = 1.0  # Base score
+        
+        # Check for related system metrics
+        if alert_type == 'high_cpu' and context.get('memory_percent', 0) > 80:
+            score += 0.3  # CPU + Memory correlation
+        
+        if alert_type == 'high_memory' and context.get('disk_io', 0) > 50:
+            score += 0.2  # Memory + IO correlation
+        
+        # Check time-based patterns
+        current_hour = datetime.now().hour
+        if alert_type in ['high_cpu', 'high_memory'] and 9 <= current_hour <= 17:
+            score += 0.1  # Business hours correlation
+        
+        return min(score, 2.0)  # Cap at 2.0
+    
+    def _calculate_priority(self, alert_type: str, context: Dict, correlation_score: float) -> str:
+        """Calculate alert priority"""
+        base_priorities = {
+            'critical_system': 'high',
+            'high_cpu': 'medium',
+            'high_memory': 'medium',
+            'high_disk': 'high',
+            'anomaly_detected': 'low',
+            'predictive_warning': 'low'
+        }
+        
+        base_priority = base_priorities.get(alert_type, 'medium')
+        
+        # Adjust based on correlation
+        if correlation_score > 1.5:
+            if base_priority == 'medium':
+                return 'high'
+            elif base_priority == 'low':
+                return 'medium'
+        
+        return base_priority
+    
+    def _get_suppression_time(self, priority: str) -> int:
+        """Get suppression time in seconds based on priority"""
+        suppression_times = {
+            'low': 3600,      # 1 hour
+            'medium': 1800,   # 30 minutes
+            'high': 900,      # 15 minutes
+            'critical': 300   # 5 minutes
+        }
+        return suppression_times.get(priority, 1800)
 
 class AdvancedHealthMonitor:
     """Advanced health monitoring with predictive analytics and auto-recovery"""
@@ -34,6 +259,8 @@ class AdvancedHealthMonitor:
         self.health_history = []
         self.prediction_models = {}
         self.auto_recovery_enabled = True
+        self.anomaly_detector = AnomalyDetector()
+        self.intelligent_alerting = IntelligentAlertManager()
         self.alert_thresholds = {
             'cpu_critical': 95.0,
             'cpu_warning': 85.0,
@@ -42,7 +269,11 @@ class AdvancedHealthMonitor:
             'disk_critical': 95.0,
             'disk_warning': 90.0,
             'temperature_critical': 80.0,
-            'temperature_warning': 70.0
+            'temperature_warning': 70.0,
+            'load_critical': 8.0,
+            'load_warning': 4.0,
+            'network_anomaly': 50.0,
+            'io_anomaly': 100.0
         }
         self.recovery_actions = {
             'high_cpu': self._recover_high_cpu,
@@ -52,7 +283,7 @@ class AdvancedHealthMonitor:
         }
     
     def analyze_health_trends(self, metrics: Dict) -> Dict:
-        """Analyze health trends and predict potential issues"""
+        """Analyze health trends and predict potential issues with AI-powered anomaly detection"""
         self.health_history.append({
             'timestamp': time.time(),
             'metrics': metrics.copy()
@@ -62,12 +293,33 @@ class AdvancedHealthMonitor:
         if len(self.health_history) > 100:
             self.health_history = self.health_history[-100:]
         
+        # Perform anomaly detection on key metrics
+        anomalies = {}
+        for metric_name, value in metrics.items():
+            if isinstance(value, (int, float)) and metric_name in ['cpu_percent', 'memory_percent', 'disk_percent', 'load_1min']:
+                anomaly_result = self.anomaly_detector.detect_anomaly(metric_name, value)
+                if anomaly_result['is_anomaly']:
+                    anomalies[metric_name] = anomaly_result
+        
+        # Generate intelligent alerts
+        alert_decisions = {}
+        for metric_name, anomaly_data in anomalies.items():
+            alert_decision = self.intelligent_alerting.should_alert(
+                f'anomaly_{metric_name}', 
+                {**metrics, 'anomaly_severity': anomaly_data['severity']}
+            )
+            if alert_decision['should_alert']:
+                alert_decisions[metric_name] = alert_decision
+        
         trends = {
             'cpu_trend': self._calculate_trend('cpu_percent'),
             'memory_trend': self._calculate_trend('memory_percent'),
             'disk_trend': self._calculate_trend('disk_percent'),
             'prediction': self._predict_issues(),
-            'recommendations': self._generate_recommendations(metrics)
+            'recommendations': self._generate_recommendations(metrics),
+            'anomalies': anomalies,
+            'intelligent_alerts': alert_decisions,
+            'anomaly_summary': self.anomaly_detector.get_anomaly_summary()
         }
         
         return trends
@@ -448,6 +700,587 @@ class SmartResourceManager:
         
         return result
 
+class EnhancedErrorHandler:
+    """Advanced error handling with context-aware recovery and logging"""
+    
+    def __init__(self, logger):
+        self.logger = logger
+        self.error_patterns = {}
+        self.recovery_strategies = {}
+        self.error_history = []
+        
+    def register_error_pattern(self, pattern: str, recovery_strategy: callable, description: str):
+        """Register an error pattern with its recovery strategy"""
+        self.error_patterns[pattern] = {
+            'strategy': recovery_strategy,
+            'description': description,
+            'usage_count': 0,
+            'success_rate': 0.0
+        }
+    
+    def handle_error(self, error: Exception, context: Dict, operation: str = "unknown") -> Dict:
+        """Handle an error with intelligent recovery strategies"""
+        error_str = str(error)
+        error_type = type(error).__name__
+        
+        # Log the error with full context
+        self.logger.error(f"Error in {operation}: {error_type}: {error_str}")
+        self.logger.debug(f"Error context: {context}")
+        
+        # Record error in history
+        error_record = {
+            'timestamp': datetime.now().isoformat(),
+            'operation': operation,
+            'error_type': error_type,
+            'error_message': error_str,
+            'context': context,
+            'recovery_attempted': False,
+            'recovery_successful': False
+        }
+        
+        # Check for matching error patterns
+        matching_pattern = self._find_matching_pattern(error_str)
+        if matching_pattern:
+            recovery_result = self._attempt_recovery(matching_pattern, error, context, operation)
+            error_record['recovery_attempted'] = True
+            error_record['recovery_successful'] = recovery_result['success']
+            error_record['recovery_details'] = recovery_result
+            
+            if recovery_result['success']:
+                self.logger.info(f"Successfully recovered from error using pattern: {matching_pattern}")
+                return {
+                    'handled': True,
+                    'recovered': True,
+                    'strategy': matching_pattern,
+                    'details': recovery_result
+                }
+        
+        # Add to error history
+        self.error_history.append(error_record)
+        
+        # Keep only last 100 errors
+        if len(self.error_history) > 100:
+            self.error_history = self.error_history[-100:]
+        
+        return {
+            'handled': True,
+            'recovered': False,
+            'error_type': error_type,
+            'error_message': error_str,
+            'recommendations': self._generate_error_recommendations(error, context)
+        }
+    
+    def _find_matching_pattern(self, error_str: str) -> Optional[str]:
+        """Find a matching error pattern"""
+        for pattern in self.error_patterns:
+            if re.search(pattern, error_str, re.IGNORECASE):
+                return pattern
+        return None
+    
+    def _attempt_recovery(self, pattern: str, error: Exception, context: Dict, operation: str) -> Dict:
+        """Attempt recovery using the matched pattern"""
+        pattern_info = self.error_patterns[pattern]
+        pattern_info['usage_count'] += 1
+        
+        try:
+            recovery_strategy = pattern_info['strategy']
+            recovery_result = recovery_strategy(error, context, operation)
+            
+            # Update success rate
+            if recovery_result.get('success', False):
+                pattern_info['success_rate'] = (
+                    pattern_info['success_rate'] * (pattern_info['usage_count'] - 1) + 1.0
+                ) / pattern_info['usage_count']
+            else:
+                pattern_info['success_rate'] = (
+                    pattern_info['success_rate'] * (pattern_info['usage_count'] - 1)
+                ) / pattern_info['usage_count']
+            
+            return recovery_result
+            
+        except Exception as recovery_error:
+            self.logger.error(f"Recovery strategy failed: {recovery_error}")
+            return {
+                'success': False,
+                'error': f"Recovery failed: {recovery_error}",
+                'strategy': pattern
+            }
+    
+    def _generate_error_recommendations(self, error: Exception, context: Dict) -> List[str]:
+        """Generate intelligent error recommendations"""
+        recommendations = []
+        error_type = type(error).__name__
+        
+        if error_type == 'PermissionError':
+            recommendations.append("Check file/directory permissions")
+            recommendations.append("Ensure the process has sufficient privileges")
+        
+        elif error_type == 'FileNotFoundError':
+            recommendations.append("Verify the file/directory path exists")
+            recommendations.append("Check for typos in file paths")
+        
+        elif error_type == 'ConnectionError':
+            recommendations.append("Check network connectivity")
+            recommendations.append("Verify service endpoints are accessible")
+        
+        elif error_type == 'TimeoutError':
+            recommendations.append("Increase timeout values")
+            recommendations.append("Check for resource contention")
+        
+        elif 'memory' in str(error).lower():
+            recommendations.append("Check available system memory")
+            recommendations.append("Consider optimizing memory usage")
+        
+        elif 'disk' in str(error).lower():
+            recommendations.append("Check available disk space")
+            recommendations.append("Consider cleaning up temporary files")
+        
+        # Context-specific recommendations
+        if 'cpu_percent' in context and context.get('cpu_percent', 0) > 90:
+            recommendations.append("High CPU usage detected - consider reducing load")
+        
+        if 'memory_percent' in context and context.get('memory_percent', 0) > 90:
+            recommendations.append("High memory usage detected - consider freeing memory")
+        
+        return recommendations
+    
+    def get_error_analytics(self) -> Dict:
+        """Get analytics on error patterns and recovery success rates"""
+        if not self.error_history:
+            return {'total_errors': 0, 'patterns': {}, 'recent_trends': []}
+        
+        total_errors = len(self.error_history)
+        error_types = {}
+        recoveries_attempted = 0
+        recoveries_successful = 0
+        
+        for error in self.error_history:
+            error_type = error['error_type']
+            error_types[error_type] = error_types.get(error_type, 0) + 1
+            
+            if error['recovery_attempted']:
+                recoveries_attempted += 1
+                if error['recovery_successful']:
+                    recoveries_successful += 1
+        
+        return {
+            'total_errors': total_errors,
+            'error_types': error_types,
+            'recoveries_attempted': recoveries_attempted,
+            'recoveries_successful': recoveries_successful,
+            'recovery_success_rate': recoveries_successful / max(1, recoveries_attempted),
+            'patterns': {
+                pattern: {
+                    'usage_count': info['usage_count'],
+                    'success_rate': info['success_rate'],
+                    'description': info['description']
+                }
+                for pattern, info in self.error_patterns.items()
+            }
+        }
+
+class WorkflowAutomationEngine:
+    """Advanced workflow automation with dependency management and scheduling"""
+    
+    def __init__(self, work_dir: Path):
+        self.work_dir = work_dir
+        self.workflows = {}
+        self.active_workflows = {}
+        self.workflow_history = []
+        self.dependency_graph = {}
+        self.scheduler = WorkflowScheduler()
+        
+    def create_workflow(self, name: str, steps: List[Dict], dependencies: Optional[List[str]] = None) -> Dict:
+        """Create a new automated workflow"""
+        workflow_id = f"workflow_{int(time.time())}_{name}"
+        
+        workflow = {
+            'id': workflow_id,
+            'name': name,
+            'steps': steps,
+            'dependencies': dependencies or [],
+            'created_at': datetime.now().isoformat(),
+            'status': 'created',
+            'execution_history': [],
+            'retry_count': 0,
+            'max_retries': 3
+        }
+        
+        self.workflows[workflow_id] = workflow
+        
+        # Build dependency graph
+        if dependencies:
+            self.dependency_graph[workflow_id] = dependencies
+        
+        return {'workflow_id': workflow_id, 'status': 'created'}
+    
+    def execute_workflow(self, workflow_id: str, context: Optional[Dict] = None) -> Dict:
+        """Execute a workflow with intelligent scheduling and dependency resolution"""
+        if workflow_id not in self.workflows:
+            return {'status': 'error', 'message': 'Workflow not found'}
+        
+        workflow = self.workflows[workflow_id]
+        
+        # Check dependencies
+        if not self._check_dependencies(workflow_id):
+            return {'status': 'waiting', 'message': 'Dependencies not satisfied'}
+        
+        # Check if already running
+        if workflow_id in self.active_workflows:
+            return {'status': 'already_running', 'message': 'Workflow is already executing'}
+        
+        # Start execution
+        self.active_workflows[workflow_id] = {
+            'started_at': time.time(),
+            'current_step': 0,
+            'context': context or {},
+            'step_results': []
+        }
+        
+        workflow['status'] = 'running'
+        
+        try:
+            execution_result = self._execute_workflow_steps(workflow_id)
+            workflow['status'] = 'completed' if execution_result['success'] else 'failed'
+            
+            # Record execution history
+            workflow['execution_history'].append({
+                'timestamp': datetime.now().isoformat(),
+                'result': execution_result,
+                'context': context
+            })
+            
+            return execution_result
+            
+        except Exception as e:
+            workflow['status'] = 'error'
+            workflow['retry_count'] += 1
+            
+            error_result = {
+                'success': False,
+                'error': str(e),
+                'retry_count': workflow['retry_count']
+            }
+            
+            workflow['execution_history'].append({
+                'timestamp': datetime.now().isoformat(),
+                'result': error_result,
+                'context': context
+            })
+            
+            return error_result
+            
+        finally:
+            if workflow_id in self.active_workflows:
+                del self.active_workflows[workflow_id]
+    
+    def _check_dependencies(self, workflow_id: str) -> bool:
+        """Check if workflow dependencies are satisfied"""
+        if workflow_id not in self.dependency_graph:
+            return True
+        
+        dependencies = self.dependency_graph[workflow_id]
+        for dep_id in dependencies:
+            if dep_id not in self.workflows:
+                return False
+            
+            dep_workflow = self.workflows[dep_id]
+            if dep_workflow['status'] != 'completed':
+                return False
+        
+        return True
+    
+    def _execute_workflow_steps(self, workflow_id: str) -> Dict:
+        """Execute all steps in a workflow"""
+        workflow = self.workflows[workflow_id]
+        active_execution = self.active_workflows[workflow_id]
+        
+        results = []
+        
+        for i, step in enumerate(workflow['steps']):
+            active_execution['current_step'] = i
+            
+            try:
+                step_result = self._execute_step(step, active_execution['context'])
+                results.append(step_result)
+                active_execution['step_results'].append(step_result)
+                
+                # Update context with step results
+                if step_result.get('output'):
+                    active_execution['context'].update(step_result['output'])
+                
+                if not step_result.get('success', True):
+                    return {
+                        'success': False,
+                        'failed_step': i,
+                        'step_name': step.get('name', 'unnamed'),
+                        'error': step_result.get('error', 'Step failed'),
+                        'results': results
+                    }
+                    
+            except Exception as e:
+                return {
+                    'success': False,
+                    'failed_step': i,
+                    'step_name': step.get('name', 'unnamed'),
+                    'error': str(e),
+                    'results': results
+                }
+        
+        return {
+            'success': True,
+            'steps_executed': len(results),
+            'results': results,
+            'execution_time': time.time() - active_execution['started_at']
+        }
+    
+    def _execute_step(self, step: Dict, context: Dict) -> Dict:
+        """Execute a single workflow step"""
+        step_type = step.get('type', 'command')
+        step_name = step.get('name', 'unnamed_step')
+        
+        if step_type == 'command':
+            return self._execute_command_step(step, context)
+        elif step_type == 'python':
+            return self._execute_python_step(step, context)
+        elif step_type == 'api_call':
+            return self._execute_api_step(step, context)
+        elif step_type == 'condition':
+            return self._execute_condition_step(step, context)
+        else:
+            return {'success': False, 'error': f'Unknown step type: {step_type}'}
+    
+    def _execute_command_step(self, step: Dict, context: Dict) -> Dict:
+        """Execute a command step"""
+        command = step.get('command', '')
+        if not command:
+            return {'success': False, 'error': 'No command specified'}
+        
+        # Template substitution
+        for key, value in context.items():
+            command = command.replace(f'{{{key}}}', str(value))
+        
+        try:
+            result = subprocess.run(
+                command, 
+                shell=True, 
+                capture_output=True, 
+                text=True, 
+                timeout=step.get('timeout', 300),
+                cwd=self.work_dir
+            )
+            
+            return {
+                'success': result.returncode == 0,
+                'output': {
+                    'stdout': result.stdout,
+                    'stderr': result.stderr,
+                    'returncode': result.returncode
+                },
+                'error': result.stderr if result.returncode != 0 else None
+            }
+            
+        except subprocess.TimeoutExpired:
+            return {'success': False, 'error': 'Command timed out'}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def _execute_python_step(self, step: Dict, context: Dict) -> Dict:
+        """Execute a Python code step"""
+        code = step.get('code', '')
+        if not code:
+            return {'success': False, 'error': 'No Python code specified'}
+        
+        try:
+            # Create safe execution environment
+            safe_globals = {
+                '__builtins__': {
+                    'print': print,
+                    'len': len,
+                    'str': str,
+                    'int': int,
+                    'float': float,
+                    'bool': bool,
+                    'dict': dict,
+                    'list': list,
+                    'tuple': tuple,
+                    'set': set,
+                    'range': range,
+                    'enumerate': enumerate,
+                    'zip': zip,
+                    'map': map,
+                    'filter': filter
+                },
+                'context': context,
+                'result': {}
+            }
+            
+            exec(code, safe_globals)
+            
+            return {
+                'success': True,
+                'output': safe_globals.get('result', {})
+            }
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def _execute_api_step(self, step: Dict, context: Dict) -> Dict:
+        """Execute an API call step"""
+        url = step.get('url', '')
+        method = step.get('method', 'GET').upper()
+        headers = step.get('headers', {})
+        data = step.get('data', {})
+        
+        # Template substitution in URL and data
+        for key, value in context.items():
+            url = url.replace(f'{{{key}}}', str(value))
+            if isinstance(data, dict):
+                for data_key, data_value in data.items():
+                    if isinstance(data_value, str):
+                        data[data_key] = data_value.replace(f'{{{key}}}', str(value))
+        
+        try:
+            import requests
+            
+            response = requests.request(
+                method=method,
+                url=url,
+                headers=headers,
+                json=data if method in ['POST', 'PUT', 'PATCH'] else None,
+                timeout=step.get('timeout', 30)
+            )
+            
+            return {
+                'success': response.status_code < 400,
+                'output': {
+                    'status_code': response.status_code,
+                    'response_data': response.json() if response.headers.get('content-type', '').startswith('application/json') else response.text,
+                    'headers': dict(response.headers)
+                },
+                'error': f'HTTP {response.status_code}' if response.status_code >= 400 else None
+            }
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def _execute_condition_step(self, step: Dict, context: Dict) -> Dict:
+        """Execute a conditional step"""
+        condition = step.get('condition', '')
+        if not condition:
+            return {'success': False, 'error': 'No condition specified'}
+        
+        try:
+            # Simple condition evaluation
+            # Replace context variables
+            for key, value in context.items():
+                condition = condition.replace(f'{{{key}}}', str(value))
+            
+            # Evaluate condition safely
+            result = eval(condition, {'__builtins__': {}}, {})
+            
+            return {
+                'success': True,
+                'output': {'condition_result': bool(result)}
+            }
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+class WorkflowScheduler:
+    """Intelligent workflow scheduler with priority and resource management"""
+    
+    def __init__(self):
+        self.scheduled_workflows = []
+        self.recurring_workflows = {}
+        self.resource_limits = {
+            'max_concurrent': 3,
+            'max_cpu_percent': 80,
+            'max_memory_percent': 85
+        }
+    
+    def schedule_workflow(self, workflow_id: str, schedule_time: datetime, priority: int = 1) -> Dict:
+        """Schedule a workflow for future execution"""
+        schedule_entry = {
+            'workflow_id': workflow_id,
+            'scheduled_time': schedule_time,
+            'priority': priority,
+            'created_at': datetime.now(),
+            'status': 'scheduled'
+        }
+        
+        self.scheduled_workflows.append(schedule_entry)
+        self.scheduled_workflows.sort(key=lambda x: (x['scheduled_time'], -x['priority']))
+        
+        return {'status': 'scheduled', 'schedule_id': len(self.scheduled_workflows) - 1}
+    
+    def add_recurring_workflow(self, workflow_id: str, cron_pattern: str, priority: int = 1) -> Dict:
+        """Add a recurring workflow with cron-like scheduling"""
+        recurring_id = f"recurring_{workflow_id}_{int(time.time())}"
+        
+        self.recurring_workflows[recurring_id] = {
+            'workflow_id': workflow_id,
+            'cron_pattern': cron_pattern,
+            'priority': priority,
+            'last_run': None,
+            'next_run': self._calculate_next_run(cron_pattern),
+            'status': 'active'
+        }
+        
+        return {'status': 'scheduled', 'recurring_id': recurring_id}
+    
+    def _calculate_next_run(self, cron_pattern: str) -> datetime:
+        """Calculate next run time from cron pattern (simplified)"""
+        # This is a simplified cron parser - in production, use a proper cron library
+        # For now, support basic patterns like "0 */4 * * *" (every 4 hours)
+        
+        now = datetime.now()
+        
+        # Simple hourly pattern
+        if cron_pattern == "0 * * * *":  # Every hour
+            return now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+        elif cron_pattern == "0 */4 * * *":  # Every 4 hours
+            next_hour = now.hour + (4 - now.hour % 4)
+            if next_hour >= 24:
+                next_hour -= 24
+                return now.replace(hour=next_hour, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            else:
+                return now.replace(hour=next_hour, minute=0, second=0, microsecond=0)
+        else:
+            # Default to 1 hour from now
+            return now + timedelta(hours=1)
+    
+    def get_ready_workflows(self) -> List[str]:
+        """Get workflows ready for execution"""
+        now = datetime.now()
+        ready_workflows = []
+        
+        # Check scheduled workflows
+        for schedule in self.scheduled_workflows:
+            if schedule['status'] == 'scheduled' and schedule['scheduled_time'] <= now:
+                ready_workflows.append(schedule['workflow_id'])
+                schedule['status'] = 'ready'
+        
+        # Check recurring workflows
+        for recurring_id, recurring in self.recurring_workflows.items():
+            if recurring['status'] == 'active' and recurring['next_run'] <= now:
+                ready_workflows.append(recurring['workflow_id'])
+                recurring['last_run'] = now
+                recurring['next_run'] = self._calculate_next_run(recurring['cron_pattern'])
+        
+        return ready_workflows
+    
+    def can_execute_workflow(self) -> bool:
+        """Check if system resources allow workflow execution"""
+        try:
+            cpu_percent = psutil.cpu_percent(interval=1)
+            memory_percent = psutil.virtual_memory().percent
+            
+            return (cpu_percent < self.resource_limits['max_cpu_percent'] and 
+                    memory_percent < self.resource_limits['max_memory_percent'])
+        except:
+            return True  # Default to allow execution if can't check resources
+
 class PerformanceProfiler:
     """Enhanced performance profiling and monitoring for Barbossa operations"""
     
@@ -594,7 +1427,7 @@ class BarbossaEnhanced:
     Now includes advanced health monitoring, resource management, and performance analytics
     """
     
-    VERSION = "2.3.0"  # Updated version
+    VERSION = "2.4.0"  # Major update with essential features
     
     WORK_AREAS = {
         'infrastructure': {
@@ -650,6 +1483,10 @@ class BarbossaEnhanced:
         self.profiler = PerformanceProfiler()
         self.health_monitor = AdvancedHealthMonitor()
         self.resource_manager = SmartResourceManager(self.work_dir)
+        self.workflow_engine = WorkflowAutomationEngine(self.work_dir)
+        
+        # Initialize error handler after logger is available
+        self.error_handler = None
         
         # Initialize caching system for expensive operations
         self._cache = {}
@@ -715,22 +1552,158 @@ class BarbossaEnhanced:
         return False
     
     def get_performance_score(self):
-        """Get system performance score from the new API"""
-        if not self.api_available:
-            return None
+        """Get comprehensive system performance score combining API and local metrics"""
+        # Try API first
+        api_score = None
+        if self.api_available:
+            try:
+                import requests
+                import urllib3
+                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                
+                response = requests.get(f"{self.portal_api_base}/api/v3/analytics/performance-score",
+                                       verify=False, timeout=10)
+                if response.status_code == 200:
+                    api_score = response.json()
+            except Exception as e:
+                self.logger.warning(f"Could not get API performance score: {e}")
         
-        try:
-            import requests
-            import urllib3
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        # Generate local performance score
+        local_score = self._calculate_local_performance_score()
+        
+        # Combine scores if both available
+        if api_score and local_score:
+            return {
+                'combined_score': (api_score.get('overall_score', 50) + local_score['overall_score']) / 2,
+                'api_score': api_score,
+                'local_score': local_score,
+                'recommendations': list(set(
+                    api_score.get('recommendations', []) + local_score.get('recommendations', [])
+                ))
+            }
+        elif api_score:
+            return api_score
+        else:
+            return local_score
+    
+    def _calculate_local_performance_score(self):
+        """Calculate performance score based on local metrics and profiler data"""
+        scores = {}
+        recommendations = []
+        
+        # Get current health metrics
+        if self.server_manager:
+            health = self.perform_system_health_check()
+            metrics = health.get('metrics', {})
             
-            response = requests.get(f"{self.portal_api_base}/api/v3/analytics/performance-score",
-                                   verify=False, timeout=10)
-            if response.status_code == 200:
-                return response.json()
-        except Exception as e:
-            self.logger.warning(f"Could not get performance score: {e}")
-        return None
+            # CPU Score (100 = excellent, 0 = critical)
+            cpu_percent = metrics.get('cpu_percent', 0)
+            if cpu_percent < 30:
+                scores['cpu'] = 100
+            elif cpu_percent < 50:
+                scores['cpu'] = 80
+            elif cpu_percent < 70:
+                scores['cpu'] = 60
+                recommendations.append("Consider optimizing CPU-intensive processes")
+            elif cpu_percent < 85:
+                scores['cpu'] = 40
+                recommendations.append("High CPU usage - investigate resource-intensive tasks")
+            else:
+                scores['cpu'] = 20
+                recommendations.append("Critical CPU usage - immediate optimization required")
+            
+            # Memory Score
+            memory_percent = metrics.get('memory_percent', 0)
+            if memory_percent < 40:
+                scores['memory'] = 100
+            elif memory_percent < 60:
+                scores['memory'] = 80
+            elif memory_percent < 75:
+                scores['memory'] = 60
+                recommendations.append("Consider freeing up memory")
+            elif memory_percent < 85:
+                scores['memory'] = 40
+                recommendations.append("High memory usage - consider optimizing applications")
+            else:
+                scores['memory'] = 20
+                recommendations.append("Critical memory usage - immediate action required")
+            
+            # Disk Score
+            disk_percent = metrics.get('disk_percent', 0)
+            if disk_percent < 50:
+                scores['disk'] = 100
+            elif disk_percent < 70:
+                scores['disk'] = 80
+            elif disk_percent < 80:
+                scores['disk'] = 60
+                recommendations.append("Consider cleaning up disk space")
+            elif disk_percent < 90:
+                scores['disk'] = 40
+                recommendations.append("Low disk space - cleanup required")
+            else:
+                scores['disk'] = 20
+                recommendations.append("Critical disk space - immediate cleanup required")
+        
+        # Performance Profiler Score
+        perf_summary = self.profiler.get_performance_summary()
+        if perf_summary:
+            efficiency_scores = [op.get('efficiency_score', 50) for op in perf_summary.values()]
+            avg_efficiency = sum(efficiency_scores) / len(efficiency_scores) if efficiency_scores else 50
+            scores['efficiency'] = avg_efficiency
+            
+            if avg_efficiency < 50:
+                recommendations.append("System efficiency is below optimal - consider performance tuning")
+        else:
+            scores['efficiency'] = 50
+        
+        # Error Rate Score
+        if self.error_handler:
+            error_analytics = self.error_handler.get_error_analytics()
+            total_errors = error_analytics.get('total_errors', 0)
+            recovery_rate = error_analytics.get('recovery_success_rate', 0)
+            
+            if total_errors == 0:
+                scores['stability'] = 100
+            elif total_errors < 5 and recovery_rate > 0.8:
+                scores['stability'] = 80
+            elif total_errors < 10 and recovery_rate > 0.6:
+                scores['stability'] = 60
+                recommendations.append("Some errors detected - monitor system stability")
+            elif recovery_rate > 0.4:
+                scores['stability'] = 40
+                recommendations.append("Multiple errors detected - investigate system issues")
+            else:
+                scores['stability'] = 20
+                recommendations.append("High error rate with low recovery - urgent investigation needed")
+        else:
+            scores['stability'] = 50
+        
+        # Calculate overall score
+        if scores:
+            overall_score = sum(scores.values()) / len(scores)
+        else:
+            overall_score = 50
+        
+        # Determine status
+        if overall_score >= 85:
+            status = "excellent"
+        elif overall_score >= 70:
+            status = "good"
+        elif overall_score >= 50:
+            status = "fair"
+            recommendations.append("System performance could be improved")
+        else:
+            status = "poor"
+            recommendations.append("System performance needs immediate attention")
+        
+        return {
+            'overall_score': int(overall_score),
+            'overall_status': status,
+            'component_scores': scores,
+            'recommendations': recommendations,
+            'timestamp': datetime.now().isoformat(),
+            'version': self.VERSION
+        }
     
     def create_backup(self, backup_type="config"):
         """Create a backup using the new API"""
@@ -766,6 +1739,92 @@ class BarbossaEnhanced:
         
         self.logger = logging.getLogger('barbossa_enhanced')
         self.logger.info(f"Logging to: {log_file}")
+        
+        # Initialize error handler now that logger is available
+        self.error_handler = EnhancedErrorHandler(self.logger)
+        self._register_error_patterns()
+    
+    def _register_error_patterns(self):
+        """Register common error patterns with recovery strategies"""
+        
+        def recover_permission_error(error, context, operation):
+            """Recovery strategy for permission errors"""
+            try:
+                # Try to fix common permission issues
+                if 'log' in str(error).lower():
+                    subprocess.run(['sudo', 'chmod', '666', '/var/log/*'], check=False)
+                    return {'success': True, 'action': 'Fixed log file permissions'}
+                elif 'tmp' in str(error).lower():
+                    subprocess.run(['sudo', 'chmod', '777', '/tmp'], check=False)
+                    return {'success': True, 'action': 'Fixed tmp directory permissions'}
+                else:
+                    return {'success': False, 'action': 'Could not determine permission fix'}
+            except Exception as e:
+                return {'success': False, 'action': f'Permission fix failed: {e}'}
+        
+        def recover_disk_space_error(error, context, operation):
+            """Recovery strategy for disk space errors"""
+            try:
+                # Clean temporary files
+                cleanup_result = self.resource_manager._optimize_logs()
+                if cleanup_result['space_freed_mb'] > 0:
+                    return {
+                        'success': True, 
+                        'action': f'Freed {cleanup_result["space_freed_mb"]:.1f}MB by cleaning logs'
+                    }
+                else:
+                    return {'success': False, 'action': 'No space could be freed'}
+            except Exception as e:
+                return {'success': False, 'action': f'Disk cleanup failed: {e}'}
+        
+        def recover_network_error(error, context, operation):
+            """Recovery strategy for network errors"""
+            try:
+                # Test network connectivity
+                result = subprocess.run(['ping', '-c', '1', '8.8.8.8'], capture_output=True)
+                if result.returncode == 0:
+                    return {'success': False, 'action': 'Network is available, issue may be service-specific'}
+                else:
+                    # Try to restart networking
+                    subprocess.run(['sudo', 'systemctl', 'restart', 'networking'], check=False)
+                    return {'success': True, 'action': 'Attempted to restart networking'}
+            except Exception as e:
+                return {'success': False, 'action': f'Network recovery failed: {e}'}
+        
+        def recover_memory_error(error, context, operation):
+            """Recovery strategy for memory errors"""
+            try:
+                # Clear system caches
+                subprocess.run(['sudo', 'sync'], check=False)
+                subprocess.run(['sudo', 'sh', '-c', 'echo 1 > /proc/sys/vm/drop_caches'], check=False)
+                return {'success': True, 'action': 'Cleared system caches to free memory'}
+            except Exception as e:
+                return {'success': False, 'action': f'Memory recovery failed: {e}'}
+        
+        # Register error patterns
+        self.error_handler.register_error_pattern(
+            r'permission denied|access denied',
+            recover_permission_error,
+            'Handle permission denied errors by fixing common file permissions'
+        )
+        
+        self.error_handler.register_error_pattern(
+            r'no space left|disk full',
+            recover_disk_space_error,
+            'Handle disk space errors by cleaning temporary files and logs'
+        )
+        
+        self.error_handler.register_error_pattern(
+            r'connection.*refused|network.*unreachable|timeout',
+            recover_network_error,
+            'Handle network errors by testing connectivity and restarting services'
+        )
+        
+        self.error_handler.register_error_pattern(
+            r'out of memory|memory.*error',
+            recover_memory_error,
+            'Handle memory errors by clearing system caches'
+        )
     
     def _get_system_info(self) -> Dict:
         """Gather comprehensive system information"""
@@ -1028,10 +2087,23 @@ Complete the task and report detailed results with performance impact analysis."
         
         output_file = self.logs_dir / f"claude_infrastructure_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
         
-        cmd = f"nohup claude --dangerously-skip-permissions --model sonnet < {prompt_file} > {output_file} 2>&1 &"
-        subprocess.Popen(cmd, shell=True, cwd=self.work_dir)
+        # Execute Claude and capture output to both the specific log file and main log
+        cmd = f"claude --dangerously-skip-permissions --model sonnet < {prompt_file} 2>&1 | tee {output_file}"
+        self.logger.info(f"Executing Claude for infrastructure management...")
+        self.logger.info(f"Output will be saved to: {output_file}")
         
-        self.logger.info(f"Enhanced infrastructure management launched. Output: {output_file}")
+        # Run synchronously to capture output in main log
+        process = subprocess.Popen(cmd, shell=True, cwd=self.work_dir, 
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
+                                 text=True, bufsize=1)
+        
+        # Stream output to logger
+        for line in iter(process.stdout.readline, ''):
+            if line:
+                self.logger.info(f"[Claude Output] {line.rstrip()}")
+        
+        process.wait()
+        self.logger.info(f"Infrastructure management completed with return code: {process.returncode}")
         
         # Create enhanced changelog
         self._create_changelog('infrastructure', {
@@ -1128,10 +2200,23 @@ Complete the improvement and create a detailed impact report."""
         
         output_file = self.logs_dir / f"claude_self_improvement_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
         
-        cmd = f"nohup claude --dangerously-skip-permissions --model sonnet < {prompt_file} > {output_file} 2>&1 &"
-        subprocess.Popen(cmd, shell=True, cwd=self.work_dir)
+        # Execute Claude and capture output to both the specific log file and main log
+        cmd = f"claude --dangerously-skip-permissions --model sonnet < {prompt_file} 2>&1 | tee {output_file}"
+        self.logger.info(f"Executing Claude for self-improvement: {selected_task}")
+        self.logger.info(f"Output will be saved to: {output_file}")
         
-        self.logger.info(f"Enhanced self-improvement launched for: {selected_task}")
+        # Run synchronously to capture output in main log
+        process = subprocess.Popen(cmd, shell=True, cwd=self.work_dir, 
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
+                                 text=True, bufsize=1)
+        
+        # Stream output to logger
+        for line in iter(process.stdout.readline, ''):
+            if line:
+                self.logger.info(f"[Claude Output] {line.rstrip()}")
+        
+        process.wait()
+        self.logger.info(f"Self-improvement completed with return code: {process.returncode}")
         
         self._create_changelog('barbossa_self', {
             'task': selected_task,
@@ -1204,10 +2289,23 @@ Complete the task and create a PR."""
         
         output_file = self.logs_dir / f"claude_personal_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
         
-        cmd = f"nohup claude --dangerously-skip-permissions --model sonnet < {prompt_file} > {output_file} 2>&1 &"
-        subprocess.Popen(cmd, shell=True, cwd=self.work_dir)
+        # Execute Claude and capture output to both the specific log file and main log
+        cmd = f"claude --dangerously-skip-permissions --model sonnet < {prompt_file} 2>&1 | tee {output_file}"
+        self.logger.info(f"Executing Claude for personal project: {selected_repo}")
+        self.logger.info(f"Output will be saved to: {output_file}")
         
-        self.logger.info(f"Personal project development launched for: {selected_repo}")
+        # Run synchronously to capture output in main log
+        process = subprocess.Popen(cmd, shell=True, cwd=self.work_dir, 
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
+                                 text=True, bufsize=1)
+        
+        # Stream output to logger
+        for line in iter(process.stdout.readline, ''):
+            if line:
+                self.logger.info(f"[Claude Output] {line.rstrip()}")
+        
+        process.wait()
+        self.logger.info(f"Personal project development completed with return code: {process.returncode}")
         
         self._create_changelog('personal_projects', {
             'repository': selected_repo,
@@ -1263,10 +2361,23 @@ Select and implement ONE improvement completely."""
         
         output_file = self.logs_dir / f"claude_davy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
         
-        cmd = f"nohup claude --dangerously-skip-permissions --model sonnet < {prompt_file} > {output_file} 2>&1 &"
-        subprocess.Popen(cmd, shell=True, cwd=self.work_dir)
+        # Execute Claude and capture output to both the specific log file and main log
+        cmd = f"claude --dangerously-skip-permissions --model sonnet < {prompt_file} 2>&1 | tee {output_file}"
+        self.logger.info(f"Executing Claude for Davy Jones development...")
+        self.logger.info(f"Output will be saved to: {output_file}")
         
-        self.logger.info("Davy Jones development launched")
+        # Run synchronously to capture output in main log
+        process = subprocess.Popen(cmd, shell=True, cwd=self.work_dir, 
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
+                                 text=True, bufsize=1)
+        
+        # Stream output to logger
+        for line in iter(process.stdout.readline, ''):
+            if line:
+                self.logger.info(f"[Claude Output] {line.rstrip()}")
+        
+        process.wait()
+        self.logger.info(f"Davy Jones development completed with return code: {process.returncode}")
         
         self._create_changelog('davy_jones', {
             'repository': repo_url,
@@ -1469,6 +2580,17 @@ Select and implement ONE improvement completely."""
         # Add enhanced resource optimization history
         if self.resource_manager.optimization_history:
             status['last_optimization'] = self.resource_manager.optimization_history[-1]
+        
+        # Add workflow automation status
+        status['workflow_automation'] = {
+            'active_workflows': len(self.workflow_engine.active_workflows),
+            'total_workflows': len(self.workflow_engine.workflows),
+            'ready_workflows': len(self.workflow_engine.scheduler.get_ready_workflows())
+        }
+        
+        # Add error handling analytics
+        if self.error_handler:
+            status['error_analytics'] = self.error_handler.get_error_analytics()
         
         # Add current work
         current_work_file = self.work_tracking_dir / 'current_work.json'
