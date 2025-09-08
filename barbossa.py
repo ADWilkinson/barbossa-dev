@@ -27,6 +27,8 @@ import psutil
 from security_guard import security_guard, SecurityViolationError
 from server_manager import BarbossaServerManager
 from ticket_enrichment import TicketEnrichmentEngine
+from health_monitor import HealthMonitor
+from cleanup_manager import CleanupManager
 
 class PerformanceProfiler:
     """Performance profiling and monitoring for Barbossa operations"""
@@ -166,6 +168,9 @@ class BarbossaEnhanced:
         for dir_path in [self.logs_dir, self.changelogs_dir, self.work_tracking_dir]:
             dir_path.mkdir(parents=True, exist_ok=True)
         
+        # Set up logging early for other components
+        self._setup_logging()
+        
         # Initialize server manager
         self.server_manager = None
         try:
@@ -181,8 +186,23 @@ class BarbossaEnhanced:
         except Exception as e:
             print(f"Warning: Could not initialize ticket enrichment: {e}")
         
-        # Set up logging
-        self._setup_logging()
+        # Initialize health monitor
+        self.health_monitor = None
+        try:
+            self.health_monitor = HealthMonitor(self.work_dir)
+            self.logger.info("Health monitor initialized successfully")
+        except Exception as e:
+            print(f"Warning: Could not initialize health monitor: {e}")
+        
+        # Initialize cleanup manager
+        self.cleanup_manager = None
+        try:
+            self.cleanup_manager = CleanupManager(self.work_dir)
+            # Schedule automatic cleanup every 24 hours
+            self.cleanup_manager.schedule_cleanup(interval_hours=24)
+            self.logger.info("Cleanup manager initialized with 24-hour schedule")
+        except Exception as e:
+            print(f"Warning: Could not initialize cleanup manager: {e}")
         
         # Load work tally
         self.work_tally = self._load_work_tally()
@@ -718,41 +738,174 @@ Select and implement ONE improvement completely."""
         self.logger.info(f"Changelog created: {changelog_file}")
     
     def select_work_area(self) -> str:
-        """Select work area with enhanced weighting"""
-        # Calculate weights based on work history and current system state
+        """Intelligently select work area using multi-factor scoring with performance metrics"""
+        # Get recent work history and performance data
+        recent_history = self._analyze_recent_work_history()
+        performance_data = self.profiler.get_performance_summary() if hasattr(self, 'profiler') else {}
+        
         weights = {}
+        area_analysis = {}
         
         for area, config in self.WORK_AREAS.items():
-            base_weight = config['weight']
+            # Initialize scoring factors
+            factors = {
+                'base_priority': config['weight'],
+                'work_balance': 1.0,
+                'time_factor': 1.0,
+                'success_rate': 1.0,
+                'performance': 1.0,
+                'system_needs': 1.0
+            }
+            
+            # 1. Work balance factor (inverse of work count)
             work_count = self.work_tally.get(area, 0)
+            factors['work_balance'] = 1.0 / (work_count + 1) ** 1.5
             
-            # Inverse weight for balance
-            adjusted_weight = base_weight * (1.0 / (work_count + 1))
+            # 2. Time since last work factor
+            if area in recent_history:
+                hours_since = recent_history[area].get('hours_since_last', 48)
+                factors['time_factor'] = min(hours_since / 24, 3.0)  # Cap at 3x for 72+ hours
+                factors['success_rate'] = recent_history[area].get('success_rate', 1.0)
             
-            # Boost infrastructure if health issues exist
-            if area == 'infrastructure' and self.server_manager:
-                health = self.perform_system_health_check()
-                if health['status'] != 'healthy':
-                    adjusted_weight *= 2.0
+            # 3. Performance factor (from profiler metrics)
+            area_perf_key = f"work_{area}"
+            if area_perf_key in performance_data:
+                avg_duration = performance_data[area_perf_key].get('avg_duration', 60)
+                # Faster completion = higher score (inverse relationship)
+                factors['performance'] = min(60 / max(avg_duration, 1), 2.0)
             
-            weights[area] = adjusted_weight
+            # 4. System needs factor (special conditions)
+            if area == 'infrastructure':
+                # Check system health for infrastructure priority
+                if self.server_manager:
+                    health = self.perform_system_health_check()
+                    if health['status'] != 'healthy':
+                        factors['system_needs'] = 3.0  # Triple priority for unhealthy system
+                    elif any(m['status'] != 'healthy' for m in health.get('monitors', [])):
+                        factors['system_needs'] = 2.0  # Double priority for partial issues
+                
+                # Skip during business hours unless critical
+                if self._is_business_hours() and factors['system_needs'] < 2.0:
+                    factors['system_needs'] = 0.1  # Heavily reduce non-critical infrastructure work
+            
+            elif area == 'barbossa_self':
+                # Boost self-improvement if errors detected in recent runs
+                if recent_history.get('barbossa_self', {}).get('error_rate', 0) > 0.2:
+                    factors['system_needs'] = 2.0
+            
+            # Calculate composite score with weighted factors
+            composite_score = (
+                factors['base_priority'] * 0.35 +  # Base configuration weight
+                factors['work_balance'] * 0.25 +   # Balance across areas
+                factors['time_factor'] * 0.15 +    # Time since last work
+                factors['success_rate'] * 0.10 +   # Historical success
+                factors['performance'] * 0.05 +    # Performance efficiency
+                factors['system_needs'] * 0.10     # System requirements
+            ) * factors['base_priority']  # Apply base multiplier
+            
+            weights[area] = max(composite_score, 0.01)  # Ensure minimum weight
+            area_analysis[area] = {
+                'composite_score': composite_score,
+                'factors': factors,
+                'work_count': work_count
+            }
         
-        # Normalize and select
+        # Normalize weights and calculate probabilities
         total_weight = sum(weights.values())
         probabilities = {k: v/total_weight for k, v in weights.items()}
         
-        self.logger.info("Work area selection probabilities:")
-        for area, prob in probabilities.items():
-            self.logger.info(f"  {area}: {prob:.2%} (count: {self.work_tally.get(area, 0)})")
+        # Log detailed analysis
+        self.logger.info("=" * 70)
+        self.logger.info("INTELLIGENT WORK AREA SELECTION ANALYSIS")
+        self.logger.info("=" * 70)
         
+        for area, prob in sorted(probabilities.items(), key=lambda x: x[1], reverse=True):
+            analysis = area_analysis[area]
+            self.logger.info(f"\n{area.upper()}:")
+            self.logger.info(f"  Selection Probability: {prob:.1%}")
+            self.logger.info(f"  Work Count: {analysis['work_count']}")
+            self.logger.info(f"  Composite Score: {analysis['composite_score']:.3f}")
+            self.logger.info("  Factors:")
+            for factor_name, value in analysis['factors'].items():
+                self.logger.info(f"    - {factor_name}: {value:.2f}")
+        
+        # Select area based on probabilities
         selected = random.choices(
             list(probabilities.keys()),
             weights=list(probabilities.values()),
             k=1
         )[0]
         
-        self.logger.info(f"SELECTED: {selected}")
+        self.logger.info("\n" + "=" * 70)
+        self.logger.info(f"SELECTED WORK AREA: {selected.upper()}")
+        self.logger.info("=" * 70)
+        
         return selected
+    
+    def _analyze_recent_work_history(self) -> Dict:
+        """Analyze recent work history for performance metrics"""
+        history = {}
+        
+        try:
+            # Check recent changelogs
+            changelogs = sorted(self.changelogs_dir.glob("*.md"), 
+                              key=lambda x: x.stat().st_mtime, reverse=True)[:20]
+            
+            now = datetime.now()
+            
+            for changelog in changelogs:
+                content = changelog.read_text().lower()
+                file_time = datetime.fromtimestamp(changelog.stat().st_mtime)
+                
+                # Extract work area from content
+                for area in self.WORK_AREAS.keys():
+                    if area in content:
+                        if area not in history:
+                            history[area] = {
+                                'count': 0,
+                                'success': 0,
+                                'errors': 0,
+                                'last_work': file_time
+                            }
+                        
+                        history[area]['count'] += 1
+                        
+                        # Analyze success/failure
+                        success_indicators = ['completed', 'success', 'fixed', 'implemented', 'enhanced']
+                        error_indicators = ['error', 'failed', 'exception', 'issue', 'problem']
+                        
+                        if any(ind in content for ind in success_indicators):
+                            history[area]['success'] += 1
+                        if any(ind in content for ind in error_indicators):
+                            history[area]['errors'] += 1
+                        
+                        # Update last work time
+                        if file_time > history[area]['last_work']:
+                            history[area]['last_work'] = file_time
+            
+            # Calculate metrics
+            for area, data in history.items():
+                if data['count'] > 0:
+                    data['success_rate'] = data['success'] / data['count']
+                    data['error_rate'] = data['errors'] / data['count']
+                    data['hours_since_last'] = (now - data['last_work']).total_seconds() / 3600
+                else:
+                    data['success_rate'] = 1.0
+                    data['error_rate'] = 0.0
+                    data['hours_since_last'] = 168  # Default to 1 week
+                    
+        except Exception as e:
+            self.logger.warning(f"Could not analyze work history: {e}")
+        
+        return history
+    
+    def _is_business_hours(self) -> bool:
+        """Check if current time is during business hours (9 AM - 6 PM weekdays)"""
+        now = datetime.now()
+        # Business hours: Monday-Friday, 9 AM - 6 PM
+        is_weekday = now.weekday() < 5  # Monday = 0, Sunday = 6
+        is_business_time = 9 <= now.hour < 18
+        return is_weekday and is_business_time
     
     def execute_work(self, area: Optional[str] = None):
         """Execute work for selected area"""
@@ -806,6 +959,180 @@ Select and implement ONE improvement completely."""
             self.logger.info("=" * 70)
     
     @performance_monitor("comprehensive_status")
+    def run_comprehensive_diagnostics(self):
+        """Run comprehensive system diagnostics and generate report"""
+        print("=" * 80)
+        print("BARBOSSA COMPREHENSIVE SYSTEM DIAGNOSTICS")
+        print("=" * 80)
+        print(f"Timestamp: {datetime.now().isoformat()}")
+        print(f"Version: {self.VERSION}")
+        print("")
+        
+        diagnostics_results = {
+            'timestamp': datetime.now().isoformat(),
+            'version': self.VERSION,
+            'checks': {}
+        }
+        
+        # 1. System Information
+        print("1. SYSTEM INFORMATION")
+        print("-" * 40)
+        for key, value in self.system_info.items():
+            if isinstance(value, dict):
+                print(f"  {key}:")
+                for k, v in value.items():
+                    print(f"    {k}: {v}")
+            else:
+                print(f"  {key}: {value}")
+        print("")
+        
+        # 2. Health Check
+        print("2. HEALTH CHECK")
+        print("-" * 40)
+        if self.health_monitor:
+            health_summary = self.health_monitor.get_health_summary()
+            print(health_summary)
+            diagnostics_results['checks']['health'] = self.health_monitor.perform_full_health_check()
+        else:
+            print("  Health monitor not available")
+        print("")
+        
+        # 3. Performance Metrics
+        print("3. PERFORMANCE METRICS")
+        print("-" * 40)
+        perf_summary = self.profiler.get_performance_summary()
+        if perf_summary:
+            for operation, metrics in perf_summary.items():
+                print(f"  {operation}:")
+                print(f"    Runs: {metrics['count']}")
+                print(f"    Avg Duration: {metrics['avg_duration']:.2f}s")
+                print(f"    Last Run: {metrics['last_run']}")
+        else:
+            print("  No performance data available yet")
+        diagnostics_results['checks']['performance'] = perf_summary
+        print("")
+        
+        # 4. Work Area Analysis
+        print("4. WORK AREA ANALYSIS")
+        print("-" * 40)
+        print("  Current Work Tally:")
+        for area, count in self.work_tally.items():
+            print(f"    {area}: {count} sessions")
+        
+        recent_history = self._analyze_recent_work_history()
+        if recent_history:
+            print("\n  Recent Work History:")
+            for area, data in recent_history.items():
+                print(f"    {area}:")
+                print(f"      Success Rate: {data.get('success_rate', 0):.1%}")
+                print(f"      Hours Since Last: {data.get('hours_since_last', 0):.1f}")
+        diagnostics_results['checks']['work_areas'] = {
+            'tally': self.work_tally,
+            'history': recent_history
+        }
+        print("")
+        
+        # 5. Security Status
+        print("5. SECURITY STATUS")
+        print("-" * 40)
+        try:
+            # Test security with safe repository
+            test_url = "https://github.com/ADWilkinson/barbossa-engineer"
+            is_valid, _ = security_guard.validate_repository_url(test_url)
+            print(f"  Security Guard: {'Active' if is_valid else 'Error'}")
+            
+            # Check violations log
+            violations_log = self.work_dir / 'security' / 'security_violations.log'
+            if violations_log.exists():
+                violation_count = sum(1 for line in open(violations_log) if 'VIOLATION' in line)
+                print(f"  Total Violations: {violation_count}")
+            else:
+                print("  Total Violations: 0")
+                
+            print("  Repository Access: ADWilkinson only (ZKP2P BLOCKED)")
+            diagnostics_results['checks']['security'] = {'status': 'active', 'violations': violation_count if violations_log.exists() else 0}
+        except Exception as e:
+            print(f"  Security check error: {e}")
+            diagnostics_results['checks']['security'] = {'status': 'error', 'error': str(e)}
+        print("")
+        
+        # 6. Service Status
+        print("6. SERVICE STATUS")
+        print("-" * 40)
+        services = {
+            'Server Manager': self.server_manager is not None,
+            'Ticket Engine': self.ticket_engine is not None,
+            'Health Monitor': self.health_monitor is not None,
+            'Portal API': self.api_available
+        }
+        for service, status in services.items():
+            status_str = "Active" if status else "Inactive"
+            print(f"  {service}: {status_str}")
+        diagnostics_results['checks']['services'] = services
+        print("")
+        
+        # 7. Storage Analysis
+        print("7. STORAGE ANALYSIS")
+        print("-" * 40)
+        storage_dirs = {
+            'Logs': self.logs_dir,
+            'Changelogs': self.changelogs_dir,
+            'Work Tracking': self.work_tracking_dir,
+            'Backups': self.work_dir / 'backups',
+            'Metrics': self.work_dir / 'metrics'
+        }
+        
+        for name, path in storage_dirs.items():
+            if path.exists():
+                if path.is_dir():
+                    file_count = len(list(path.glob('*')))
+                    size_mb = sum(f.stat().st_size for f in path.rglob('*') if f.is_file()) / (1024 * 1024)
+                    print(f"  {name}:")
+                    print(f"    Files: {file_count}")
+                    print(f"    Size: {size_mb:.1f} MB")
+                else:
+                    size_mb = path.stat().st_size / (1024 * 1024)
+                    print(f"  {name}: {size_mb:.1f} MB")
+            else:
+                print(f"  {name}: Not found")
+        print("")
+        
+        # 8. Recent Errors
+        print("8. RECENT ERRORS")
+        print("-" * 40)
+        error_count = 0
+        recent_logs = sorted(self.logs_dir.glob('*.log'), key=lambda x: x.stat().st_mtime, reverse=True)[:3]
+        for log_file in recent_logs:
+            try:
+                with open(log_file, 'r') as f:
+                    errors = [line for line in f if 'ERROR' in line or 'CRITICAL' in line]
+                    if errors:
+                        print(f"  {log_file.name}: {len(errors)} errors")
+                        error_count += len(errors)
+                        # Show last error
+                        if errors:
+                            last_error = errors[-1].strip()
+                            if len(last_error) > 100:
+                                last_error = last_error[:100] + "..."
+                            print(f"    Last: {last_error}")
+            except:
+                pass
+        
+        if error_count == 0:
+            print("  No recent errors found")
+        diagnostics_results['checks']['errors'] = error_count
+        print("")
+        
+        # Save diagnostics report
+        report_file = self.work_dir / 'diagnostics' / f"diagnostics_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        report_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(report_file, 'w') as f:
+            json.dump(diagnostics_results, f, indent=2)
+        
+        print("=" * 80)
+        print(f"Diagnostics complete. Report saved to: {report_file}")
+        print("=" * 80)
+    
     def get_comprehensive_status(self) -> Dict:
         """Get comprehensive system and Barbossa status with optimized caching"""
         # Check cache for non-critical status components
@@ -900,6 +1227,21 @@ def main():
         help='Perform health check and exit'
     )
     parser.add_argument(
+        '--diagnostics',
+        action='store_true',
+        help='Run comprehensive system diagnostics'
+    )
+    parser.add_argument(
+        '--cleanup',
+        action='store_true',
+        help='Run storage cleanup to free disk space'
+    )
+    parser.add_argument(
+        '--cleanup-dry-run',
+        action='store_true',
+        help='Simulate cleanup without deleting files'
+    )
+    parser.add_argument(
         '--test-security',
         action='store_true',
         help='Test security system and exit'
@@ -922,9 +1264,39 @@ def main():
             print(json.dumps(status, indent=2))
             
         elif args.health:
-            # Perform health check
-            health = barbossa.perform_system_health_check()
-            print(json.dumps(health, indent=2))
+            # Perform comprehensive health check
+            if barbossa.health_monitor:
+                print(barbossa.health_monitor.get_health_summary())
+            else:
+                # Fallback to basic health check
+                health = barbossa.perform_system_health_check()
+                print(json.dumps(health, indent=2))
+        
+        elif args.diagnostics:
+            # Run comprehensive system diagnostics
+            barbossa.run_comprehensive_diagnostics()
+        
+        elif args.cleanup or args.cleanup_dry_run:
+            # Run storage cleanup
+            if barbossa.cleanup_manager:
+                dry_run = args.cleanup_dry_run
+                print(f"Running storage cleanup {'(DRY RUN)' if dry_run else ''}...")
+                results = barbossa.cleanup_manager.perform_cleanup(dry_run=dry_run)
+                print("\n" + results['summary'])
+                
+                # Show storage report
+                print("\nCurrent Storage Report:")
+                report = barbossa.cleanup_manager.get_storage_report()
+                for name, info in report['directories'].items():
+                    print(f"  {name}: {info['size_mb']:.1f} MB ({info['file_count']} files)")
+                print(f"\nTotal: {report['total_size_mb']:.1f} MB")
+                
+                if report['recommendations']:
+                    print("\nRecommendations:")
+                    for rec in report['recommendations']:
+                        print(f"  - {rec}")
+            else:
+                print("Cleanup manager not available")
             
         elif args.test_security:
             # Test security
