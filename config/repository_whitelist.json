@@ -1,15 +1,6 @@
 {
   "allowed_owner": "ADWilkinson",
-  "allowed_repositories": [
-    "ADWilkinson/barbossa-engineer",
-    "ADWilkinson/davy-jones-intern",
-    "ADWilkinson/_save",
-    "ADWilkinson/chordcraft-app",
-    "ADWilkinson/piggyonchain",
-    "ADWilkinson/personal-website",
-    "ADWilkinson/saylormemes",
-    "ADWilkinson/the-flying-dutchman-theme"
-  ],
+  "allowed_repositories": [],
   "forbidden_organizations": [
     "zkp2p",
     "ZKP2P",

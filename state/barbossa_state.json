@@ -187,10 +187,10 @@
       "description": "Add metrics dashboard"
     }
   },
-  "last_run": "2025-09-08T10:54:06.091821",
+  "last_run": "2025-09-09T12:49:07.515325",
   "statistics": {
     "total_tickets_enriched": 45,
     "total_improvements_found": 10,
-    "total_runs": 12
+    "total_runs": 17
   }
 }

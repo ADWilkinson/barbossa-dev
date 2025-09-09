@@ -648,5 +648,653 @@
     ],
     "metrics": {},
     "health_score": 90.0
+  },
+  {
+    "timestamp": "2025-09-08T18:00:12.615078",
+    "overall_status": "critical",
+    "components": {
+      "system": {
+        "status": "healthy",
+        "metrics": {
+          "cpu_percent": 0.0,
+          "memory_percent": 5.7,
+          "memory_available_gb": 28.916942596435547,
+          "process_count": 404,
+          "load_average": [
+            0.005859375,
+            0.1396484375,
+            0.10888671875
+          ]
+        },
+        "issues": [],
+        "timestamp": "2025-09-08T18:00:12.615138"
+      },
+      "disk": {
+        "status": "healthy",
+        "filesystems": {
+          "/": {
+            "total_gb": 3663.444511413574,
+            "used_gb": 69.4979362487793,
+            "free_gb": 3407.782512664795,
+            "percent": 2.0
+          }
+        },
+        "issues": [],
+        "timestamp": "2025-09-08T18:00:13.617659"
+      },
+      "network": {
+        "status": "healthy",
+        "checks": {
+          "Google DNS": true,
+          "Cloudflare DNS": true,
+          "GitHub": true,
+          "local_network": true
+        },
+        "issues": [],
+        "timestamp": "2025-09-08T18:00:13.618567",
+        "local_ip": "127.0.1.1"
+      },
+      "services": {
+        "status": "critical",
+        "services": {
+          "docker": {
+            "active": true,
+            "status": "active"
+          },
+          "cloudflared": {
+            "active": false,
+            "status": "inactive"
+          },
+          "ssh": {
+            "active": true,
+            "status": "active"
+          },
+          "systemd-resolved": {
+            "active": true,
+            "status": "active"
+          }
+        },
+        "issues": [
+          "Critical service cloudflared is not active"
+        ],
+        "timestamp": "2025-09-08T18:00:13.634963"
+      },
+      "api_endpoints": {
+        "status": "healthy",
+        "endpoints": {
+          "Barbossa Portal": {
+            "available": true,
+            "status_code": 200,
+            "response_time": 0.03713369369506836
+          },
+          "External Portal": {
+            "available": true,
+            "status_code": 200,
+            "response_time": 0.13084936141967773
+          },
+          "Portainer": {
+            "available": true,
+            "status_code": 200,
+            "response_time": 0.005442380905151367
+          },
+          "Grafana": {
+            "available": true,
+            "status_code": 200,
+            "response_time": 0.0057947635650634766
+          }
+        },
+        "issues": [],
+        "timestamp": "2025-09-08T18:00:13.652032"
+      },
+      "security": {
+        "status": "healthy",
+        "security_checks": {
+          "security_guard": true,
+          "recent_violations": 0,
+          "whitelist_exists": true
+        },
+        "issues": [],
+        "timestamp": "2025-09-08T18:00:13.831430"
+      },
+      "logs": {
+        "status": "healthy",
+        "log_stats": {
+          "total_size_mb": 2.2989988327026367,
+          "log_count": 108
+        },
+        "issues": [],
+        "timestamp": "2025-09-08T18:00:13.831649"
+      },
+      "dependencies": {
+        "status": "warning",
+        "dependencies": {
+          "python_flask": true,
+          "python_requests": true,
+          "python_psutil": true,
+          "python_anthropic": false,
+          "nodejs": "v18.19.1"
+        },
+        "issues": [
+          "Missing Python package: anthropic"
+        ],
+        "timestamp": "2025-09-08T18:00:13.833915"
+      },
+      "database": {
+        "status": "healthy",
+        "databases": {
+          "metrics": {
+            "exists": true,
+            "size_mb": 0.1015625
+          },
+          "state_files": 2
+        },
+        "issues": [],
+        "timestamp": "2025-09-08T18:00:13.888882"
+      },
+      "backup": {
+        "status": "healthy",
+        "backups": {
+          "latest": {
+            "name": "cleanup_20250908_103933",
+            "age_hours": 7.34461934334702,
+            "size_mb": 0
+          }
+        },
+        "issues": [],
+        "timestamp": "2025-09-08T18:00:13.889118"
+      }
+    },
+    "issues": [
+      "Critical service cloudflared is not active",
+      "Missing Python package: anthropic"
+    ],
+    "metrics": {},
+    "health_score": 90.0
+  },
+  {
+    "timestamp": "2025-09-09T00:00:12.786183",
+    "overall_status": "critical",
+    "components": {
+      "system": {
+        "status": "healthy",
+        "metrics": {
+          "cpu_percent": 0.0,
+          "memory_percent": 5.2,
+          "memory_available_gb": 29.07457733154297,
+          "process_count": 389,
+          "load_average": [
+            0.0205078125,
+            0.00927734375,
+            0.0
+          ]
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T00:00:12.786247"
+      },
+      "disk": {
+        "status": "healthy",
+        "filesystems": {
+          "/": {
+            "total_gb": 3663.444511413574,
+            "used_gb": 69.57555770874023,
+            "free_gb": 3407.704891204834,
+            "percent": 2.0
+          }
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T00:00:13.788902"
+      },
+      "network": {
+        "status": "healthy",
+        "checks": {
+          "Google DNS": true,
+          "Cloudflare DNS": true,
+          "GitHub": true,
+          "local_network": true
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T00:00:13.789853",
+        "local_ip": "127.0.1.1"
+      },
+      "services": {
+        "status": "critical",
+        "services": {
+          "docker": {
+            "active": true,
+            "status": "active"
+          },
+          "cloudflared": {
+            "active": false,
+            "status": "inactive"
+          },
+          "ssh": {
+            "active": true,
+            "status": "active"
+          },
+          "systemd-resolved": {
+            "active": true,
+            "status": "active"
+          }
+        },
+        "issues": [
+          "Critical service cloudflared is not active"
+        ],
+        "timestamp": "2025-09-09T00:00:13.807550"
+      },
+      "api_endpoints": {
+        "status": "healthy",
+        "endpoints": {
+          "Barbossa Portal": {
+            "available": true,
+            "status_code": 200,
+            "response_time": 0.03585934638977051
+          },
+          "External Portal": {
+            "available": true,
+            "status_code": 200,
+            "response_time": 0.09306550025939941
+          },
+          "Portainer": {
+            "available": true,
+            "status_code": 200,
+            "response_time": 0.0045146942138671875
+          },
+          "Grafana": {
+            "available": true,
+            "status_code": 200,
+            "response_time": 0.0054950714111328125
+          }
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T00:00:13.824051"
+      },
+      "security": {
+        "status": "healthy",
+        "security_checks": {
+          "security_guard": true,
+          "recent_violations": 0,
+          "whitelist_exists": true
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T00:00:13.963091"
+      },
+      "logs": {
+        "status": "healthy",
+        "log_stats": {
+          "total_size_mb": 2.3517723083496094,
+          "log_count": 102
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T00:00:13.963208"
+      },
+      "dependencies": {
+        "status": "warning",
+        "dependencies": {
+          "python_flask": true,
+          "python_requests": true,
+          "python_psutil": true,
+          "python_anthropic": false,
+          "nodejs": "v18.19.1"
+        },
+        "issues": [
+          "Missing Python package: anthropic"
+        ],
+        "timestamp": "2025-09-09T00:00:13.964364"
+      },
+      "database": {
+        "status": "healthy",
+        "databases": {
+          "metrics": {
+            "exists": true,
+            "size_mb": 0.1015625
+          },
+          "state_files": 2
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T00:00:14.013246"
+      },
+      "backup": {
+        "status": "healthy",
+        "backups": {
+          "latest": {
+            "name": "cleanup_20250908_103933",
+            "age_hours": 13.344653961526022,
+            "size_mb": 0
+          }
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T00:00:14.013658"
+      }
+    },
+    "issues": [
+      "Critical service cloudflared is not active",
+      "Missing Python package: anthropic"
+    ],
+    "metrics": {},
+    "health_score": 90.0
+  },
+  {
+    "timestamp": "2025-09-09T06:00:12.549740",
+    "overall_status": "critical",
+    "components": {
+      "system": {
+        "status": "healthy",
+        "metrics": {
+          "cpu_percent": 0.0,
+          "memory_percent": 5.1,
+          "memory_available_gb": 29.095211029052734,
+          "process_count": 387,
+          "load_average": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T06:00:12.549811"
+      },
+      "disk": {
+        "status": "healthy",
+        "filesystems": {
+          "/": {
+            "total_gb": 3663.444511413574,
+            "used_gb": 69.5598373413086,
+            "free_gb": 3407.7206115722656,
+            "percent": 2.0
+          }
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T06:00:13.551933"
+      },
+      "network": {
+        "status": "healthy",
+        "checks": {
+          "Google DNS": true,
+          "Cloudflare DNS": true,
+          "GitHub": true,
+          "local_network": true
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T06:00:13.552714",
+        "local_ip": "127.0.1.1"
+      },
+      "services": {
+        "status": "critical",
+        "services": {
+          "docker": {
+            "active": true,
+            "status": "active"
+          },
+          "cloudflared": {
+            "active": false,
+            "status": "inactive"
+          },
+          "ssh": {
+            "active": true,
+            "status": "active"
+          },
+          "systemd-resolved": {
+            "active": true,
+            "status": "active"
+          }
+        },
+        "issues": [
+          "Critical service cloudflared is not active"
+        ],
+        "timestamp": "2025-09-09T06:00:13.568795"
+      },
+      "api_endpoints": {
+        "status": "healthy",
+        "endpoints": {
+          "Barbossa Portal": {
+            "available": true,
+            "status_code": 200,
+            "response_time": 0.03382372856140137
+          },
+          "External Portal": {
+            "available": true,
+            "status_code": 200,
+            "response_time": 0.09391403198242188
+          },
+          "Portainer": {
+            "available": true,
+            "status_code": 200,
+            "response_time": 0.005296945571899414
+          },
+          "Grafana": {
+            "available": true,
+            "status_code": 200,
+            "response_time": 0.007145404815673828
+          }
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T06:00:13.584455"
+      },
+      "security": {
+        "status": "healthy",
+        "security_checks": {
+          "security_guard": true,
+          "recent_violations": 0,
+          "whitelist_exists": true
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T06:00:13.724845"
+      },
+      "logs": {
+        "status": "healthy",
+        "log_stats": {
+          "total_size_mb": 2.3749094009399414,
+          "log_count": 108
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T06:00:13.724974"
+      },
+      "dependencies": {
+        "status": "warning",
+        "dependencies": {
+          "python_flask": true,
+          "python_requests": true,
+          "python_psutil": true,
+          "python_anthropic": false,
+          "nodejs": "v18.19.1"
+        },
+        "issues": [
+          "Missing Python package: anthropic"
+        ],
+        "timestamp": "2025-09-09T06:00:13.726347"
+      },
+      "database": {
+        "status": "healthy",
+        "databases": {
+          "metrics": {
+            "exists": true,
+            "size_mb": 0.1015625
+          },
+          "state_files": 2
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T06:00:13.777482"
+      },
+      "backup": {
+        "status": "healthy",
+        "backups": {
+          "latest": {
+            "name": "cleanup_20250908_103933",
+            "age_hours": 19.344588471518623,
+            "size_mb": 0
+          }
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T06:00:13.777901"
+      }
+    },
+    "issues": [
+      "Critical service cloudflared is not active",
+      "Missing Python package: anthropic"
+    ],
+    "metrics": {},
+    "health_score": 90.0
+  },
+  {
+    "timestamp": "2025-09-09T12:00:12.070208",
+    "overall_status": "critical",
+    "components": {
+      "system": {
+        "status": "healthy",
+        "metrics": {
+          "cpu_percent": 0.0,
+          "memory_percent": 5.1,
+          "memory_available_gb": 29.0858154296875,
+          "process_count": 387,
+          "load_average": [
+            0.01220703125,
+            0.048828125,
+            0.01318359375
+          ]
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T12:00:12.070268"
+      },
+      "disk": {
+        "status": "healthy",
+        "filesystems": {
+          "/": {
+            "total_gb": 3663.444511413574,
+            "used_gb": 69.57326889038086,
+            "free_gb": 3407.7071800231934,
+            "percent": 2.0
+          }
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T12:00:13.072841"
+      },
+      "network": {
+        "status": "healthy",
+        "checks": {
+          "Google DNS": true,
+          "Cloudflare DNS": true,
+          "GitHub": true,
+          "local_network": true
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T12:00:13.073778",
+        "local_ip": "127.0.1.1"
+      },
+      "services": {
+        "status": "critical",
+        "services": {
+          "docker": {
+            "active": true,
+            "status": "active"
+          },
+          "cloudflared": {
+            "active": false,
+            "status": "inactive"
+          },
+          "ssh": {
+            "active": true,
+            "status": "active"
+          },
+          "systemd-resolved": {
+            "active": true,
+            "status": "active"
+          }
+        },
+        "issues": [
+          "Critical service cloudflared is not active"
+        ],
+        "timestamp": "2025-09-09T12:00:13.110475"
+      },
+      "api_endpoints": {
+        "status": "healthy",
+        "endpoints": {
+          "Barbossa Portal": {
+            "available": true,
+            "status_code": 200,
+            "response_time": 0.035941123962402344
+          },
+          "External Portal": {
+            "available": true,
+            "status_code": 200,
+            "response_time": 0.12805795669555664
+          },
+          "Portainer": {
+            "available": true,
+            "status_code": 200,
+            "response_time": 0.004828929901123047
+          },
+          "Grafana": {
+            "available": true,
+            "status_code": 200,
+            "response_time": 0.0053288936614990234
+          }
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T12:00:13.127119"
+      },
+      "security": {
+        "status": "healthy",
+        "security_checks": {
+          "security_guard": true,
+          "recent_violations": 0,
+          "whitelist_exists": true
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T12:00:13.301388"
+      },
+      "logs": {
+        "status": "healthy",
+        "log_stats": {
+          "total_size_mb": 2.4305152893066406,
+          "log_count": 113
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T12:00:13.301502"
+      },
+      "dependencies": {
+        "status": "warning",
+        "dependencies": {
+          "python_flask": true,
+          "python_requests": true,
+          "python_psutil": true,
+          "python_anthropic": false,
+          "nodejs": "v18.19.1"
+        },
+        "issues": [
+          "Missing Python package: anthropic"
+        ],
+        "timestamp": "2025-09-09T12:00:13.302718"
+      },
+      "database": {
+        "status": "healthy",
+        "databases": {
+          "metrics": {
+            "exists": true,
+            "size_mb": 0.1015625
+          },
+          "state_files": 2
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T12:00:13.353121"
+      },
+      "backup": {
+        "status": "healthy",
+        "backups": {
+          "latest": {
+            "name": "cleanup_20250908_103933",
+            "age_hours": 25.344470579889087,
+            "size_mb": 0
+          }
+        },
+        "issues": [],
+        "timestamp": "2025-09-09T12:00:13.353500"
+      }
+    },
+    "issues": [
+      "Critical service cloudflared is not active",
+      "Missing Python package: anthropic"
+    ],
+    "metrics": {},
+    "health_score": 90.0
   }
 ]

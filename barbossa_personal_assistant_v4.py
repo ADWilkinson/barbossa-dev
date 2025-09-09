@@ -280,7 +280,11 @@ class LinearAPIClient:
                     return []
                     
         except Exception as e:
-            logger.error(f"Error fetching Todo tickets: {e}")
+            error_msg = str(e) if str(e) else type(e).__name__
+            logger.error(f"Error fetching Todo tickets: {error_msg}")
+            if hasattr(e, '__traceback__'):
+                import traceback
+                logger.debug(f"Traceback: {traceback.format_exc()}")
             return []
     
     async def update_ticket_description(self, issue_id: str, identifier: str, new_description: str) -> bool:
@@ -606,8 +610,11 @@ class BarbossaPersonalAssistant:
     
     async def enrich_todo_tickets(self):
         """Enrich only Todo tickets with development context"""
-        if not self.linear_client or not self.enrichment_service:
-            logger.warning("Required services not initialized")
+        if not self.linear_client:
+            logger.warning("Linear API client not initialized - LINEAR_API_KEY environment variable not set")
+            return
+        if not self.enrichment_service:
+            logger.warning("Enrichment service not initialized - ANTHROPIC_API_KEY environment variable not set")
             return
         
         logger.info("🎯 Enriching Todo tickets for Andrew")

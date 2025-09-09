@@ -103,16 +103,8 @@ class TicketEnrichmentEngine:
             except:
                 pass
         
-        # Default ADWilkinson repositories
-        return [
-            'ADWilkinson/barbossa-engineer',
-            'ADWilkinson/davy-jones-intern',
-            'ADWilkinson/saylormemes',
-            'ADWilkinson/the-flying-dutchman-theme',
-            'ADWilkinson/personal-website',
-            'ADWilkinson/chordcraft-app',
-            'ADWilkinson/_save'
-        ]
+        # Default ADWilkinson repositories - currently empty as no active development
+        return []
     
     def fetch_github_issues(self, repo: str) -> List[Dict]:
         """Fetch open issues from a GitHub repository"""
@@ -132,8 +124,13 @@ class TicketEnrichmentEngine:
             
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
             if result.returncode == 0:
-                issues = json.loads(result.stdout)
-                return [issue for issue in issues if not issue.get('pull_request')]
+                response = json.loads(result.stdout)
+                # Handle both list of issues and error responses
+                if isinstance(response, list):
+                    return [issue for issue in response if not issue.get('pull_request')]
+                else:
+                    self.logger.warning(f"Unexpected API response for {repo}: {response}")
+                    return []
             
         except Exception as e:
             self.logger.error(f"Error fetching issues from {repo}: {e}")
