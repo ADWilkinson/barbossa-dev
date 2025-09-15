@@ -1278,7 +1278,8 @@ class WorkflowScheduler:
             
             return (cpu_percent < self.resource_limits['max_cpu_percent'] and 
                     memory_percent < self.resource_limits['max_memory_percent'])
-        except:
+        except (psutil.Error, OSError, AttributeError) as e:
+            logger.warning(f"Failed to check system resources: {e}")
             return True  # Default to allow execution if can't check resources
 
 class PerformanceProfiler:
@@ -1839,18 +1840,19 @@ class BarbossaEnhanced:
         
         # Get disk usage
         try:
-            result = subprocess.run(['df', '-h', '/'], capture_output=True, text=True)
+            result = subprocess.run(['df', '-h', '/'], capture_output=True, text=True, timeout=10)
             lines = result.stdout.split('\n')
             if len(lines) > 1:
                 parts = lines[1].split()
-                info['disk_usage'] = {
-                    'total': parts[1],
-                    'used': parts[2],
-                    'available': parts[3],
-                    'percent': parts[4]
-                }
-        except:
-            pass
+                if len(parts) >= 5:
+                    info['disk_usage'] = {
+                        'total': parts[1],
+                        'used': parts[2],
+                        'available': parts[3],
+                        'percent': parts[4]
+                    }
+        except (subprocess.SubprocessError, subprocess.TimeoutExpired, IndexError) as e:
+            logger.warning(f"Failed to get disk usage information: {e}")
         
         return info
     

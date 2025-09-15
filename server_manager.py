@@ -214,7 +214,8 @@ class MetricsCollector:
         try:
             cpu_freq = psutil.cpu_freq()
             metrics['cpu_freq'] = cpu_freq.current if cpu_freq else 0
-        except:
+        except (psutil.Error, AttributeError, OSError) as e:
+            logging.getLogger(__name__).debug(f"CPU frequency unavailable: {e}")
             metrics['cpu_freq'] = 0
         
         # Memory metrics
@@ -296,7 +297,8 @@ class MetricsCollector:
             try:
                 result = subprocess.run(['docker', 'ps', '-q'], capture_output=True, text=True, timeout=5)
                 docker_count = len(result.stdout.strip().split('\n')) if result.stdout.strip() else 0
-            except:
+            except (subprocess.SubprocessError, subprocess.TimeoutExpired, FileNotFoundError) as e:
+                logging.getLogger(__name__).debug(f"Docker container count unavailable: {e}")
                 docker_count = 0
             self._set_cache(docker_cache_key, docker_count, ttl=15)
         metrics['docker_containers'] = docker_count
@@ -316,7 +318,8 @@ class MetricsCollector:
                                 break
                         if temperature:
                             break
-            except:
+            except (psutil.Error, AttributeError, OSError) as e:
+                logging.getLogger(__name__).debug(f"Temperature sensors unavailable: {e}")
                 temperature = None
             self._set_cache(temp_cache_key, temperature, ttl=30)
         metrics['temperature'] = temperature
@@ -517,11 +520,11 @@ class ServiceManager:
             'tmux': self.executor.submit(self._get_tmux_sessions)
         }
         
-        # Wait for all tasks to complete
+        # Wait for all tasks to complete with increased timeouts
         try:
-            self.services = futures['services'].result(timeout=10)
-            self.docker_containers = futures['docker'].result(timeout=10)
-            self.tmux_sessions = futures['tmux'].result(timeout=5)
+            self.services = futures['services'].result(timeout=15)
+            self.docker_containers = futures['docker'].result(timeout=15)
+            self.tmux_sessions = futures['tmux'].result(timeout=10)
             
             # Cache the results
             all_services = {
@@ -531,11 +534,19 @@ class ServiceManager:
             }
             self._set_cache(cache_key, all_services, ttl=30)
             
-        except concurrent.futures.TimeoutError:
+        except concurrent.futures.TimeoutError as e:
             # Fallback to cached data if available
             for future in futures.values():
                 future.cancel()
-            logging.getLogger(__name__).warning("Service update timeout, using cached data")
+            logging.getLogger(__name__).warning(f"Service update timeout after extended wait: {e}")
+            
+            # Try to get cached data as fallback
+            cached_data = self._get_cached(cache_key, ttl=300)  # Use older cache if needed
+            if cached_data:
+                self.services = cached_data.get('services', {})
+                self.docker_containers = cached_data.get('docker_containers', {})
+                self.tmux_sessions = cached_data.get('tmux_sessions', [])
+                logging.getLogger(__name__).info("Using extended cached data as fallback")
     
     def _get_systemd_services(self) -> Dict:
         """Get status of important systemd services"""
