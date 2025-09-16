@@ -101,43 +101,40 @@ class BarbossaEnhanced:
     VERSION = "2.2.0"
     
     WORK_AREAS = {
-        'infrastructure': {
-            'name': 'Server Infrastructure Management',
-            'description': 'Comprehensive server monitoring, optimization, and maintenance',
-            'weight': 0.1,  # MINIMAL - Only for critical issues
-            'tasks': [
-                'Critical security patches only',
-                'Emergency system fixes',
-                'Critical service failures'
-            ]
+        'peerlytics': {
+            'name': 'Peerlytics - ZKP2P Analytics Dashboard',
+            'description': 'ZKP2P Pre-computed Analytics Dashboard for Base with performance optimizations',
+            'repository': 'ADWilkinson/peerlytics',
+            'focus': ['API performance & caching', 'UI visualizations', 'Data chunking optimizations', 'Mobile responsiveness'],
+            'weight': 2.0  # Equal priority across all projects
         },
-        'personal_projects': {
-            'name': 'Personal Project Development',
-            'description': 'Feature development for ADWilkinson repositories',
-            'repositories': [
-                'ADWilkinson/_save',
-                'ADWilkinson/chordcraft-app',
-                'ADWilkinson/piggyonchain',
-                'ADWilkinson/personal-website',
-                'ADWilkinson/saylormemes',
-                'ADWilkinson/the-flying-dutchman-theme'
-            ],
-            'weight': 7.0  # HIGH - 70% weight (multiple projects)
+        '_save': {
+            'name': 'Elune - Crypto Savings App',
+            'description': 'Crypto Savings App with SuperUSDC and Coinbase Smart Wallet integration',
+            'repository': 'ADWilkinson/_save',
+            'focus': ['Yield optimization features', 'Achievement system', 'Auto-invest improvements', 'UI polish'],
+            'weight': 2.0
         },
         'davy_jones': {
-            'name': 'Davy Jones Intern Enhancement',
-            'description': 'Bot improvements without affecting production',
+            'name': 'Davy Jones Intern - Claude-powered Slack Bot',
+            'description': 'AI development assistant bot with Claude integration',
             'repository': 'ADWilkinson/davy-jones-intern',
-            'weight': 3.0  # MODERATE - 30% weight (single project)
+            'focus': ['New commands', 'GitHub integration', 'Better error handling', 'Response improvements'],
+            'weight': 2.0
         },
-        'barbossa_self': {
-            'name': 'Barbossa Self-Improvement',
-            'description': 'Enhance Barbossa capabilities and features',
-            'weight': 0.2,  # LOW - Minimal priority
-            'tasks': [
-                'Critical bug fixes only',
-                'Essential feature updates'
-            ]
+        'chordcraft': {
+            'name': 'ChordCraft - AI-Powered Chord Progression Explorer',
+            'description': 'Music theory app with AI chord generation and piano UI',
+            'repository': 'ADWilkinson/chordcraft-app',
+            'focus': ['AI generation features', 'Playback improvements', 'Mobile optimization', 'Firebase performance'],
+            'weight': 2.0
+        },
+        'piggyonchain': {
+            'name': 'PiggyOnChain - DeFi Terminal & DAO Platform',
+            'description': 'Terminal-style DeFi dashboard and DAO governance for PIGGY token',
+            'repository': 'ADWilkinson/piggyonchain',
+            'focus': ['Real-time analytics', 'Trading features', 'Treasury management', 'Terminal UI enhancements'],
+            'weight': 2.0
         }
     }
     
@@ -573,116 +570,147 @@ Complete the improvement and create a detailed report."""
             'output_file': str(output_file)
         })
     
-    def execute_personal_project_development(self):
-        """Execute personal project development (inherited from original)"""
-        self.logger.info("Executing personal project development...")
-        
-        repos = self.WORK_AREAS['personal_projects']['repositories']
-        selected_repo = random.choice(repos)
-        repo_url = f"https://github.com/{selected_repo}"
-        
+    def execute_repository_development(self, area: str):
+        """Execute feature development for specific repository"""
+        work_config = self.WORK_AREAS[area]
+        repository = work_config['repository']
+        self.logger.info(f"Executing {work_config['name']}...")
+
+        repo_url = f"https://github.com/{repository}"
+
         # Validate repository access
         if not self.validate_repository_access(repo_url):
             self.logger.error("Repository access denied by security guard")
             return
-        
-        self.logger.info(f"Working on repository: {selected_repo}")
-        
+
+        self.logger.info(f"Working on repository: {repository}")
+
         timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
-        prompt = f"""You are Barbossa Enhanced, working on personal project improvements.
+        focus_areas = "\n".join([f"   - {focus}" for focus in work_config['focus']])
 
-REPOSITORY: {selected_repo}
+        prompt = f"""You are Barbossa Enhanced, focusing on FEATURE DEVELOPMENT and UI/UX improvements.
+
+REPOSITORY: {repository}
 URL: {repo_url}
+FOCUS: {work_config['description']}
 
-INSTRUCTIONS:
+DEVELOPMENT PRIORITIES (STRICTLY IN ORDER):
+1. NEW FEATURE IMPLEMENTATION - Create valuable new functionality
+2. UI/UX IMPROVEMENTS - Enhance user interfaces and user experience
+3. POLISH & REFINEMENT - Add animations, transitions, better feedback
+4. PERFORMANCE OPTIMIZATION - Improve speed and efficiency
+5. ACCESSIBILITY ENHANCEMENTS - Better keyboard nav, screen readers
+6. MOBILE/RESPONSIVE DESIGN - Optimize for all screen sizes
+7. BUG FIXES - Only fix user-facing bugs that impact functionality
+
+SPECIFIC FOCUS AREAS FOR THIS REPOSITORY:
+{focus_areas}
+
+STRICTLY AVOID:
+- Writing ANY test cases or unit tests
+- Creating test files or test suites
+- Spending time on test coverage
+- Documentation unless it's user-facing (tooltips, help text)
+
+WORKFLOW:
 1. Clone repository to ~/barbossa-engineer/projects/ if not present, or navigate to existing clone
 2. Fetch latest changes: git fetch origin
 3. Checkout main/master branch: git checkout main (or master)
 4. Pull latest changes: git pull origin main (or master)
-5. Create new feature branch from updated main: git checkout -b feature/barbossa-improvement-{timestamp}
-6. Analyze codebase comprehensively
-7. Choose ONE significant improvement (PRIORITIZE IN THIS ORDER):
-   - Implement new feature (HIGHEST PRIORITY)
-   - Refactor for better architecture and code quality
-   - Optimize performance and efficiency
-   - Fix critical bugs and issues
-   - Update critical dependencies
-   - Improve inline code documentation (minimal)
-   - Add tests ONLY if absolutely necessary (LOWEST PRIORITY)
-
-8. Implement the improvement completely
-9. Run tests if available
-10. Commit with clear message
+5. Create new feature branch: git checkout -b feature/{area}-enhancement-{timestamp}
+6. Analyze codebase for feature opportunities
+7. Choose ONE significant user-facing improvement
+8. Implement the feature/improvement completely
+9. If tests exist and break, fix them minimally
+10. Commit with descriptive feature-focused message
 11. Push feature branch to origin
-12. Create detailed PR
+12. Create PR focused on USER VALUE
 
 REQUIREMENTS:
-- Make meaningful improvements
-- Follow project conventions
-- Ensure tests pass
-- Write clean code
-- Create comprehensive PR description
+- Focus on visible, user-facing improvements
+- Follow existing UI patterns and design systems
+- Ensure responsive design
+- Add loading states and error handling
+- Include helpful user feedback
+- Create PR description emphasizing user benefits
 
-Complete the task and create a PR."""
+Complete the feature development and create a PR."""
 
         prompt_file = self.work_dir / 'temp_prompt.txt'
         with open(prompt_file, 'w') as f:
             f.write(prompt)
-        
-        output_file = self.logs_dir / f"claude_personal_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-        
+
+        output_file = self.logs_dir / f"claude_{area}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+
         cmd = f"nohup claude --dangerously-skip-permissions --model sonnet < {prompt_file} > {output_file} 2>&1 &"
         subprocess.Popen(cmd, shell=True, cwd=self.work_dir)
-        
-        self.logger.info(f"Personal project development launched for: {selected_repo}")
-        
-        self._create_changelog('personal_projects', {
-            'repository': selected_repo,
+
+        self.logger.info(f"Feature development launched for: {repository}")
+
+        self._create_changelog(area, {
+            'repository': repository,
+            'focus': work_config['focus'],
             'output_file': str(output_file)
         })
     
     def execute_davy_jones_development(self):
-        """Execute Davy Jones development (inherited from original)"""
-        self.logger.info("Executing Davy Jones Intern development...")
-        
+        """Execute Davy Jones development focusing on features"""
+        self.logger.info("Executing Davy Jones Intern feature development...")
+
         repo_url = "https://github.com/ADWilkinson/davy-jones-intern"
-        
+
         if not self.validate_repository_access(repo_url):
             self.logger.error("Repository access denied")
             return
-        
+
         timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
-        prompt = f"""You are Barbossa Enhanced, improving the Davy Jones Intern bot.
+        prompt = f"""You are Barbossa Enhanced, adding NEW FEATURES to the Davy Jones Intern bot.
 
 CRITICAL: Production bot is running. DO NOT affect it.
 
 REPOSITORY: {repo_url}
 WORK DIR: ~/barbossa-engineer/projects/davy-jones-intern
 
-INSTRUCTIONS:
+DEVELOPMENT PRIORITIES (STRICTLY IN ORDER):
+1. NEW BOT COMMANDS - Add valuable new slash commands and functionality
+2. GITHUB INTEGRATION FEATURES - Enhanced PR management, issue handling
+3. RESPONSE IMPROVEMENTS - Better formatting, progress tracking, user feedback
+4. CLAUDE INTEGRATION ENHANCEMENTS - Smarter context handling, better prompts
+5. SLACK UI IMPROVEMENTS - Interactive blocks, modals, better messages
+6. PERFORMANCE OPTIMIZATION - Faster responses, caching, efficiency
+
+FEATURE FOCUS:
+- New slash commands for developer productivity
+- Enhanced GitHub operations and automation
+- Better error messages and user feedback
+- Interactive Slack UI components
+- Improved natural language understanding
+- Smart context management
+
+STRICTLY AVOID:
+- Writing test cases or unit tests
+- Creating test files
+- Test coverage improvements
+- Internal documentation
+
+WORKFLOW:
 1. Navigate to ~/barbossa-engineer/projects/davy-jones-intern (clone if not present)
 2. Fetch latest changes: git fetch origin
 3. Checkout main branch: git checkout main
 4. Pull latest changes: git pull origin main
-5. Create new feature branch: git checkout -b feature/davy-jones-improvement-{timestamp}
-
-IMPROVEMENT AREAS:
-1. Add comprehensive test coverage
-2. Enhance error handling
-3. Improve Claude integration
-4. Add new Slack commands
-5. Optimize performance
-6. Enhance logging
-7. Improve GitHub integration
+5. Create new feature branch: git checkout -b feature/davy-enhancement-{timestamp}
+6. Implement ONE significant NEW FEATURE
+7. Fix any broken tests minimally if blocking
+8. Commit with feature-focused message
+9. Push branch and create PR
 
 REQUIREMENTS:
+- Focus on USER-VISIBLE features
 - Work in feature branch only
 - Do not touch production
-- Run tests locally
-- Create detailed PR
-- Document all changes
+- Create PR emphasizing user value
 
-Select and implement ONE improvement completely."""
+Select and implement ONE NEW FEATURE completely."""
 
         prompt_file = self.work_dir / 'temp_prompt.txt'
         with open(prompt_file, 'w') as f:
@@ -926,15 +954,14 @@ Select and implement ONE improvement completely."""
             json.dump(current_work, f, indent=2)
         
         try:
-            # Execute based on area
-            if area == 'infrastructure':
-                self.execute_infrastructure_management()
-            elif area == 'personal_projects':
-                self.execute_personal_project_development()
-            elif area == 'davy_jones':
-                self.execute_davy_jones_development()
-            elif area == 'barbossa_self':
-                self.execute_barbossa_self_improvement()
+            # Execute based on area - all use same feature development approach
+            if area in self.WORK_AREAS:
+                if area == 'davy_jones':
+                    # Special handling for davy_jones to maintain compatibility
+                    self.execute_davy_jones_development()
+                else:
+                    # All other repositories use the new feature development approach
+                    self.execute_repository_development(area)
             else:
                 self.logger.error(f"Unknown work area: {area}")
                 return
@@ -1213,8 +1240,8 @@ def main():
     )
     parser.add_argument(
         '--area',
-        choices=['infrastructure', 'personal_projects', 'davy_jones', 'barbossa_self'],
-        help='Specific work area to focus on'
+        choices=['peerlytics', '_save', 'davy_jones', 'chordcraft', 'piggyonchain'],
+        help='Specific repository to focus on for feature development'
     )
     parser.add_argument(
         '--status',

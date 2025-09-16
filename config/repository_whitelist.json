@@ -1,6 +1,12 @@
 {
   "allowed_owner": "ADWilkinson",
-  "allowed_repositories": [],
+  "allowed_repositories": [
+    "ADWilkinson/peerlytics",
+    "ADWilkinson/_save",
+    "ADWilkinson/davy-jones-intern",
+    "ADWilkinson/chordcraft-app",
+    "ADWilkinson/piggyonchain"
+  ],
   "forbidden_organizations": [
     "zkp2p",
     "ZKP2P",
@@ -11,6 +17,6 @@
   ],
   "security_level": "MAXIMUM",
   "audit_enabled": true,
-  "last_updated": "2025-08-09T00:00:00Z",
-  "notes": "This whitelist explicitly allows ONLY ADWilkinson repositories. Any attempt to access ZKP2P organization repositories will be blocked and logged as a security violation."
+  "last_updated": "2025-09-16T00:00:00Z",
+  "notes": "Focus on feature development, UI/UX improvements, and polish for specified repositories. No test case development."
 }
