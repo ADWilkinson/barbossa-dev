@@ -136,28 +136,37 @@
                 
                 <!-- Work Tally -->
                 <div class="mt-3 pt-2 border-t border-terminal/20">
-                    <div class="text-[10px] text-terminal-dim uppercase mb-2">Work Distribution</div>
+                    <div class="text-[10px] text-terminal-dim uppercase mb-2">Repository Development</div>
                     <div id="work-tally" class="space-y-1">
                         <!-- Populated by JS -->
                     </div>
                 </div>
                 
-                <!-- Quick Actions -->
+                <!-- Repository Quick Actions -->
                 <div class="mt-3 pt-2 border-t border-terminal/20">
+                    <div class="text-[10px] text-terminal-dim uppercase mb-2">Repository Focus</div>
                     <div class="grid grid-cols-2 gap-1">
-                        <button onclick="triggerBarbossa('infrastructure')" 
+                        <button onclick="triggerBarbossa('peerlytics')"
                             class="text-[10px] px-2 py-1 border border-terminal bg-terminal/10 hover:bg-terminal/20 transition-colors uppercase">
-                            Infra
+                            Analytics
                         </button>
-                        <button onclick="triggerBarbossa('personal_projects')" 
+                        <button onclick="triggerBarbossa('_save')"
                             class="text-[10px] px-2 py-1 border border-terminal bg-terminal/10 hover:bg-terminal/20 transition-colors uppercase">
-                            Projects
+                            Save
                         </button>
-                        <button onclick="triggerBarbossa('davy_jones')" 
+                        <button onclick="triggerBarbossa('chordcraft')"
                             class="text-[10px] px-2 py-1 border border-terminal bg-terminal/10 hover:bg-terminal/20 transition-colors uppercase">
-                            Davy
+                            Chords
                         </button>
-                        <button onclick="triggerBarbossa()" 
+                        <button onclick="triggerBarbossa('piggyonchain')"
+                            class="text-[10px] px-2 py-1 border border-terminal bg-terminal/10 hover:bg-terminal/20 transition-colors uppercase">
+                            Piggy
+                        </button>
+                        <button onclick="triggerBarbossa('davy_jones')"
+                            class="text-[10px] px-2 py-1 border border-terminal bg-terminal/10 hover:bg-terminal/20 transition-colors uppercase">
+                            Bot
+                        </button>
+                        <button onclick="triggerBarbossa()"
                             class="text-[10px] px-2 py-1 border border-terminal bg-terminal/10 hover:bg-terminal/20 transition-colors uppercase">
                             Auto
                         </button>
@@ -203,6 +212,47 @@
                         class="text-[10px] px-2 py-1 border border-terminal bg-terminal/10 hover:bg-terminal/20 transition-colors uppercase col-span-2">
                         View Details
                     </button>
+                </div>
+            </div>
+
+            <!-- Current Development Work -->
+            <div class="border border-terminal bg-black/90 p-3 terminal-border">
+                <h2 class="text-xs font-bold uppercase tracking-wider mb-3 pb-1 border-b border-terminal/50 glow-text">
+                    Feature Development
+                </h2>
+                <div class="space-y-2 text-xs">
+                    <div class="bg-terminal/5 border border-terminal/30 p-2">
+                        <div class="text-[10px] text-terminal-dim uppercase mb-1">Current Repository</div>
+                        <div class="font-bold" id="current-repo">-</div>
+                    </div>
+                    <div class="bg-terminal/5 border border-terminal/30 p-2">
+                        <div class="text-[10px] text-terminal-dim uppercase mb-1">Work Type</div>
+                        <div class="font-bold" id="work-type">Feature Development</div>
+                    </div>
+                    <div class="bg-terminal/5 border border-terminal/30 p-2">
+                        <div class="text-[10px] text-terminal-dim uppercase mb-1">Last Activity</div>
+                        <div class="font-bold" id="last-activity">-</div>
+                    </div>
+                    <div class="bg-terminal/5 border border-terminal/30 p-2">
+                        <div class="text-[10px] text-terminal-dim uppercase mb-1">Recent Features</div>
+                        <div id="recent-features" class="text-[10px] max-h-16 overflow-y-auto">
+                            Loading recent work...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="mt-3 pt-2 border-t border-terminal/20">
+                    <div class="grid grid-cols-2 gap-1">
+                        <button onclick="viewRecentPRs()"
+                            class="text-[10px] px-2 py-1 border border-terminal bg-terminal/10 hover:bg-terminal/20 transition-colors uppercase">
+                            Recent PRs
+                        </button>
+                        <button onclick="viewChangelogs()"
+                            class="text-[10px] px-2 py-1 border border-terminal bg-terminal/10 hover:bg-terminal/20 transition-colors uppercase">
+                            Changelogs
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -765,20 +815,35 @@
                 }
                 document.getElementById('next-run').textContent = nextRunDisplay;
                 
-                // Update work tally
+                // Update work tally with proper repository names
                 const tallyDiv = document.getElementById('work-tally');
                 tallyDiv.innerHTML = '';
                 if (barbossaData.work_tally) {
+                    const repoNames = {
+                        'peerlytics': 'Analytics',
+                        '_save': 'Save App',
+                        'davy_jones': 'Bot Dev',
+                        'chordcraft': 'Chords',
+                        'piggyonchain': 'Piggy',
+                        // Legacy support
+                        'infrastructure': 'Infra',
+                        'personal_projects': 'Projects'
+                    };
+
                     Object.entries(barbossaData.work_tally).forEach(([area, count]) => {
                         const bar = document.createElement('div');
                         bar.className = 'flex justify-between items-center text-[10px]';
+                        const displayName = repoNames[area] || area.replace(/_/g, ' ');
                         bar.innerHTML = `
-                            <span class="text-terminal-dim">${area.replace(/_/g, ' ')}</span>
+                            <span class="text-terminal-dim">${displayName}</span>
                             <span class="font-bold">${count}</span>
                         `;
                         tallyDiv.appendChild(bar);
                     });
                 }
+
+                // Update Feature Development section
+                updateFeatureDevelopment(barbossaData);
                 
                 // Update System Health
                 const systemData = currentData.status.system || {};
@@ -1249,7 +1314,102 @@
                 alert(`Error: ${error.message}`);
             }
         }
-        
+
+        function updateFeatureDevelopment(barbossaData) {
+            // Update current repository
+            const currentRepo = document.getElementById('current-repo');
+            const lastActivity = document.getElementById('last-activity');
+            const recentFeatures = document.getElementById('recent-features');
+
+            // Map repository names for display
+            const repoDisplayNames = {
+                'peerlytics': 'Peerlytics (Analytics)',
+                '_save': '_Save (Save App)',
+                'davy_jones': 'Davy Jones (Bot)',
+                'chordcraft': 'ChordCraft (Music)',
+                'piggyonchain': 'PiggyOnChain (DeFi)',
+                // Legacy support
+                'infrastructure': 'Infrastructure',
+                'personal_projects': 'Personal Projects'
+            };
+
+            // Determine current/most active repository
+            let mostActiveRepo = 'auto';
+            let maxCount = 0;
+
+            if (barbossaData.work_tally) {
+                Object.entries(barbossaData.work_tally).forEach(([area, count]) => {
+                    if (count > maxCount) {
+                        maxCount = count;
+                        mostActiveRepo = area;
+                    }
+                });
+            }
+
+            // Check current work if available
+            if (barbossaData.current_work && barbossaData.current_work.area) {
+                mostActiveRepo = barbossaData.current_work.area;
+                // Handle status information
+                if (barbossaData.current_work.status === 'running') {
+                    document.getElementById('work-type').textContent = 'Feature Development (Active)';
+                } else {
+                    document.getElementById('work-type').textContent = 'Feature Development';
+                }
+            }
+
+            currentRepo.textContent = repoDisplayNames[mostActiveRepo] || mostActiveRepo.replace(/_/g, ' ');
+
+            // Update last activity
+            if (barbossaData.current_work && barbossaData.current_work.completed) {
+                const lastDate = new Date(barbossaData.current_work.completed);
+                lastActivity.textContent = lastDate.toLocaleString();
+            } else if (barbossaData.current_work && barbossaData.current_work.started) {
+                const startDate = new Date(barbossaData.current_work.started);
+                lastActivity.textContent = `Active since ${startDate.toLocaleString()}`;
+            } else {
+                lastActivity.textContent = 'No recent activity';
+            }
+
+            // Update recent features - fetch from recent changelogs
+            fetchRecentFeatures(recentFeatures);
+        }
+
+        async function fetchRecentFeatures(container) {
+            try {
+                const response = await fetch('/api/recent-changelogs?limit=3');
+                const result = await response.json();
+
+                if (result.success && result.changelogs && result.changelogs.length > 0) {
+                    container.innerHTML = result.changelogs.map(changelog => {
+                        // Extract first line as summary
+                        const firstLine = changelog.content.split('\n')[0].replace(/^#+\s*/, '').trim();
+                        const shortSummary = firstLine.length > 40 ? firstLine.substring(0, 40) + '...' : firstLine;
+                        return `
+                            <div class="mb-1 pb-1 border-b border-terminal/20 last:border-b-0">
+                                <div class="font-bold">${changelog.repository}</div>
+                                <div class="text-terminal-dim">${shortSummary}</div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = '<div class="text-terminal-dim">No recent features</div>';
+                }
+            } catch (error) {
+                console.error('Error fetching recent features:', error);
+                container.innerHTML = '<div class="text-terminal-dim">Error loading features</div>';
+            }
+        }
+
+        function viewRecentPRs() {
+            // Open GitHub in new tab showing recent activity
+            window.open('https://github.com/ADWilkinson?tab=repositories', '_blank');
+        }
+
+        function viewChangelogs() {
+            // Navigate to changelogs section
+            window.location.href = '/logs?filter=changelogs';
+        }
+
         async function viewLog(filename) {
             try {
                 const response = await fetch(`/api/log/${filename}`);

@@ -658,6 +658,82 @@ def api_logs():
     
     return jsonify(logs[:50])  # Return top 50 logs
 
+@app.route('/api/recent-changelogs')
+@auth.login_required
+def api_recent_changelogs():
+    """Get recent changelogs to show what features Barbossa has been working on"""
+    try:
+        limit = int(request.args.get('limit', 10))
+        changelogs = []
+
+        # Check changelogs directory
+        changelogs_dir = BARBOSSA_DIR / 'changelogs'
+        if changelogs_dir.exists():
+            # Get all changelog files, sorted by modification time (newest first)
+            changelog_files = []
+            for file_path in changelogs_dir.rglob('*.md'):
+                try:
+                    stat = file_path.stat()
+                    changelog_files.append((file_path, stat.st_mtime))
+                except OSError:
+                    continue
+
+            # Sort by modification time (newest first)
+            changelog_files.sort(key=lambda x: x[1], reverse=True)
+
+            # Read the most recent changelog files
+            for file_path, _ in changelog_files[:limit]:
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+
+                    # Extract repository from filename or content
+                    filename = file_path.name
+                    repository = 'Unknown'
+
+                    # Try to extract repo from filename (e.g., "peerlytics_20250916_120000.md")
+                    parts = filename.replace('.md', '').split('_')
+                    if len(parts) >= 3:
+                        potential_repo = parts[0]
+                        if potential_repo in ['peerlytics', 'save', 'davy', 'chordcraft', 'piggyonchain', 'barbossa']:
+                            repository = potential_repo.title()
+
+                    # Try to extract from content
+                    if repository == 'Unknown':
+                        lines = content.split('\n')
+                        for line in lines[:10]:  # Check first 10 lines
+                            if 'repository:' in line.lower() or 'repo:' in line.lower():
+                                repository = line.split(':')[1].strip()
+                                break
+                            elif any(repo in line.lower() for repo in ['peerlytics', 'save', 'davy', 'chordcraft', 'piggy']):
+                                for repo in ['peerlytics', 'save', 'davy', 'chordcraft', 'piggy']:
+                                    if repo in line.lower():
+                                        repository = repo.title()
+                                        break
+                                break
+
+                    changelogs.append({
+                        'filename': filename,
+                        'repository': repository,
+                        'content': content[:500],  # First 500 chars
+                        'modified': file_path.stat().st_mtime
+                    })
+
+                except Exception as e:
+                    print(f"Error reading changelog {file_path}: {e}")
+                    continue
+
+        return jsonify({
+            'success': True,
+            'changelogs': changelogs
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
 # Next runs endpoint
 @app.route('/api/next-runs')
 @auth.login_required
@@ -1389,7 +1465,7 @@ def api_trigger_barbossa():
         return jsonify({'success': False, 'error': 'Barbossa is already running'}), 400
     
     cmd = ['python3', str(BARBOSSA_DIR / 'barbossa.py')]
-    if work_area and work_area in ['infrastructure', 'personal_projects', 'davy_jones']:
+    if work_area and work_area in ['peerlytics', '_save', 'davy_jones', 'chordcraft', 'piggyonchain']:
         cmd.extend(['--area', work_area])
     
     subprocess.Popen(cmd, cwd=BARBOSSA_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
