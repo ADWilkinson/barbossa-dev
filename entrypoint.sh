@@ -7,10 +7,12 @@ echo "========================================"
 echo "Time: $(date)"
 echo ""
 
-# Configure git
-git config --global user.email "barbossa@eastindiaonchaincompany.xyz"
-git config --global user.name "Barbossa"
-git config --global init.defaultBranch main
+# Git config is mounted from host - just verify it exists
+if [ -f /root/.gitconfig ]; then
+    echo "Git config: mounted from host"
+else
+    echo "Warning: No git config found"
+fi
 
 # Authenticate GitHub CLI if token provided
 if [ -n "$GITHUB_TOKEN" ]; then

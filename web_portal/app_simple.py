@@ -4,13 +4,37 @@ Barbossa v3.0 - Simple Web Portal
 Shows work done, sessions, and changelogs.
 """
 
-from flask import Flask, render_template_string, jsonify, send_file
+from flask import Flask, render_template_string, jsonify, send_file, request, Response
+from functools import wraps
 import json
 import os
 from datetime import datetime
 from pathlib import Path
 
 app = Flask(__name__)
+
+# Basic Auth Configuration
+AUTH_USERNAME = "barbossa"
+AUTH_PASSWORD = "Galleon6242"
+
+def check_auth(username, password):
+    return username == AUTH_USERNAME and password == AUTH_PASSWORD
+
+def authenticate():
+    return Response(
+        'Access denied. Please provide valid credentials.',
+        401,
+        {'WWW-Authenticate': 'Basic realm="Barbossa Portal"'}
+    )
+
+def requires_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or not check_auth(auth.username, auth.password):
+            return authenticate()
+        return f(*args, **kwargs)
+    return decorated
 
 # Support both Docker (/app) and local (~/) paths
 WORK_DIR = Path(os.environ.get('BARBOSSA_DIR', '/app'))
@@ -306,6 +330,7 @@ def is_running():
 
 
 @app.route('/')
+@requires_auth
 def dashboard():
     """Main dashboard"""
     config = load_config()
@@ -325,6 +350,7 @@ def dashboard():
 
 
 @app.route('/api/status')
+@requires_auth
 def api_status():
     """API endpoint for status"""
     config = load_config()
@@ -340,18 +366,21 @@ def api_status():
 
 
 @app.route('/api/sessions')
+@requires_auth
 def api_sessions():
     """API endpoint for sessions"""
     return jsonify(load_sessions())
 
 
 @app.route('/api/changelogs')
+@requires_auth
 def api_changelogs():
     """API endpoint for changelogs"""
     return jsonify(get_changelogs())
 
 
 @app.route('/api/trigger/<repo_name>', methods=['POST'])
+@requires_auth
 def api_trigger(repo_name):
     """Trigger a run for specific repository"""
     import subprocess

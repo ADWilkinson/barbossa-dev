@@ -12,8 +12,8 @@ services:
       - ./logs:/app/logs
       - ./changelogs:/app/changelogs
       - ./projects:/app/projects
-      # Git config for commits
-      - ~/.gitconfig:/root/.gitconfig:ro
+      # Git config for commits (needs write access for git operations)
+      - ~/.gitconfig:/root/.gitconfig
       # GitHub CLI auth
       - ~/.config/gh:/root/.config/gh:ro
       # SSH keys for private repo access
