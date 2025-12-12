@@ -1,0 +1,121 @@
+{
+  "repositories": [
+    {
+      "name": "peerlytics",
+      "url": "git@github-personal:ADWilkinson/peerlytics.git",
+      "description": "Next.js 15 analytics dashboard for ZKP2P protocol - displays real-time peer-to-peer fiat trading metrics, liquidity analysis, and protocol statistics with a two-tier caching architecture (Firebase + Envio GraphQL)",
+      "tech_stack": {
+        "framework": "Next.js 15 (App Router, React 19)",
+        "language": "TypeScript (strict mode)",
+        "styling": "Tailwind CSS with custom design tokens",
+        "state": "React Query 5 for data fetching",
+        "charts": "ECharts, Recharts, Nivo, D3.js",
+        "web3": "Wagmi, Viem, Privy auth",
+        "testing": "Vitest, Playwright"
+      },
+      "architecture": {
+        "data_flow": "Cron service pre-computes analytics to Firebase every 15min; dashboard reads with Envio fallback",
+        "key_dirs": [
+          "src/components/dashboard/ - Main dashboard with 8 tabs",
+          "src/hooks/ - 11 custom hooks for data fetching",
+          "src/lib/indexer/ - Envio GraphQL client",
+          "src/app/api/ - 12 API routes",
+          "cron/ - Background analytics service"
+        ]
+      },
+      "design_system": {
+        "aesthetic": "Terminal/monospace theme (CoinbaseMono font)",
+        "brand_rules": [
+          "Zero border-radius (square corners everywhere)",
+          "Dark mode: #0A0A0E background, #00FF88 mint accent",
+          "Light mode: #FDFCFB warm undertones"
+        ]
+      },
+      "improvement_opportunities": [
+        "Test coverage is only 14% - needs unit tests for chart components",
+        "~200 lines of duplicated code across chart components",
+        "Performance: multiple array passes could be single-pass",
+        "Loading states and skeleton loaders inconsistently applied",
+        "Mobile responsiveness not fully tested",
+        "Some components still have rounded corners (violates brand)"
+      ],
+      "do_not_touch": [
+        "Do NOT modify cron service or Firebase write logic",
+        "Do NOT change the GraphQL queries without testing",
+        "Do NOT alter the withApiHandler pattern in API routes"
+      ],
+      "example_good_prs": [
+        "Add unit tests for a chart component",
+        "Extract duplicated color management to shared hook",
+        "Add skeleton loader to a tab that's missing one",
+        "Fix a dark mode styling issue",
+        "Improve mobile responsiveness of a component",
+        "Optimize a data transformation function"
+      ]
+    },
+    {
+      "name": "usdctofiat",
+      "url": "git@github-personal:ADWilkinson/usdctofiat.git",
+      "description": "Composable USDC off-ramp web app for makers on Base. React 18 + Vite + TypeScript strict mode with Privy authentication, ZKP2P SDK integration, and the Davy Jones design system. Financial application handling real value.",
+      "tech_stack": {
+        "framework": "React 18, Vite 5",
+        "language": "TypeScript (strict mode)",
+        "styling": "Tailwind CSS 4 with CSS custom properties from tokens/colors.css",
+        "auth": "Privy SDK (smart wallets, cross-app wallets, EOAs)",
+        "web3": "ZKP2P client SDK, Viem, Base MiniKit",
+        "ui_components": "Radix UI primitives (Select, Tabs, Accordion, Tooltip)",
+        "testing": "Vitest + React Testing Library"
+      },
+      "architecture": {
+        "data_flow": "Privy auth -> wallet adapters (smart/external/cross-app) -> ZKP2P client -> Base mainnet escrow contracts",
+        "key_dirs": [
+          "src/components/ - UI: CreateDeposit (1700 LOC), ManageDeposits, ConnectBar",
+          "src/lib/ - Wallet adapters, ZKP2P client, platform configs",
+          "src/services/ - Network helpers: balances, FX quotes, relay",
+          "src/utils/ - Formatting helpers (bignum, format)",
+          "tokens/colors.css - Design system CSS variables"
+        ]
+      },
+      "design_system": {
+        "aesthetic": "Davy Jones - nautical, minimalist, 3-color palette",
+        "brand_rules": [
+          "Canvas #f4eee8 (light bg), Charcoal #27272a (dark bg), Navigator #0072b5 (accent)",
+          "Typography: Morion (serif headings), Wigrum (sans body)",
+          "Use CSS variables from tokens/colors.css, never hardcode colors",
+          "Respect reduced motion preferences (prefers-reduced-motion)",
+          "All interactive elements must have focus states"
+        ]
+      },
+      "improvement_opportunities": [
+        "Only 3 test files exist - needs unit tests for components and utils",
+        "CreateDeposit.tsx is 1706 lines - candidate for refactoring into smaller components",
+        "DepositCalculator.tsx is 948 lines - could extract logic into custom hooks",
+        "No loading/skeleton states in some components",
+        "Could add more comprehensive error boundaries",
+        "Accessibility audit needed - ensure all ARIA labels are present"
+      ],
+      "do_not_touch": [
+        "Do NOT modify wallet adapter core logic in src/lib/*Adapter.ts",
+        "Do NOT change ZKP2P client initialization in src/lib/zkp2pClient.ts",
+        "Do NOT alter the Privy provider setup in src/main.tsx",
+        "This is a FINANCIAL app - never introduce patterns that could expose keys/phrases"
+      ],
+      "example_good_prs": [
+        "Add unit tests for a utility function in src/utils/",
+        "Extract a sub-component from CreateDeposit.tsx",
+        "Add skeleton loading state to a component",
+        "Improve a11y by adding ARIA labels to interactive elements",
+        "Add error boundary to a component tree",
+        "Optimize a large component's rendering performance"
+      ]
+    }
+  ],
+  "owner": "ADWilkinson",
+  "schedule": "every_4_hours",
+  "version": "3.0.0",
+  "notes": {
+    "github_auth": "Use github-personal SSH host for ADWilkinson repos",
+    "peerlytics_style": "Terminal aesthetic - NO rounded corners",
+    "usdctofiat_style": "Davy Jones nautical - warm canvas/charcoal theme"
+  }
+}

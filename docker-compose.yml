@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  barbossa:
+    build: .
+    container_name: barbossa
+    restart: unless-stopped
+    ports:
+      - "8443:8080"
+    volumes:
+      # Persist data
+      - ./logs:/app/logs
+      - ./changelogs:/app/changelogs
+      - ./projects:/app/projects
+      # Git config for commits
+      - ~/.gitconfig:/root/.gitconfig:ro
+      # GitHub CLI auth
+      - ~/.config/gh:/root/.config/gh:ro
+      # SSH keys for private repo access
+      - ~/.ssh:/root/.ssh:ro
+      # Claude config (if needed)
+      - ~/.claude:/root/.claude:ro
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - TZ=Europe/London
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/status"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

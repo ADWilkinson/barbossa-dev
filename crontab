@@ -1,0 +1,11 @@
+# Barbossa v3.0 - Cron Schedule
+# Run every 4 hours to create PRs
+
+# Load environment
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+
+# Every 4 hours: 00:00, 04:00, 08:00, 12:00, 16:00, 20:00
+0 */4 * * * cd /app && /usr/local/bin/python3 barbossa_simple.py >> /app/logs/cron.log 2>&1
+
+# Empty line required at end
