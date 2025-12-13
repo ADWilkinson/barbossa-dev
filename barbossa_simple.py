@@ -9,6 +9,7 @@ import logging
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -716,15 +717,30 @@ Begin your work now."""
                 self.logger.error(f"Repository not found: {repo_name}")
                 self.logger.info(f"Available: {[r['name'] for r in self.repositories]}")
         else:
-            # Run for all repos
+            # Run for all repos IN PARALLEL
+            self.logger.info(f"Starting parallel execution for {len(self.repositories)} repositories...")
             results = []
-            for repo in self.repositories:
-                success = self.execute_for_repo(repo)
-                results.append((repo['name'], success))
+
+            with ThreadPoolExecutor(max_workers=len(self.repositories)) as executor:
+                # Submit all repos for parallel execution
+                future_to_repo = {
+                    executor.submit(self.execute_for_repo, repo): repo
+                    for repo in self.repositories
+                }
+
+                # Collect results as they complete
+                for future in as_completed(future_to_repo):
+                    repo = future_to_repo[future]
+                    try:
+                        success = future.result()
+                        results.append((repo['name'], success))
+                    except Exception as e:
+                        self.logger.error(f"Exception for {repo['name']}: {e}")
+                        results.append((repo['name'], False))
 
             # Summary
             self.logger.info(f"\n{'#'*60}")
-            self.logger.info("RUN SUMMARY")
+            self.logger.info("RUN SUMMARY (parallel execution)")
             self.logger.info(f"{'#'*60}")
             for name, success in results:
                 status = "SUCCESS" if success else "FAILED"
