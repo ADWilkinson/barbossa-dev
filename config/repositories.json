@@ -34,12 +34,10 @@
         ]
       },
       "improvement_opportunities": [
-        "Test coverage is only 14% - needs unit tests for chart components",
-        "~200 lines of duplicated code across chart components",
-        "Performance: multiple array passes could be single-pass",
-        "Loading states and skeleton loaders inconsistently applied",
-        "Mobile responsiveness not fully tested",
-        "Some components still have rounded corners (violates brand)"
+        "Test coverage could be improved in various areas",
+        "Code deduplication opportunities may exist",
+        "Performance optimizations where appropriate",
+        "UX polish: loading states, mobile responsiveness"
       ],
       "do_not_touch": [
         "Do NOT modify cron service or Firebase write logic",
@@ -91,12 +89,10 @@
         ]
       },
       "improvement_opportunities": [
-        "Only 3 test files exist - needs unit tests for components and utils",
-        "CreateDeposit.tsx is 1706 lines - candidate for refactoring into smaller components",
-        "DepositCalculator.tsx is 948 lines - could extract logic into custom hooks",
-        "No loading/skeleton states in some components",
-        "Could add more comprehensive error boundaries",
-        "Accessibility audit needed - ensure all ARIA labels are present"
+        "Test coverage could be improved in various areas",
+        "Large components might benefit from refactoring",
+        "UX polish: loading states, error handling, accessibility",
+        "Performance optimizations where appropriate"
       ],
       "do_not_touch": [
         "Do NOT modify wallet adapter core logic in src/lib/*Adapter.ts",
@@ -115,7 +111,7 @@
     }
   ],
   "owner": "ADWilkinson",
-  "schedule": "every_4_hours",
+  "schedule": "every_1_hour",
   "version": "3.0.0",
   "notes": {
     "github_auth": "Use github-personal SSH host for ADWilkinson repos",

@@ -1,12 +1,12 @@
 # Barbossa v3.0 - Cron Schedule
-# Run every 4 hours to create PRs
+# Run every 1 hour to create or review PRs
 
 # Load environment
 SHELL=/bin/bash
 PATH=/usr/local/bin:/usr/bin:/bin
 
-# Every 4 hours: 00:00, 04:00, 08:00, 12:00, 16:00, 20:00
+# Every hour at minute 0
 # Run as barbossa user (non-root) so Claude CLI works
-0 */4 * * * su - barbossa -c "cd /app && python3 barbossa_simple.py" >> /app/logs/cron.log 2>&1
+0 * * * * su - barbossa -c "cd /app && python3 barbossa_simple.py" >> /app/logs/cron.log 2>&1
 
 # Empty line required at end

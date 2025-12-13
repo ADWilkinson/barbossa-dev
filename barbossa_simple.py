@@ -184,10 +184,14 @@ YOUR MISSION
 ================================================================================
 Create ONE meaningful Pull Request that improves this codebase.
 
-KNOWN IMPROVEMENT OPPORTUNITIES (pick ONE):
+REFERENCE IDEAS (for inspiration only - do NOT treat as a literal task list):
 {improvements_section}
 
-EXAMPLE GOOD PRs FOR THIS REPO:
+These are just example areas that MIGHT need work. Explore the codebase yourself and identify
+what would be most valuable. Do NOT repeatedly fix the same type of issue across runs.
+Use your own judgment to find meaningful improvements.
+
+EXAMPLES OF GOOD PR TYPES (not tasks to do):
 {examples_section}
 
 ================================================================================
@@ -409,6 +413,189 @@ See: {output_file}
 
         self.logger.info(f"Changelog: {changelog_file}")
 
+    def _get_open_prs(self, repo: Dict) -> List[Dict]:
+        """Get open PRs for a repository"""
+        owner = self.config.get('owner', 'ADWilkinson')
+        repo_name = repo['name']
+
+        try:
+            result = subprocess.run(
+                f"gh pr list --repo {owner}/{repo_name} --state open --json number,title,headRefName,checksStatus,reviewDecision,url --limit 20",
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return json.loads(result.stdout)
+        except Exception as e:
+            self.logger.warning(f"Could not fetch PRs for {repo_name}: {e}")
+        return []
+
+    def _count_total_open_prs(self) -> int:
+        """Count total open PRs across all repositories"""
+        total = 0
+        for repo in self.repositories:
+            prs = self._get_open_prs(repo)
+            total += len(prs)
+            self.logger.info(f"  {repo['name']}: {len(prs)} open PRs")
+        return total
+
+    def _get_prs_needing_attention(self, repo: Dict) -> List[Dict]:
+        """Get PRs that have failing checks or need fixes"""
+        prs = self._get_open_prs(repo)
+        needs_attention = []
+
+        for pr in prs:
+            # Check if PR has failing checks or pending review
+            checks = pr.get('checksStatus', {})
+            if checks and checks.get('state') in ['FAILURE', 'ERROR']:
+                pr['attention_reason'] = 'failing_checks'
+                needs_attention.append(pr)
+            elif pr.get('reviewDecision') == 'CHANGES_REQUESTED':
+                pr['attention_reason'] = 'changes_requested'
+                needs_attention.append(pr)
+
+        return needs_attention
+
+    def _create_review_prompt(self, repo: Dict, pr: Dict, session_id: str) -> str:
+        """Create a prompt for reviewing and fixing an existing PR"""
+        owner = self.config.get('owner', 'ADWilkinson')
+        repo_name = repo['name']
+        pr_number = pr['number']
+        pr_branch = pr['headRefName']
+        attention_reason = pr.get('attention_reason', 'needs_review')
+
+        pkg_manager = repo.get('package_manager', 'npm')
+        if pkg_manager == 'pnpm':
+            install_cmd, build_cmd, test_cmd = 'pnpm install', 'pnpm run build', 'pnpm run test'
+        elif pkg_manager == 'yarn':
+            install_cmd, build_cmd, test_cmd = 'yarn install', 'yarn build', 'yarn test'
+        else:
+            install_cmd, build_cmd, test_cmd = 'npm install', 'npm run build', 'npm test'
+
+        return f"""You are Barbossa, an autonomous personal development assistant.
+
+================================================================================
+SESSION METADATA
+================================================================================
+Session ID: {session_id}
+Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Repository: {repo_name}
+MODE: PR REVIEW AND FIX
+
+================================================================================
+YOUR MISSION
+================================================================================
+Review and fix an existing Pull Request that needs attention.
+
+PR Details:
+- PR #{pr_number}: {pr['title']}
+- Branch: {pr_branch}
+- URL: {pr['url']}
+- Issue: {attention_reason.replace('_', ' ').title()}
+
+================================================================================
+WORKFLOW
+================================================================================
+Phase 1 - Setup:
+  cd ~/barbossa-engineer/projects
+  if [ ! -d "{repo_name}" ]; then
+    git clone {repo['url']} {repo_name}
+  fi
+  cd {repo_name}
+
+  # Fetch and checkout the PR branch
+  git fetch origin
+  git checkout {pr_branch}
+  git pull origin {pr_branch}
+
+  {install_cmd}
+
+Phase 2 - Investigate:
+  # Check what's failing
+  gh pr checks {pr_number} --repo {owner}/{repo_name}
+
+  # View any review comments
+  gh pr view {pr_number} --repo {owner}/{repo_name} --comments
+
+  # Run tests/build locally to see the errors
+  {build_cmd}
+  {test_cmd}
+
+Phase 3 - Fix:
+  - Identify the root cause of failures
+  - Make targeted fixes to address the issues
+  - Run build and tests again to verify fixes
+  - Keep changes minimal and focused
+
+Phase 4 - Update PR:
+  git add -A
+  git commit -m "fix: address CI failures / review comments"
+  git push origin {pr_branch}
+
+================================================================================
+OUTPUT REQUIRED
+================================================================================
+When complete, provide:
+1. ISSUE: What was failing
+2. FIX: What you changed to fix it
+3. RESULT: Confirmation that build/tests now pass
+4. PR URL: {pr['url']}
+
+Begin your work now."""
+
+    def execute_pr_review(self, repo: Dict, pr: Dict) -> bool:
+        """Execute PR review and fix session"""
+        repo_name = repo['name']
+        session_id = self._generate_session_id()
+
+        self.logger.info(f"\n{'='*60}")
+        self.logger.info(f"REVIEW MODE: {repo_name} PR #{pr['number']}")
+        self.logger.info(f"Issue: {pr.get('attention_reason', 'unknown')}")
+        self.logger.info(f"Session ID: {session_id}")
+        self.logger.info(f"{'='*60}\n")
+
+        prompt = self._create_review_prompt(repo, pr, session_id)
+
+        prompt_file = self.work_dir / f'prompt_{repo_name}_review.txt'
+        with open(prompt_file, 'w') as f:
+            f.write(prompt)
+
+        output_file = self.logs_dir / f"claude_{repo_name}_review_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+
+        self._save_session(repo_name, session_id, prompt, output_file)
+
+        self.logger.info(f"Launching Claude to fix PR #{pr['number']}...")
+
+        cmd = f"claude --dangerously-skip-permissions --model opus < {prompt_file} > {output_file} 2>&1"
+
+        try:
+            result = subprocess.run(
+                cmd,
+                shell=True,
+                cwd=str(self.work_dir),
+                timeout=1800
+            )
+
+            if result.returncode == 0:
+                self.logger.info(f"Claude completed review for {repo_name} PR #{pr['number']}")
+                self._update_session_status(session_id, 'completed', pr_url=pr['url'])
+                return True
+            else:
+                self.logger.error(f"Claude failed review for {repo_name}")
+                self._update_session_status(session_id, 'failed')
+                return False
+
+        except subprocess.TimeoutExpired:
+            self.logger.error(f"Claude timed out during review")
+            self._update_session_status(session_id, 'timeout')
+            return False
+        except Exception as e:
+            self.logger.error(f"Error during review: {e}")
+            self._update_session_status(session_id, 'error')
+            return False
+
     def execute_for_repo(self, repo: Dict) -> bool:
         """Execute development session for a single repository"""
         repo_name = repo['name']
@@ -482,6 +669,45 @@ See: {output_file}
         self.logger.info(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         self.logger.info(f"{'#'*60}\n")
 
+        # Check total open PRs to decide mode
+        self.logger.info("Checking open PRs across repositories...")
+        total_open_prs = self._count_total_open_prs()
+        self.logger.info(f"Total open PRs: {total_open_prs}")
+
+        # If >5 open PRs, switch to review mode
+        if total_open_prs > 5:
+            self.logger.info(f"\n{'!'*60}")
+            self.logger.info("REVIEW MODE: >5 open PRs detected")
+            self.logger.info("Will review and fix existing PRs instead of creating new ones")
+            self.logger.info(f"{'!'*60}\n")
+
+            # Find PRs needing attention across all repos
+            results = []
+            for repo in self.repositories:
+                prs_needing_attention = self._get_prs_needing_attention(repo)
+                if prs_needing_attention:
+                    # Fix the first PR that needs attention
+                    pr = prs_needing_attention[0]
+                    self.logger.info(f"Found PR needing attention: {repo['name']} #{pr['number']}")
+                    success = self.execute_pr_review(repo, pr)
+                    results.append((f"{repo['name']} PR #{pr['number']}", success))
+                    break  # Only fix one PR per run to avoid overwhelming
+            else:
+                # No PRs need fixes, but still too many open - just log it
+                self.logger.info("No PRs with failing checks found. Waiting for PRs to be merged.")
+                self.logger.info("Open PRs should be reviewed and merged before creating new ones.")
+
+            if results:
+                self.logger.info(f"\n{'#'*60}")
+                self.logger.info("REVIEW SUMMARY")
+                self.logger.info(f"{'#'*60}")
+                for name, success in results:
+                    status = "FIXED" if success else "FAILED"
+                    self.logger.info(f"  {name}: {status}")
+                self.logger.info(f"{'#'*60}\n")
+            return
+
+        # Normal mode: create new PRs
         if repo_name:
             # Run for specific repo
             repo = next((r for r in self.repositories if r['name'] == repo_name), None)
