@@ -34,6 +34,7 @@ WORKDIR /app
 
 # Copy application files
 COPY barbossa_simple.py .
+COPY barbossa_tech_lead.py .
 COPY run.sh .
 COPY config/ config/
 COPY web_portal/app_simple.py web_portal/
