@@ -554,19 +554,22 @@ def get_changelogs():
 
 
 def get_latest_log():
-    """Get content of latest log file"""
+    """Get content of latest non-empty log file"""
     if LOGS_DIR.exists():
         logs = sorted(LOGS_DIR.glob('claude_*.log'),
                      key=lambda x: x.stat().st_mtime, reverse=True)
-        if logs:
+        # Find the first non-empty log
+        for log in logs:
             try:
-                content = logs[0].read_text()
-                # Limit to last 3000 chars
-                if len(content) > 3000:
-                    content = '...(truncated)...\n\n' + content[-3000:]
-                return content
+                if log.stat().st_size > 0:
+                    content = log.read_text()
+                    if content.strip():
+                        # Limit to last 3000 chars
+                        if len(content) > 3000:
+                            content = '...(truncated)...\n\n' + content[-3000:]
+                        return content
             except:
-                return "Error reading log file"
+                continue
     return None
 
 
