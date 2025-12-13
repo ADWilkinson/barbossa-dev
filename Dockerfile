@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     cron \
     nodejs \
     npm \
+    sudo \
     && rm -rf /var/lib/apt/lists/*
 
 # Install GitHub CLI
@@ -17,11 +18,16 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
     && apt-get install -y gh \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Claude CLI
+# Install Claude CLI globally
 RUN npm install -g @anthropic-ai/claude-code
 
 # Install Python dependencies
 RUN pip install --no-cache-dir flask
+
+# Create non-root user for Claude CLI
+# (--dangerously-skip-permissions cannot be used with root)
+RUN useradd -m -s /bin/bash -u 1000 barbossa \
+    && echo "barbossa ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Set working directory
 WORKDIR /app
@@ -32,8 +38,9 @@ COPY run.sh .
 COPY config/ config/
 COPY web_portal/app_simple.py web_portal/
 
-# Create directories
-RUN mkdir -p logs changelogs projects
+# Create directories with proper ownership
+RUN mkdir -p logs changelogs projects \
+    && chown -R barbossa:barbossa /app
 
 # Copy entrypoint and cron
 COPY entrypoint.sh /entrypoint.sh
@@ -42,10 +49,17 @@ RUN chmod +x /entrypoint.sh run.sh \
     && chmod 0644 /etc/cron.d/barbossa-cron \
     && crontab /etc/cron.d/barbossa-cron
 
+# Create home directory for barbossa user with proper structure
+RUN mkdir -p /home/barbossa/.config/gh \
+    && mkdir -p /home/barbossa/.claude \
+    && mkdir -p /home/barbossa/.ssh \
+    && chown -R barbossa:barbossa /home/barbossa
+
 # Expose web portal port
 EXPOSE 8080
 
-# Environment variables (set via docker-compose or runtime)
+# Environment variables
 ENV PYTHONUNBUFFERED=1
+ENV HOME=/home/barbossa
 
 ENTRYPOINT ["/entrypoint.sh"]
