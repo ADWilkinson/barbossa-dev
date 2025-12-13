@@ -84,6 +84,24 @@ class Barbossa:
         """Create a context-rich Claude prompt for a repository"""
         timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
 
+        # Get package manager (defaults to npm if not specified)
+        pkg_manager = repo.get('package_manager', 'npm')
+        env_file = repo.get('env_file', '.env')
+
+        # Build install/build commands based on package manager
+        if pkg_manager == 'pnpm':
+            install_cmd = 'pnpm install'
+            build_cmd = 'pnpm run build'
+            test_cmd = 'pnpm run test'
+        elif pkg_manager == 'yarn':
+            install_cmd = 'yarn install'
+            build_cmd = 'yarn build'
+            test_cmd = 'yarn test'
+        else:
+            install_cmd = 'npm install'
+            build_cmd = 'npm run build'
+            test_cmd = 'npm test'
+
         # Build tech stack section
         tech_stack = repo.get('tech_stack', {})
         tech_lines = []
@@ -193,6 +211,16 @@ ABSOLUTELY DO NOT:
 - Ignore the design system or brand rules
 
 ================================================================================
+PACKAGE MANAGER: {pkg_manager.upper()}
+================================================================================
+This project uses {pkg_manager}. Use these commands:
+  - Install: {install_cmd}
+  - Build: {build_cmd}
+  - Test: {test_cmd}
+
+DO NOT use npm if the project uses pnpm or yarn!
+
+================================================================================
 EXECUTION WORKFLOW
 ================================================================================
 Phase 1 - Setup:
@@ -201,10 +229,19 @@ Phase 1 - Setup:
     git clone {repo['url']} {repo['name']}
   fi
   cd {repo['name']}
+
+  # Copy environment file if it doesn't exist
+  if [ ! -f "{env_file}" ] && [ -f "/app/config/env/{repo['name']}{env_file}" ]; then
+    cp "/app/config/env/{repo['name']}{env_file}" "{env_file}"
+  fi
+
   git fetch origin
   git checkout main
   git pull origin main
   git checkout -b barbossa/{timestamp}
+
+  # Install dependencies with correct package manager
+  {install_cmd}
 
 Phase 2 - Analysis:
   - Understand the codebase structure
@@ -215,7 +252,8 @@ Phase 2 - Analysis:
 Phase 3 - Implementation:
   - Make focused, clean changes
   - Follow existing patterns in the codebase
-  - Test your changes (run build, check for errors)
+  - Test your changes: {build_cmd}
+  - Run tests if applicable: {test_cmd}
 
 Phase 4 - Submission:
   git add -A
@@ -271,7 +309,7 @@ Begin your work now."""
         with open(sessions_file, 'w') as f:
             json.dump(sessions, f, indent=2)
 
-    def _update_session_status(self, session_id: str, status: str, pr_url: str = None):
+    def _update_session_status(self, session_id: str, status: str, pr_url: str = None, summary: str = None):
         """Update session status"""
         sessions_file = self.work_dir / 'sessions.json'
 
@@ -288,12 +326,55 @@ Begin your work now."""
                     session['completed'] = datetime.now().isoformat()
                     if pr_url:
                         session['pr_url'] = pr_url
+                    if summary:
+                        session['summary'] = summary
                     break
 
             with open(sessions_file, 'w') as f:
                 json.dump(sessions, f, indent=2)
         except:
             pass
+
+    def _extract_pr_url(self, log_file: Path) -> Optional[str]:
+        """Extract PR URL from Claude's output"""
+        if not log_file.exists():
+            return None
+
+        try:
+            content = log_file.read_text()
+            # Look for GitHub PR URLs
+            import re
+            pr_pattern = r'https://github\.com/[^/]+/[^/]+/pull/\d+'
+            matches = re.findall(pr_pattern, content)
+            if matches:
+                return matches[-1]  # Return the last PR URL found
+        except:
+            pass
+        return None
+
+    def _extract_summary(self, log_file: Path) -> Optional[str]:
+        """Extract summary from Claude's output"""
+        if not log_file.exists():
+            return None
+
+        try:
+            content = log_file.read_text()
+            # Look for WHAT section or Summary
+            lines = content.split('\n')
+            for i, line in enumerate(lines):
+                if '**WHAT:**' in line or 'WHAT:' in line:
+                    # Get the content after WHAT:
+                    summary = line.split(':', 1)[-1].strip()
+                    if summary:
+                        return summary[:200]  # Limit to 200 chars
+            # Fallback: get first non-empty line
+            for line in lines:
+                line = line.strip()
+                if line and not line.startswith('#') and len(line) > 20:
+                    return line[:200]
+        except:
+            pass
+        return None
 
     def _create_changelog(self, repo_name: str, session_id: str, output_file: Path):
         """Create changelog entry"""
@@ -363,13 +444,19 @@ See: {output_file}
                 timeout=1800  # 30 minute timeout per repo
             )
 
+            # Extract PR URL and summary from output
+            pr_url = self._extract_pr_url(output_file)
+            summary = self._extract_summary(output_file)
+
             if result.returncode == 0:
                 self.logger.info(f"Claude completed for {repo_name}")
-                self._update_session_status(session_id, 'completed')
+                if pr_url:
+                    self.logger.info(f"PR created: {pr_url}")
+                self._update_session_status(session_id, 'completed', pr_url=pr_url, summary=summary)
                 return True
             else:
                 self.logger.error(f"Claude failed for {repo_name} with code {result.returncode}")
-                self._update_session_status(session_id, 'failed')
+                self._update_session_status(session_id, 'failed', summary=summary)
                 return False
 
         except subprocess.TimeoutExpired:

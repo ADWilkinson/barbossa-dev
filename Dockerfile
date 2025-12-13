@@ -18,8 +18,8 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
     && apt-get install -y gh \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Claude CLI globally
-RUN npm install -g @anthropic-ai/claude-code
+# Install Claude CLI and package managers globally
+RUN npm install -g @anthropic-ai/claude-code pnpm yarn
 
 # Install Python dependencies
 RUN pip install --no-cache-dir flask
@@ -37,6 +37,9 @@ COPY barbossa_simple.py .
 COPY run.sh .
 COPY config/ config/
 COPY web_portal/app_simple.py web_portal/
+
+# Copy environment files for projects
+COPY config/env/ config/env/
 
 # Create directories with proper ownership
 RUN mkdir -p logs changelogs projects \
