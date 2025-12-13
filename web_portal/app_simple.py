@@ -47,6 +47,7 @@ LOGS_DIR = WORK_DIR / 'logs'
 CHANGELOGS_DIR = WORK_DIR / 'changelogs'
 CONFIG_FILE = WORK_DIR / 'config' / 'repositories.json'
 SESSIONS_FILE = WORK_DIR / 'sessions.json'
+DECISIONS_FILE = WORK_DIR / 'tech_lead_decisions.json'
 
 # Enhanced HTML template with much more info
 DASHBOARD_HTML = """
@@ -103,6 +104,9 @@ DASHBOARD_HTML = """
         .status-open { background: #238636; color: white; }
         .status-merged { background: #8957e5; color: white; }
         .status-closed { background: #da3633; color: white; }
+        .status-MERGE { background: #238636; color: white; }
+        .status-CLOSE { background: #da3633; color: white; }
+        .status-REQUEST_CHANGES { background: #d29922; color: white; }
 
         @keyframes pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
@@ -398,6 +402,80 @@ DASHBOARD_HTML = """
             margin-top: 10px;
         }
 
+        /* Tech Lead Decisions */
+        .decision-item {
+            padding: 15px;
+            background: #0d1117;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 3px solid #30363d;
+        }
+        .decision-item.MERGE { border-left-color: #238636; }
+        .decision-item.CLOSE { border-left-color: #da3633; }
+        .decision-item.REQUEST_CHANGES { border-left-color: #d29922; }
+
+        .decision-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .decision-pr { font-weight: 600; color: #c9d1d9; font-size: 14px; }
+        .decision-repo { color: #8b949e; font-size: 12px; }
+        .decision-reasoning {
+            color: #8b949e;
+            font-size: 12px;
+            margin-top: 8px;
+            padding: 8px;
+            background: #161b22;
+            border-radius: 4px;
+            line-height: 1.5;
+        }
+        .decision-scores {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 11px;
+        }
+        .score-item { display: flex; align-items: center; gap: 5px; }
+        .score-label { color: #8b949e; }
+        .score-value { font-weight: 600; }
+        .score-value.high { color: #238636; }
+        .score-value.medium { color: #d29922; }
+        .score-value.low { color: #da3633; }
+
+        .tech-lead-banner {
+            background: linear-gradient(135deg, #8957e522 0%, #161b22 100%);
+            border: 1px solid #8957e544;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .tech-lead-banner .mode-icon { background: rgba(137, 87, 229, 0.3); }
+        .tech-lead-stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+        }
+        .tech-lead-stat {
+            text-align: center;
+        }
+        .tech-lead-stat-value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .tech-lead-stat-value.merged { color: #238636; }
+        .tech-lead-stat-value.closed { color: #da3633; }
+        .tech-lead-stat-value.changes { color: #d29922; }
+        .tech-lead-stat-label {
+            font-size: 10px;
+            color: #8b949e;
+            text-transform: uppercase;
+        }
+
         .last-updated {
             color: #8b949e;
             font-size: 11px;
@@ -488,6 +566,36 @@ DASHBOARD_HTML = """
                 <span class="next-run">Next run: {{ next_run }}</span>
             </div>
         </div>
+
+        <!-- Tech Lead Status Banner -->
+        {% if tech_lead_decisions %}
+        <div class="tech-lead-banner">
+            <div class="mode-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="#8957e5">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+            </div>
+            <div class="mode-details">
+                <h3>Tech Lead Reviews</h3>
+                <p>Strict PR governance with merge/close authority. Reviews run every 5 hours.</p>
+                <div class="tech-lead-stats">
+                    <div class="tech-lead-stat">
+                        <div class="tech-lead-stat-value merged">{{ tech_lead_merged }}</div>
+                        <div class="tech-lead-stat-label">Merged</div>
+                    </div>
+                    <div class="tech-lead-stat">
+                        <div class="tech-lead-stat-value closed">{{ tech_lead_closed }}</div>
+                        <div class="tech-lead-stat-label">Closed</div>
+                    </div>
+                    <div class="tech-lead-stat">
+                        <div class="tech-lead-stat-value changes">{{ tech_lead_changes }}</div>
+                        <div class="tech-lead-stat-label">Changes Req</div>
+                    </div>
+                </div>
+                <span class="next-run">Next review: {{ next_tech_lead_run }}</span>
+            </div>
+        </div>
+        {% endif %}
 
         {% if running_sessions %}
         <!-- Parallel Execution Panel -->
@@ -594,6 +702,53 @@ DASHBOARD_HTML = """
                 </ul>
                 {% else %}
                 <div class="empty-state">No sessions yet. First run will start at the next hour.</div>
+                {% endif %}
+            </div>
+
+            <!-- Tech Lead Decisions -->
+            <div class="card">
+                <h2>
+                    <span>Tech Lead Decisions</span>
+                    <span style="font-size: 12px; color: #8b949e;">Last {{ tech_lead_decisions|length if tech_lead_decisions else 0 }}</span>
+                </h2>
+                {% if tech_lead_decisions %}
+                <div class="decision-list">
+                    {% for decision in tech_lead_decisions[:10] %}
+                    <div class="decision-item {{ decision.decision }}">
+                        <div class="decision-header">
+                            <div>
+                                <a href="{{ decision.pr_url }}" target="_blank" class="decision-pr" style="text-decoration: none; color: #c9d1d9;">
+                                    #{{ decision.pr_number }}: {{ decision.pr_title[:50] }}{% if decision.pr_title|length > 50 %}...{% endif %}
+                                </a>
+                                <div class="decision-repo">{{ decision.repository }} - {{ decision.timestamp[:16] }}</div>
+                            </div>
+                            <span class="status-badge status-{{ decision.decision }}">{{ decision.decision }}</span>
+                        </div>
+                        <div class="decision-reasoning">{{ decision.reasoning[:200] }}{% if decision.reasoning|length > 200 %}...{% endif %}</div>
+                        <div class="decision-scores">
+                            <div class="score-item">
+                                <span class="score-label">Value:</span>
+                                <span class="score-value {{ 'high' if decision.value_score >= 7 else ('low' if decision.value_score <= 3 else 'medium') }}">{{ decision.value_score }}/10</span>
+                            </div>
+                            <div class="score-item">
+                                <span class="score-label">Quality:</span>
+                                <span class="score-value {{ 'high' if decision.quality_score >= 7 else ('low' if decision.quality_score <= 3 else 'medium') }}">{{ decision.quality_score }}/10</span>
+                            </div>
+                            <div class="score-item">
+                                <span class="score-label">Bloat Risk:</span>
+                                <span class="score-value {{ 'low' if decision.bloat_risk == 'LOW' else ('high' if decision.bloat_risk == 'HIGH' else 'medium') }}">{{ decision.bloat_risk }}</span>
+                            </div>
+                            {% if decision.executed %}
+                            <div class="score-item">
+                                <span style="color: #238636;">Executed</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">No tech lead decisions yet. First review will run at next 5-hour interval.</div>
                 {% endif %}
             </div>
 
@@ -796,6 +951,40 @@ def load_sessions():
     return []
 
 
+def load_tech_lead_decisions():
+    """Load tech lead decisions data"""
+    if DECISIONS_FILE.exists():
+        try:
+            with open(DECISIONS_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+
+def count_tech_lead_stats(decisions):
+    """Calculate tech lead decision stats"""
+    return {
+        'merged': sum(1 for d in decisions if d.get('decision') == 'MERGE' and d.get('executed')),
+        'closed': sum(1 for d in decisions if d.get('decision') == 'CLOSE' and d.get('executed')),
+        'changes': sum(1 for d in decisions if d.get('decision') == 'REQUEST_CHANGES' and d.get('executed'))
+    }
+
+
+def get_next_tech_lead_run():
+    """Calculate next tech lead scheduled run time (every 5 hours)"""
+    now = datetime.now()
+    # Runs at 0:00, 5:00, 10:00, 15:00, 20:00
+    current_hour = now.hour
+    next_run_hour = ((current_hour // 5) + 1) * 5
+    if next_run_hour >= 24:
+        next_run_hour = 0
+        next_run = now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    else:
+        next_run = now.replace(hour=next_run_hour, minute=0, second=0, microsecond=0)
+    return next_run.strftime('%H:%M')
+
+
 def get_open_prs_for_repo(owner, repo_name):
     """Fetch open PRs from GitHub for a repository"""
     try:
@@ -913,6 +1102,10 @@ def dashboard():
         repo['open_prs'] = get_open_prs_for_repo(owner, repo['name'])
         total_open_prs += len(repo['open_prs'])
 
+    # Load tech lead decisions
+    tech_lead_decisions = load_tech_lead_decisions()
+    tech_lead_stats = count_tech_lead_stats(tech_lead_decisions)
+
     return render_template_string(
         DASHBOARD_HTML,
         repositories=repositories,
@@ -926,6 +1119,11 @@ def dashboard():
         prs_created=stats['prs'],
         total_open_prs=total_open_prs,
         next_run=get_next_run_time(),
+        tech_lead_decisions=tech_lead_decisions,
+        tech_lead_merged=tech_lead_stats['merged'],
+        tech_lead_closed=tech_lead_stats['closed'],
+        tech_lead_changes=tech_lead_stats['changes'],
+        next_tech_lead_run=get_next_tech_lead_run(),
         now=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     )
 
@@ -1014,6 +1212,32 @@ def api_prs():
         all_prs[repo['name']] = get_open_prs_for_repo(owner, repo['name'])
 
     return jsonify(all_prs)
+
+
+@app.route('/api/tech-lead/decisions')
+@requires_auth
+def api_tech_lead_decisions():
+    """API endpoint for tech lead decisions"""
+    decisions = load_tech_lead_decisions()
+    stats = count_tech_lead_stats(decisions)
+    return jsonify({
+        'decisions': decisions,
+        'stats': stats,
+        'next_run': get_next_tech_lead_run()
+    })
+
+
+@app.route('/api/tech-lead/trigger', methods=['POST'])
+@requires_auth
+def api_tech_lead_trigger():
+    """Trigger a tech lead review run"""
+    cmd = f"cd {WORK_DIR} && python3 barbossa_tech_lead.py"
+
+    try:
+        subprocess.Popen(cmd, shell=True, cwd=str(WORK_DIR))
+        return jsonify({'status': 'started', 'message': 'Tech Lead review triggered'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 if __name__ == '__main__':
