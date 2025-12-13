@@ -420,7 +420,7 @@ See: {output_file}
 
         try:
             result = subprocess.run(
-                f"gh pr list --repo {owner}/{repo_name} --state open --json number,title,headRefName,checksStatus,reviewDecision,url --limit 20",
+                f"gh pr list --repo {owner}/{repo_name} --state open --json number,title,headRefName,statusCheckRollup,reviewDecision,url --limit 20",
                 shell=True,
                 capture_output=True,
                 text=True,
@@ -428,6 +428,8 @@ See: {output_file}
             )
             if result.returncode == 0 and result.stdout.strip():
                 return json.loads(result.stdout)
+            else:
+                self.logger.warning(f"gh pr list failed for {repo_name}: {result.stderr}")
         except Exception as e:
             self.logger.warning(f"Could not fetch PRs for {repo_name}: {e}")
         return []
@@ -447,13 +449,26 @@ See: {output_file}
         needs_attention = []
 
         for pr in prs:
-            # Check if PR has failing checks or pending review
-            checks = pr.get('checksStatus', {})
-            if checks and checks.get('state') in ['FAILURE', 'ERROR']:
-                pr['attention_reason'] = 'failing_checks'
-                needs_attention.append(pr)
-            elif pr.get('reviewDecision') == 'CHANGES_REQUESTED':
+            # Check if PR has requested changes (highest priority)
+            if pr.get('reviewDecision') == 'CHANGES_REQUESTED':
                 pr['attention_reason'] = 'changes_requested'
+                needs_attention.append(pr)
+                continue
+
+            # Check if PR has failing checks
+            # statusCheckRollup is an array of check results
+            checks = pr.get('statusCheckRollup', [])
+            has_failure = False
+            for check in (checks or []):
+                # CheckRun uses 'conclusion', StatusContext uses 'state'
+                conclusion = check.get('conclusion', '')
+                state = check.get('state', '')
+                if conclusion == 'FAILURE' or state == 'FAILURE':
+                    has_failure = True
+                    break
+
+            if has_failure:
+                pr['attention_reason'] = 'failing_checks'
                 needs_attention.append(pr)
 
         return needs_attention
