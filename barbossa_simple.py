@@ -131,14 +131,6 @@ class Barbossa:
                 design_lines.append(f"    - {rule}")
         design_section = "\n".join(design_lines) if design_lines else "  (no specific design system)"
 
-        # Build improvement opportunities section
-        improvements = repo.get('improvement_opportunities', [])
-        if improvements:
-            imp_lines = [f"  {i+1}. {imp}" for i, imp in enumerate(improvements)]
-            improvements_section = "\n".join(imp_lines)
-        else:
-            improvements_section = "  (explore codebase to identify opportunities)"
-
         # Build do not touch section
         do_not_touch = repo.get('do_not_touch', [])
         if do_not_touch:
@@ -147,13 +139,8 @@ class Barbossa:
         else:
             dnt_section = "  (no restrictions)"
 
-        # Build example PRs section
-        example_prs = repo.get('example_good_prs', [])
-        if example_prs:
-            ex_lines = [f"  - {ex}" for ex in example_prs]
-            examples_section = "\n".join(ex_lines)
-        else:
-            examples_section = "  (use your judgment)"
+        # Get owner for gh commands
+        owner = self.config.get('owner', 'ADWilkinson')
 
         return f"""You are Barbossa, an autonomous personal development assistant.
 
@@ -182,25 +169,35 @@ DESIGN SYSTEM:
 ================================================================================
 YOUR MISSION
 ================================================================================
-Create ONE meaningful Pull Request that improves this codebase.
+Create ONE meaningful Pull Request that adds real value to this codebase.
 
-REFERENCE IDEAS (for inspiration only - do NOT treat as a literal task list):
-{improvements_section}
+CRITICAL: Before writing any code, you MUST first understand the current state:
 
-These are just example areas that MIGHT need work. Explore the codebase yourself and identify
-what would be most valuable. Do NOT repeatedly fix the same type of issue across runs.
-Use your own judgment to find meaningful improvements.
+PHASE 0 - RECONNAISSANCE (do this FIRST, before any coding):
+  1. Check open PRs: gh pr list --state open --repo {owner}/{repo['name']}
+  2. Check recent commits: git log --oneline -15
+  3. Check for any GitHub issues: gh issue list --state open --repo {owner}/{repo['name']} --limit 10
+  4. Explore the codebase structure and understand what exists
+  5. Think critically: What would ACTUALLY be most valuable right now?
 
-EXAMPLES OF GOOD PR TYPES (not tasks to do):
-{examples_section}
+DO NOT just pick something obvious or easy. Think like a senior engineer:
+- What's the biggest pain point in this codebase?
+- What would make the biggest impact for users or developers?
+- Is there technical debt that's actively causing problems?
+- Are there patterns that could be improved across the codebase?
+- Is there missing functionality that would be high-value?
+
+BE CREATIVE. You are an autonomous engineer, not a task executor.
+Your job is to identify the highest-value improvement, not follow a checklist.
 
 ================================================================================
-CRITICAL CONSTRAINTS
+AREAS OFF-LIMITS
 ================================================================================
-DO NOT TOUCH (these areas are off-limits):
 {dnt_section}
 
-QUALITY STANDARDS:
+================================================================================
+QUALITY STANDARDS
+================================================================================
 - Changes must compile/build successfully
 - Follow existing code patterns and conventions
 - Respect the design system (brand rules above)
@@ -208,11 +205,13 @@ QUALITY STANDARDS:
 - Write clean, maintainable code
 
 ABSOLUTELY DO NOT:
+- Start coding without first reviewing repo state (PRs, commits, issues)
 - Add comments or documentation as the main change
 - Create empty or trivial PRs
 - Touch configuration for services you don't understand
 - Break existing functionality
 - Ignore the design system or brand rules
+- Do the same type of fix you've done in previous sessions
 
 ================================================================================
 PACKAGE MANAGER: {pkg_manager.upper()}
