@@ -669,45 +669,56 @@ Begin your work now."""
         self.logger.info(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         self.logger.info(f"{'#'*60}\n")
 
-        # Check total open PRs to decide mode
+        # PRIORITY 1: Always check for PRs needing attention first (requested changes, failing CI)
+        # This ensures Tech Lead feedback is addressed before creating new work
+        self.logger.info("Checking for PRs needing attention (requested changes, failing CI)...")
+
+        prs_needing_attention = []
+        for repo in self.repositories:
+            repo_prs = self._get_prs_needing_attention(repo)
+            for pr in repo_prs:
+                prs_needing_attention.append((repo, pr))
+
+        if prs_needing_attention:
+            # Prioritize changes_requested over failing_checks
+            prs_needing_attention.sort(
+                key=lambda x: 0 if x[1].get('attention_reason') == 'changes_requested' else 1
+            )
+
+            repo, pr = prs_needing_attention[0]
+            self.logger.info(f"\n{'!'*60}")
+            self.logger.info("REVISION MODE: PR needs attention")
+            self.logger.info(f"  PR: {repo['name']} #{pr['number']}")
+            self.logger.info(f"  Reason: {pr.get('attention_reason', 'unknown')}")
+            self.logger.info(f"  Title: {pr['title']}")
+            self.logger.info("Addressing feedback before creating new PRs")
+            self.logger.info(f"{'!'*60}\n")
+
+            success = self.execute_pr_review(repo, pr)
+
+            self.logger.info(f"\n{'#'*60}")
+            self.logger.info("REVISION SUMMARY")
+            self.logger.info(f"{'#'*60}")
+            status = "ADDRESSED" if success else "FAILED"
+            self.logger.info(f"  {repo['name']} PR #{pr['number']}: {status}")
+            self.logger.info(f"{'#'*60}\n")
+            return
+
+        self.logger.info("No PRs need attention - all clear!")
+
+        # PRIORITY 2: Check total open PRs to avoid PR sprawl
         self.logger.info("Checking open PRs across repositories...")
         total_open_prs = self._count_total_open_prs()
         self.logger.info(f"Total open PRs: {total_open_prs}")
 
-        # If >5 open PRs, switch to review mode
         if total_open_prs > 5:
             self.logger.info(f"\n{'!'*60}")
-            self.logger.info("REVIEW MODE: >5 open PRs detected")
-            self.logger.info("Will review and fix existing PRs instead of creating new ones")
+            self.logger.info("PAUSE MODE: >5 open PRs detected")
+            self.logger.info("Waiting for PRs to be reviewed and merged before creating new ones.")
             self.logger.info(f"{'!'*60}\n")
-
-            # Find PRs needing attention across all repos
-            results = []
-            for repo in self.repositories:
-                prs_needing_attention = self._get_prs_needing_attention(repo)
-                if prs_needing_attention:
-                    # Fix the first PR that needs attention
-                    pr = prs_needing_attention[0]
-                    self.logger.info(f"Found PR needing attention: {repo['name']} #{pr['number']}")
-                    success = self.execute_pr_review(repo, pr)
-                    results.append((f"{repo['name']} PR #{pr['number']}", success))
-                    break  # Only fix one PR per run to avoid overwhelming
-            else:
-                # No PRs need fixes, but still too many open - just log it
-                self.logger.info("No PRs with failing checks found. Waiting for PRs to be merged.")
-                self.logger.info("Open PRs should be reviewed and merged before creating new ones.")
-
-            if results:
-                self.logger.info(f"\n{'#'*60}")
-                self.logger.info("REVIEW SUMMARY")
-                self.logger.info(f"{'#'*60}")
-                for name, success in results:
-                    status = "FIXED" if success else "FAILED"
-                    self.logger.info(f"  {name}: {status}")
-                self.logger.info(f"{'#'*60}\n")
             return
 
-        # Normal mode: create new PRs
+        # PRIORITY 3: Create new PRs (only if no PRs need attention and count is low)
         if repo_name:
             # Run for specific repo
             repo = next((r for r in self.repositories if r['name'] == repo_name), None)
