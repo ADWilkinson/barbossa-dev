@@ -638,7 +638,6 @@ DASHBOARD_HTML = """
         <header>
             <div class="logo">
                 Barbossa
-                <span>Autonomous Dev System</span>
             </div>
             <div class="status-pill">
                 <span class="status-dot {{ 'active' if running_sessions else '' }}"></span>
@@ -654,19 +653,19 @@ DASHBOARD_HTML = """
         <div class="stats">
             <div class="stat">
                 <div class="stat-value">{{ total_sessions }}</div>
-                <div class="stat-label">Sessions</div>
+                <div class="stat-label">Runs</div>
             </div>
             <div class="stat">
                 <div class="stat-value success">{{ completed_sessions }}</div>
-                <div class="stat-label">Completed</div>
+                <div class="stat-label">Done</div>
             </div>
             <div class="stat">
                 <div class="stat-value">{{ prs_created }}</div>
-                <div class="stat-label">PRs Created</div>
+                <div class="stat-label">PRs</div>
             </div>
             <div class="stat">
                 <div class="stat-value {{ 'warning' if total_open_prs > 5 else '' }}">{{ total_open_prs }}</div>
-                <div class="stat-label">Open PRs</div>
+                <div class="stat-label">Open</div>
             </div>
             <div class="stat">
                 <div class="stat-value {{ 'danger' if failed_sessions > 0 else '' }}">{{ failed_sessions }}</div>
@@ -690,15 +689,15 @@ DASHBOARD_HTML = """
             <div class="mode-content">
                 {% if running_sessions %}
                     {% if revision_mode %}
-                        <h2>Revision Mode</h2>
-                        <p>Addressing Tech Lead feedback on existing PRs</p>
+                        <h2>Fixing PRs</h2>
+                        <p>Addressing review feedback before shipping new work</p>
                     {% else %}
-                        <h2>Creating PRs</h2>
-                        <p>Analyzing codebases and creating improvements</p>
+                        <h2>Shipping</h2>
+                        <p>Finding and fixing things across repos</p>
                     {% endif %}
                 {% else %}
-                    <h2>Waiting</h2>
-                    <p>Next run scheduled at the top of the hour</p>
+                    <h2>Idle</h2>
+                    <p>Runs every hour on the hour</p>
                 {% endif %}
             </div>
             <div class="mode-meta">
@@ -716,8 +715,8 @@ DASHBOARD_HTML = """
                 </svg>
             </div>
             <div>
-                <div style="font-weight: 500; font-size: 14px;">Tech Lead</div>
-                <div style="font-size: 12px; color: var(--text-dim);">Reviews every 5 hours</div>
+                <div style="font-weight: 500; font-size: 14px;">Reviewer</div>
+                <div style="font-size: 12px; color: var(--text-dim);">Merges good PRs, closes bad ones</div>
             </div>
             <div class="tech-lead-stats">
                 <div class="tl-stat">
@@ -740,8 +739,8 @@ DASHBOARD_HTML = """
             <!-- Repositories -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">Repositories</div>
-                    <div class="card-meta">{{ total_open_prs }} open PRs</div>
+                    <div class="card-title">Repos</div>
+                    <div class="card-meta">{{ total_open_prs }} open</div>
                 </div>
                 {% for repo in repositories %}
                 <div class="repo-item">
@@ -770,7 +769,7 @@ DASHBOARD_HTML = """
                     {% endif %}
                     {% if is_admin %}
                     <div class="admin-controls">
-                        <button class="btn" onclick="triggerRun('{{ repo.name }}')">Trigger Run</button>
+                        <button class="btn" onclick="triggerRun('{{ repo.name }}')">Run now</button>
                     </div>
                     {% endif %}
                 </div>
@@ -780,8 +779,7 @@ DASHBOARD_HTML = """
             <!-- Recent Sessions -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">Recent Sessions</div>
-                    <div class="card-meta">Last {{ sessions|length if sessions else 0 }}</div>
+                    <div class="card-title">Activity</div>
                 </div>
                 {% if sessions %}
                     {% for session in sessions[:8] %}
@@ -810,8 +808,8 @@ DASHBOARD_HTML = """
             <!-- Tech Lead Decisions -->
             <div class="card full-width">
                 <div class="card-header">
-                    <div class="card-title">Tech Lead Decisions</div>
-                    <div class="card-meta">Quality gate reviews</div>
+                    <div class="card-title">Review Log</div>
+                    <div class="card-meta">What got merged, closed, or sent back</div>
                 </div>
                 {% if tech_lead_decisions %}
                     {% for decision in tech_lead_decisions[:6] %}
@@ -842,7 +840,7 @@ DASHBOARD_HTML = """
                                 <span class="score-value {{ 'high' if decision.quality_score >= 7 else ('low' if decision.quality_score <= 3 else 'mid') }}">{{ decision.quality_score }}/10</span>
                             </div>
                             <div class="score">
-                                <span class="score-label">Bloat</span>
+                                <span class="score-label">Risk</span>
                                 <span class="score-value {{ 'high' if decision.bloat_risk == 'LOW' else ('low' if decision.bloat_risk == 'HIGH' else 'mid') }}">{{ decision.bloat_risk }}</span>
                             </div>
                         </div>
