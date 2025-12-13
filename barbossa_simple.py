@@ -223,22 +223,29 @@ DO NOT use npm if the project uses pnpm or yarn!
 ================================================================================
 EXECUTION WORKFLOW
 ================================================================================
-Phase 1 - Setup:
+Phase 1 - Setup (CRITICAL - must have latest code):
   cd ~/barbossa-engineer/projects
   if [ ! -d "{repo['name']}" ]; then
     git clone {repo['url']} {repo['name']}
   fi
   cd {repo['name']}
 
+  # IMPORTANT: Clean slate - discard ANY local changes and get latest from main
+  git fetch origin
+  git checkout main --force
+  git reset --hard origin/main
+  git clean -fd
+
+  # Delete any old barbossa branches to avoid conflicts
+  git branch -D $(git branch | grep 'barbossa/') 2>/dev/null || true
+
+  # Now we are guaranteed to have the exact latest code from origin/main
+  git checkout -b barbossa/{timestamp}
+
   # Copy environment file if it doesn't exist
   if [ ! -f "{env_file}" ] && [ -f "/app/config/env/{repo['name']}{env_file}" ]; then
     cp "/app/config/env/{repo['name']}{env_file}" "{env_file}"
   fi
-
-  git fetch origin
-  git checkout main
-  git pull origin main
-  git checkout -b barbossa/{timestamp}
 
   # Install dependencies with correct package manager
   {install_cmd}
