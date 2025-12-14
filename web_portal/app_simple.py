@@ -1035,10 +1035,10 @@ def count_tech_lead_stats(decisions):
 
 
 def get_next_tech_lead_run():
-    """Calculate next tech lead scheduled run time"""
+    """Calculate next tech lead scheduled run time (every 2 hours)"""
     now = datetime.now()
     current_hour = now.hour
-    next_run_hour = ((current_hour // 5) + 1) * 5
+    next_run_hour = ((current_hour // 2) + 1) * 2
     if next_run_hour >= 24:
         next_run_hour = 0
         next_run = now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
@@ -1051,7 +1051,7 @@ def get_open_prs_for_repo(owner, repo_name):
     """Fetch open PRs from GitHub"""
     try:
         result = subprocess.run(
-            f"gh pr list --repo {owner}/{repo_name} --state open --json number,title,url,headRefName,checksStatusRaw --limit 10",
+            f"gh pr list --repo {owner}/{repo_name} --state open --json number,title,url,headRefName,statusCheckRollup,mergeable --limit 10",
             shell=True,
             capture_output=True,
             text=True,
@@ -1060,15 +1060,31 @@ def get_open_prs_for_repo(owner, repo_name):
         if result.returncode == 0 and result.stdout.strip():
             prs = json.loads(result.stdout)
             for pr in prs:
-                checks = pr.get('checksStatusRaw', [])
+                checks = pr.get('statusCheckRollup', [])
                 if not checks:
                     pr['checks_status'] = 'PENDING'
-                elif all(c.get('conclusion') == 'SUCCESS' for c in checks if c.get('conclusion')):
-                    pr['checks_status'] = 'SUCCESS'
-                elif any(c.get('conclusion') == 'FAILURE' for c in checks):
-                    pr['checks_status'] = 'FAILURE'
                 else:
-                    pr['checks_status'] = 'PENDING'
+                    # Check for failures first
+                    has_failure = any(
+                        c.get('conclusion') == 'FAILURE' or c.get('state') == 'FAILURE'
+                        for c in checks
+                    )
+                    # Check if all completed checks passed
+                    all_success = all(
+                        c.get('conclusion') in ('SUCCESS', 'NEUTRAL', 'SKIPPED') or c.get('state') == 'SUCCESS'
+                        for c in checks
+                        if c.get('status') == 'COMPLETED' or c.get('state')
+                    )
+
+                    if has_failure:
+                        pr['checks_status'] = 'FAILURE'
+                    elif all_success and checks:
+                        pr['checks_status'] = 'SUCCESS'
+                    else:
+                        pr['checks_status'] = 'PENDING'
+
+                # Add merge status info
+                pr['mergeable'] = pr.get('mergeable', 'UNKNOWN')
             return prs
     except Exception:
         pass

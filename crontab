@@ -1,6 +1,6 @@
-# Barbossa v3.0 - Cron Schedule
+# Barbossa v3.1 - Cron Schedule
 # Senior Engineer: Every 1 hour to create or review PRs
-# Tech Lead: Every 5 hours to review, merge, or close PRs
+# Tech Lead: Every 2 hours to review, merge, or close PRs
 
 # Load environment
 SHELL=/bin/bash
@@ -10,8 +10,8 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # Creates new PRs and fixes failing CI
 0 * * * * su - barbossa -c "cd /app && python3 barbossa_simple.py" >> /app/logs/cron.log 2>&1
 
-# Tech Lead - Every 5 hours (0:00, 5:00, 10:00, 15:00, 20:00)
+# Tech Lead - Every 2 hours (0:00, 2:00, 4:00, 6:00, 8:00, 10:00, 12:00, 14:00, 16:00, 18:00, 20:00, 22:00)
 # Reviews PRs with strict criteria, has authority to merge or close
-0 */5 * * * su - barbossa -c "cd /app && python3 barbossa_tech_lead.py" >> /app/logs/tech_lead_cron.log 2>&1
+0 */2 * * * su - barbossa -c "cd /app && python3 barbossa_tech_lead.py" >> /app/logs/tech_lead_cron.log 2>&1
 
 # Empty line required at end

@@ -735,27 +735,38 @@ Begin your work now."""
                 prs_needing_attention.append((repo, pr))
 
         if prs_needing_attention:
-            # Prioritize changes_requested over failing_checks
+            # Prioritize changes_requested over failing_checks over merge_conflicts
             prs_needing_attention.sort(
-                key=lambda x: 0 if x[1].get('attention_reason') == 'changes_requested' else 1
+                key=lambda x: (
+                    0 if x[1].get('attention_reason') == 'changes_requested'
+                    else 1 if x[1].get('attention_reason') == 'failing_checks'
+                    else 2
+                )
             )
 
-            repo, pr = prs_needing_attention[0]
             self.logger.info(f"\n{'!'*60}")
-            self.logger.info("REVISION MODE: PR needs attention")
-            self.logger.info(f"  PR: {repo['name']} #{pr['number']}")
-            self.logger.info(f"  Reason: {pr.get('attention_reason', 'unknown')}")
-            self.logger.info(f"  Title: {pr['title']}")
-            self.logger.info("Addressing feedback before creating new PRs")
+            self.logger.info(f"REVISION MODE: {len(prs_needing_attention)} PRs need attention")
+            for repo, pr in prs_needing_attention:
+                self.logger.info(f"  - {repo['name']} #{pr['number']}: {pr.get('attention_reason', 'unknown')}")
+            self.logger.info("Addressing ALL feedback before creating new PRs")
             self.logger.info(f"{'!'*60}\n")
 
-            success = self.execute_pr_review(repo, pr)
+            # Process ALL PRs needing attention (up to 5 per run to avoid timeout)
+            results = []
+            for repo, pr in prs_needing_attention[:5]:
+                self.logger.info(f"\n{'='*60}")
+                self.logger.info(f"Processing: {repo['name']} #{pr['number']} ({pr.get('attention_reason', 'unknown')})")
+                self.logger.info(f"{'='*60}")
+
+                success = self.execute_pr_review(repo, pr)
+                results.append((repo['name'], pr['number'], success))
 
             self.logger.info(f"\n{'#'*60}")
             self.logger.info("REVISION SUMMARY")
             self.logger.info(f"{'#'*60}")
-            status = "ADDRESSED" if success else "FAILED"
-            self.logger.info(f"  {repo['name']} PR #{pr['number']}: {status}")
+            for repo_name, pr_num, success in results:
+                status = "ADDRESSED" if success else "FAILED"
+                self.logger.info(f"  {repo_name} PR #{pr_num}: {status}")
             self.logger.info(f"{'#'*60}\n")
             return
 

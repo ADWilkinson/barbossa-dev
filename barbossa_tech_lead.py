@@ -354,12 +354,22 @@ Begin your review now."""
 
         try:
             if action == 'MERGE':
-                # Squash merge and delete branch
+                # Try to squash merge and delete branch
+                # If it fails due to conflicts, that's fine - Senior Engineer will fix them
                 cmd = f"gh pr merge {pr_number} --repo {self.owner}/{repo_name} --squash --delete-branch"
                 result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
                 success = result.returncode == 0
                 if not success:
-                    self.logger.error(f"Merge failed: {result.stderr}")
+                    stderr = result.stderr.lower()
+                    if 'merge conflict' in stderr or 'not mergeable' in stderr:
+                        self.logger.warning(f"Merge blocked by conflicts - Senior Engineer will fix: {result.stderr}")
+                        # Add a comment so we know we tried
+                        comment_cmd = f'gh pr comment {pr_number} --repo {self.owner}/{repo_name} --body "Tech Lead approved for merge (Value: {decision.get("value_score", "?")}/10, Quality: {decision.get("quality_score", "?")}/10). Waiting for conflict resolution."'
+                        subprocess.run(comment_cmd, shell=True, capture_output=True, text=True, timeout=30)
+                    else:
+                        self.logger.error(f"Merge failed: {result.stderr}")
+                else:
+                    self.logger.info(f"Successfully merged PR #{pr_number}")
                 return success
 
             elif action == 'CLOSE':
@@ -373,13 +383,30 @@ Begin your review now."""
                 return success
 
             elif action == 'REQUEST_CHANGES':
-                # Request changes with feedback
+                # Use PR comment instead of review (GitHub doesn't allow requesting changes on own PRs)
                 feedback = decision['reasoning'][:1000]
-                cmd = f'gh pr review {pr_number} --repo {self.owner}/{repo_name} --request-changes --body "Tech Lead Review:\\n\\n{feedback}"'
+                value_score = decision.get('value_score', '?')
+                quality_score = decision.get('quality_score', '?')
+                bloat_risk = decision.get('bloat_risk', '?')
+
+                comment_body = f"""**Tech Lead Review - Changes Requested**
+
+**Scores:** Value {value_score}/10 | Quality {quality_score}/10 | Bloat Risk: {bloat_risk}
+
+**Feedback:**
+{feedback}
+
+---
+_Senior Engineer: Please address the above feedback and push updates._"""
+
+                # Use gh pr comment instead of gh pr review (which fails on own PRs)
+                cmd = f'gh pr comment {pr_number} --repo {self.owner}/{repo_name} --body "{comment_body}"'
                 result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
                 success = result.returncode == 0
                 if not success:
-                    self.logger.error(f"Review failed: {result.stderr}")
+                    self.logger.error(f"Comment failed: {result.stderr}")
+                else:
+                    self.logger.info(f"Posted feedback comment on PR #{pr_number}")
                 return success
 
         except Exception as e:
