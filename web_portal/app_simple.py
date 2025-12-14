@@ -1229,7 +1229,8 @@ def api_sessions():
 @requires_auth
 def api_trigger(repo_name):
     """Trigger a run for specific repository (admin only)"""
-    cmd = f"cd {WORK_DIR} && python3 barbossa_simple.py --repo {repo_name}"
+    # Run as barbossa user (Claude CLI rejects root)
+    cmd = f"su - barbossa -c 'cd {WORK_DIR} && python3 barbossa_simple.py --repo {repo_name}'"
     try:
         subprocess.Popen(cmd, shell=True, cwd=str(WORK_DIR))
         return jsonify({'status': 'started', 'repository': repo_name})
@@ -1280,7 +1281,8 @@ def api_tech_lead_decisions():
 @requires_auth
 def api_tech_lead_trigger():
     """Trigger a tech lead review run (admin only)"""
-    cmd = f"cd {WORK_DIR} && python3 barbossa_tech_lead.py"
+    # Run as barbossa user (Claude CLI rejects root)
+    cmd = f"su - barbossa -c 'cd {WORK_DIR} && python3 barbossa_tech_lead.py'"
     try:
         subprocess.Popen(cmd, shell=True, cwd=str(WORK_DIR))
         return jsonify({'status': 'started'})

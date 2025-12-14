@@ -420,7 +420,7 @@ See: {output_file}
 
         try:
             result = subprocess.run(
-                f"gh pr list --repo {owner}/{repo_name} --state open --json number,title,headRefName,statusCheckRollup,reviewDecision,url --limit 20",
+                f"gh pr list --repo {owner}/{repo_name} --state open --json number,title,headRefName,statusCheckRollup,reviewDecision,url,mergeable,mergeStateStatus --limit 20",
                 shell=True,
                 capture_output=True,
                 text=True,
@@ -444,7 +444,7 @@ See: {output_file}
         return total
 
     def _get_prs_needing_attention(self, repo: Dict) -> List[Dict]:
-        """Get PRs that have failing checks or need fixes"""
+        """Get PRs that have failing checks, merge conflicts, or need fixes"""
         prs = self._get_open_prs(repo)
         needs_attention = []
 
@@ -452,6 +452,14 @@ See: {output_file}
             # Check if PR has requested changes (highest priority)
             if pr.get('reviewDecision') == 'CHANGES_REQUESTED':
                 pr['attention_reason'] = 'changes_requested'
+                needs_attention.append(pr)
+                continue
+
+            # Check if PR has merge conflicts (high priority - blocks merging)
+            # mergeable can be: MERGEABLE, CONFLICTING, or UNKNOWN
+            # mergeStateStatus can be: DIRTY, CLEAN, HAS_HOOKS, UNKNOWN, etc.
+            if pr.get('mergeable') == 'CONFLICTING' or pr.get('mergeStateStatus') == 'DIRTY':
+                pr['attention_reason'] = 'merge_conflicts'
                 needs_attention.append(pr)
                 continue
 
@@ -489,6 +497,59 @@ See: {output_file}
         else:
             install_cmd, build_cmd, test_cmd = 'npm install', 'npm run build', 'npm test'
 
+        # Build issue-specific instructions
+        if attention_reason == 'merge_conflicts':
+            issue_instructions = f"""
+ISSUE TYPE: MERGE CONFLICTS
+The PR has merge conflicts with main branch that must be resolved.
+
+Phase 2 - Resolve Conflicts:
+  # First, rebase onto latest main
+  git fetch origin
+  git rebase origin/main
+
+  # If conflicts occur during rebase:
+  # 1. Identify conflicting files: git status
+  # 2. Open each conflicting file and resolve conflicts
+  # 3. Stage resolved files: git add <file>
+  # 4. Continue rebase: git rebase --continue
+  # 5. Repeat until rebase completes
+
+  # After resolving conflicts, reinstall dependencies
+  {install_cmd}
+
+Phase 3 - Verify:
+  # Run build and tests to ensure nothing broke
+  {build_cmd}
+  {test_cmd}
+
+Phase 4 - Update PR:
+  # Force push the rebased branch
+  git push origin {pr_branch} --force-with-lease"""
+        else:
+            issue_instructions = f"""
+Phase 2 - Investigate:
+  # Check what's failing
+  gh pr checks {pr_number} --repo {owner}/{repo_name}
+
+  # View any review comments
+  gh pr view {pr_number} --repo {owner}/{repo_name} --comments
+
+  # Run tests/build locally to see the errors
+  {build_cmd}
+  {test_cmd}
+
+Phase 3 - Fix:
+  - Identify the root cause of failures
+  - Make targeted fixes to address the issues
+  - Run build and tests again to verify fixes
+  - Keep changes minimal and focused
+
+Phase 4 - Update PR:
+  git add -A
+  git commit -m "fix: address CI failures / review comments"
+  git push origin {pr_branch}"""
+
         return f"""You are Barbossa, an autonomous personal development assistant.
 
 ================================================================================
@@ -523,31 +584,10 @@ Phase 1 - Setup:
   # Fetch and checkout the PR branch
   git fetch origin
   git checkout {pr_branch}
-  git pull origin {pr_branch}
+  git pull origin {pr_branch} || true  # May fail if conflicts exist
 
   {install_cmd}
-
-Phase 2 - Investigate:
-  # Check what's failing
-  gh pr checks {pr_number} --repo {owner}/{repo_name}
-
-  # View any review comments
-  gh pr view {pr_number} --repo {owner}/{repo_name} --comments
-
-  # Run tests/build locally to see the errors
-  {build_cmd}
-  {test_cmd}
-
-Phase 3 - Fix:
-  - Identify the root cause of failures
-  - Make targeted fixes to address the issues
-  - Run build and tests again to verify fixes
-  - Keep changes minimal and focused
-
-Phase 4 - Update PR:
-  git add -A
-  git commit -m "fix: address CI failures / review comments"
-  git push origin {pr_branch}
+{issue_instructions}
 
 ================================================================================
 OUTPUT REQUIRED
