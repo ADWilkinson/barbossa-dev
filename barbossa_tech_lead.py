@@ -918,14 +918,24 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                 except:
                     pending_feedback = {}
 
-            # Review each PR (skip those with pending feedback)
+            # Review each PR (skip those with pending feedback unless updated)
             for pr in open_prs:
                 pr_key = f"{repo_name}/{pr['number']}"
 
-                # Skip if we already requested changes and are waiting for fixes
+                # Check if we already requested changes
                 if pr_key in pending_feedback and not pending_feedback[pr_key].get('addressed', False):
-                    self.logger.info(f"SKIP PR #{pr['number']} - already has pending feedback, waiting for Senior Engineer")
-                    continue
+                    feedback_time = pending_feedback[pr_key].get('timestamp', '')
+                    pr_updated = pr.get('updatedAt', '')
+
+                    # If PR was updated AFTER feedback was posted, Senior Engineer likely addressed it
+                    # Re-review in that case
+                    if feedback_time and pr_updated and pr_updated > feedback_time:
+                        self.logger.info(f"RE-REVIEW PR #{pr['number']} - updated since feedback was posted")
+                        # Clear the pending feedback since we're re-reviewing
+                        self._remove_pending_feedback(repo_name, pr['number'])
+                    else:
+                        self.logger.info(f"SKIP PR #{pr['number']} - pending feedback, waiting for Senior Engineer")
+                        continue
 
                 result = self.review_pr(repo, pr)
                 all_results.append(result)

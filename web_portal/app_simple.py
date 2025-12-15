@@ -1366,15 +1366,14 @@ def count_tech_lead_stats(decisions):
 
 
 def get_next_tech_lead_run():
-    """Calculate next tech lead scheduled run time (every 2 hours)"""
+    """Calculate next tech lead scheduled run time (every hour at :45)"""
     now = datetime.now()
-    current_hour = now.hour
-    next_run_hour = ((current_hour // 2) + 1) * 2
-    if next_run_hour >= 24:
-        next_run_hour = 0
-        next_run = now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    if now.minute < 45:
+        # Next run is :45 of current hour
+        next_run = now.replace(minute=45, second=0, microsecond=0)
     else:
-        next_run = now.replace(hour=next_run_hour, minute=0, second=0, microsecond=0)
+        # Next run is :45 of next hour
+        next_run = (now.replace(minute=45, second=0, microsecond=0) + timedelta(hours=1))
     return next_run.strftime('%H:%M')
 
 

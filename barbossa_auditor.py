@@ -296,8 +296,11 @@ class BarbossaAuditor:
         close_reasons = defaultdict(int)
         for d in recent:
             if d.get('decision') == 'CLOSE':
-                reason = d.get('reasoning', '')[:100].lower()
-                if 'test' in reason:
+                reason = d.get('reasoning', '').lower()
+                # Distinguish between "test-only PRs" (closed for being only tests) vs "missing tests"
+                if 'test-only' in reason or 'only test' in reason or 'only add test' in reason:
+                    close_reasons['test_only'] += 1
+                elif 'missing test' in reason or 'no test' in reason:
                     close_reasons['missing_tests'] += 1
                 elif 'conflict' in reason:
                     close_reasons['merge_conflicts'] += 1
@@ -420,6 +423,15 @@ class BarbossaAuditor:
                     'severity': 'medium',
                     'value': close_reasons['missing_tests'],
                     'message': f"PRs closed for missing tests ({close_reasons['missing_tests']}) - Senior Engineer prompt needs stronger test requirements"
+                })
+
+            # Track test-only PR closures (positive signal - system rejecting low-value work)
+            if close_reasons.get('test_only', 0) > 0:
+                patterns.append({
+                    'type': 'test_only_rejected',
+                    'severity': 'info',
+                    'value': close_reasons['test_only'],
+                    'message': f"Test-only PRs closed ({close_reasons['test_only']}) - system correctly rejecting low-value work"
                 })
 
         return patterns
