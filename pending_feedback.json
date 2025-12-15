@@ -1,1 +1,9 @@
-{}
+{
+  "peerlytics/29": {
+    "repo": "peerlytics",
+    "pr_number": 29,
+    "feedback": "The PR adds test coverage for a previously untested hook, which is valuable. However, ~40% of the tests are shallow (testing mock data factories, hardcoded constants, or browser APIs) and rate limit tests duplicate existing coverage. The migration logic tests are the only genuinely valuable portion. Requires cleanup before merge.",
+    "timestamp": "2025-12-15T04:47:50.582529",
+    "addressed": false
+  }
+}

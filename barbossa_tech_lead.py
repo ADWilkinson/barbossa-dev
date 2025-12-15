@@ -898,8 +898,24 @@ _Senior Engineer: Please address the above feedback and push updates._"""
 
             self.logger.info(f"Found {len(open_prs)} open PRs")
 
-            # Review each PR
+            # Load pending feedback to skip PRs already awaiting fixes
+            pending_feedback = {}
+            if self.pending_feedback_file.exists():
+                try:
+                    with open(self.pending_feedback_file, 'r') as f:
+                        pending_feedback = json.load(f)
+                except:
+                    pending_feedback = {}
+
+            # Review each PR (skip those with pending feedback)
             for pr in open_prs:
+                pr_key = f"{repo_name}/{pr['number']}"
+
+                # Skip if we already requested changes and are waiting for fixes
+                if pr_key in pending_feedback and not pending_feedback[pr_key].get('addressed', False):
+                    self.logger.info(f"SKIP PR #{pr['number']} - already has pending feedback, waiting for Senior Engineer")
+                    continue
+
                 result = self.review_pr(repo, pr)
                 all_results.append(result)
                 self.logger.info(f"Completed review of PR #{pr['number']}")

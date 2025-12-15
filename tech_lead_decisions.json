@@ -1,1 +1,42 @@
-[]
+[
+  {
+    "session_id": "tl-20251215-044558-ac8937ba",
+    "timestamp": "2025-12-15T04:47:50.582870",
+    "repository": "peerlytics",
+    "pr_number": 29,
+    "pr_title": "test: add comprehensive unit tests for useAnalyticsSummary hook",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/29",
+    "pr_author": "ADWilkinson",
+    "additions": 765,
+    "deletions": 0,
+    "files_changed": 1,
+    "decision": "REQUEST_CHANGES",
+    "reasoning": "The PR adds test coverage for a previously untested hook, which is valuable. However, ~40% of the tests are shallow (testing mock data factories, hardcoded constants, or browser APIs) and rate limit tests duplicate existing coverage. The migration logic tests are the only genuinely valuable portion. Requires cleanup before merge.",
+    "value_score": 5,
+    "quality_score": 5,
+    "bloat_risk": "MEDIUM",
+    "auto_rejected": false,
+    "executed": true,
+    "output_file": "/app/logs/tech_lead_peerlytics_29_20251215_044559.log"
+  },
+  {
+    "session_id": "tl-20251215-044502-abdb626a",
+    "timestamp": "2025-12-15T04:45:58.636991",
+    "repository": "peerlytics",
+    "pr_number": 30,
+    "pr_title": "test: add comprehensive unit tests for chart-utils module",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/30",
+    "pr_author": "ADWilkinson",
+    "additions": 1040,
+    "deletions": 0,
+    "files_changed": 1,
+    "decision": "MERGE",
+    "reasoning": "This PR adds 120 well-structured unit tests for a critical 538-line module that previously had zero test coverage. The chart-utils module handles financial data transformations, time series operations, and visualization configs used across the entire dashboard. Tests comprehensively cover edge cases (null, NaN, Infinity, type coercion, boundary conditions) and protect against regressions in financial calculations. CI passes, single file scope, no bloat, no violations of restricted areas.",
+    "value_score": 8,
+    "quality_score": 9,
+    "bloat_risk": "LOW",
+    "auto_rejected": false,
+    "executed": true,
+    "output_file": "/app/logs/tech_lead_peerlytics_30_20251215_044502.log"
+  }
+]
