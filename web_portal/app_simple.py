@@ -1072,11 +1072,11 @@ DASHBOARD_HTML = """
                 <div class="cron-schedule">
                     <div class="cron-item">
                         <div class="cron-agent">Tech Lead</div>
-                        <div class="cron-time">:50 odd hrs</div>
+                        <div class="cron-time">:45</div>
                     </div>
                     <div class="cron-item">
                         <div class="cron-agent">Engineer</div>
-                        <div class="cron-time">:00 every hr</div>
+                        <div class="cron-time">:00</div>
                     </div>
                     <div class="cron-item">
                         <div class="cron-agent">Auditor</div>
