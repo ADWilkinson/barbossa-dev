@@ -353,9 +353,8 @@ QUALITY_SCORE: [1-10, where 10 is excellent quality]
 BLOAT_RISK: [LOW|MEDIUM|HIGH]
 ```
 
-If MERGE: Execute `gh pr merge {pr['number']} --repo {self.owner}/{repo['name']} --squash --delete-branch`
-If CLOSE: Execute `gh pr close {pr['number']} --repo {self.owner}/{repo['name']} --comment "Closed by Tech Lead: [reason]"`
-If REQUEST_CHANGES: Execute `gh pr review {pr['number']} --repo {self.owner}/{repo['name']} --request-changes --body "[specific feedback]"`
+IMPORTANT: Do NOT execute any gh commands yourself. Just provide your decision in the format above.
+The system will handle executing the merge/close/comment commands automatically.
 
 Be decisive. Be critical. Protect the codebase.
 Begin your review now."""
