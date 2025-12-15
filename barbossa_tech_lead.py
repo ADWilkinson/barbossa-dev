@@ -362,6 +362,33 @@ Begin your review now."""
 
         # Try multiple patterns to find the decision
 
+        # Pattern 0: Try to find JSON block first (most reliable)
+        json_patterns = [
+            r'```json\s*(\{.*?\})\s*```',
+            r'```\s*(\{[^`]*"decision"[^`]*\})\s*```',
+        ]
+        for pattern in json_patterns:
+            match = re.search(pattern, output, re.DOTALL | re.IGNORECASE)
+            if match:
+                try:
+                    data = json.loads(match.group(1))
+                    if 'decision' in data:
+                        decision = data['decision'].upper().replace(' ', '_').replace('-', '_')
+                        if decision in ['MERGE', 'CLOSE', 'REQUEST_CHANGES']:
+                            result['decision'] = decision
+                            result['reasoning'] = data.get('reasoning', data.get('reason', result['reasoning']))[:500]
+                            if 'value_score' in data or 'value' in data:
+                                result['value_score'] = min(10, max(1, int(data.get('value_score', data.get('value', 5)))))
+                            if 'quality_score' in data or 'quality' in data:
+                                result['quality_score'] = min(10, max(1, int(data.get('quality_score', data.get('quality', 5)))))
+                            if 'bloat_risk' in data or 'bloat' in data:
+                                risk = str(data.get('bloat_risk', data.get('bloat', 'MEDIUM'))).upper()
+                                if risk in ['LOW', 'MEDIUM', 'HIGH']:
+                                    result['bloat_risk'] = risk
+                            return result
+                except (json.JSONDecodeError, ValueError, TypeError):
+                    pass
+
         # Pattern 1: ```decision block
         decision_match = re.search(r'```decision\s*(.*?)\s*```', output, re.DOTALL)
         if decision_match:
@@ -388,37 +415,96 @@ Begin your review now."""
 
                 return result
 
-        # Pattern 2: Look for "DECISION: MERGE" anywhere in output
+        # Pattern 2: Look for "DECISION: MERGE" anywhere in output with many variations
         decision_patterns = [
             r'\*\*DECISION\*\*:\s*(MERGE|CLOSE|REQUEST_CHANGES)',  # **DECISION**: MERGE
+            r'\*\*Decision\*\*:\s*(MERGE|CLOSE|REQUEST_CHANGES)',  # **Decision**: MERGE
             r'DECISION:\s*(MERGE|CLOSE|REQUEST_CHANGES)',          # DECISION: MERGE
+            r'Decision:\s*(MERGE|CLOSE|REQUEST_CHANGES)',          # Decision: MERGE
+            r'\bdecision\s*[=:]\s*(MERGE|CLOSE|REQUEST_CHANGES)\b',  # decision = MERGE
             r'\bdecision\s+(?:is\s+)?(?:to\s+)?(MERGE|CLOSE|REQUEST_CHANGES)\b',  # decision is to MERGE
-            r'(?:will|should|recommend)\s+(MERGE|CLOSE|REQUEST[_\s]CHANGES)',  # will MERGE
+            r'(?:will|should|recommend|going to)\s+(MERGE|CLOSE|REQUEST[_\s]?CHANGES)',  # will MERGE
+            r'I(?:\'m| am| will)\s+(?:going to\s+)?(MERGE|CLOSE|REQUEST[_\s]?CHANGES)',  # I'm going to MERGE
+            r'(?:verdict|action|outcome)[:\s]+\**(MERGE|CLOSE|REQUEST_CHANGES)\**',  # verdict: MERGE
+            r'\*\*(MERGE|CLOSE|REQUEST_CHANGES)\*\*',  # **MERGE**
         ]
 
         for pattern in decision_patterns:
             match = re.search(pattern, output, re.IGNORECASE)
             if match:
-                decision = match.group(1).upper().replace(' ', '_')
+                decision = match.group(1).upper().replace(' ', '_').replace('-', '_')
+                # Normalize REQUEST CHANGES variations
+                if 'REQUEST' in decision and 'CHANGE' in decision:
+                    decision = 'REQUEST_CHANGES'
                 if decision in ['MERGE', 'CLOSE', 'REQUEST_CHANGES']:
                     result['decision'] = decision
                     break
 
-        # If still no decision, look for clear indicators
+        # Pattern 3: Look at the end of output for clear commands executed
+        if not result['decision']:
+            # Look for gh commands that were executed
+            gh_patterns = [
+                (r'gh pr merge', 'MERGE'),
+                (r'gh pr close', 'CLOSE'),
+                (r'gh pr review.*--request-changes', 'REQUEST_CHANGES'),
+                (r'gh pr comment', 'REQUEST_CHANGES'),  # comments typically mean feedback
+            ]
+            for pattern, action in gh_patterns:
+                if re.search(pattern, output, re.IGNORECASE):
+                    result['decision'] = action
+                    break
+
+        # Pattern 4: Look for clear natural language indicators
         if not result['decision']:
             output_lower = output.lower()
-            if 'merging this pr' in output_lower or 'approve and merge' in output_lower:
-                result['decision'] = 'MERGE'
-            elif 'closing this pr' in output_lower or 'should be closed' in output_lower:
-                result['decision'] = 'CLOSE'
-            elif 'requesting changes' in output_lower or 'needs changes' in output_lower:
-                result['decision'] = 'REQUEST_CHANGES'
+
+            # Strong merge indicators
+            merge_phrases = [
+                'merging this pr', 'approve and merge', 'lgtm', 'looks good to merge',
+                'ready to merge', 'approved for merge', 'this pr is approved',
+                'merged successfully', 'proceeding to merge', 'will merge this'
+            ]
+
+            # Strong close indicators
+            close_phrases = [
+                'closing this pr', 'should be closed', 'recommend closing',
+                'this pr should be rejected', 'rejecting this pr', 'will close',
+                'does not add value', 'closing without merge'
+            ]
+
+            # Strong request changes indicators
+            change_phrases = [
+                'requesting changes', 'needs changes', 'changes requested',
+                'please address', 'needs to be fixed', 'requires changes',
+                'before this can be merged', 'cannot be merged as-is',
+                'needs work', 'needs improvement'
+            ]
+
+            for phrase in merge_phrases:
+                if phrase in output_lower:
+                    result['decision'] = 'MERGE'
+                    break
+
+            if not result['decision']:
+                for phrase in close_phrases:
+                    if phrase in output_lower:
+                        result['decision'] = 'CLOSE'
+                        break
+
+            if not result['decision']:
+                for phrase in change_phrases:
+                    if phrase in output_lower:
+                        result['decision'] = 'REQUEST_CHANGES'
+                        break
 
         # Extract reasoning from common patterns
         reasoning_patterns = [
             r'\*\*REASONING\*\*:\s*(.+?)(?=\n\*\*|\n```|$)',
+            r'\*\*Reasoning\*\*:\s*(.+?)(?=\n\*\*|\n```|$)',
             r'REASONING:\s*(.+?)(?=\n[A-Z_]+:|$)',
-            r'(?:because|reason|rationale):\s*(.+?)(?:\n\n|$)',
+            r'Reasoning:\s*(.+?)(?=\n[A-Z_]+:|$)',
+            r'(?:^|\n)(?:because|reason|rationale|summary)[:\s]+(.+?)(?:\n\n|\n[A-Z]|$)',
+            r'##\s*(?:Summary|Reasoning|Verdict)\s*\n(.+?)(?=\n##|\n```|$)',
         ]
 
         for pattern in reasoning_patterns:
@@ -427,19 +513,55 @@ Begin your review now."""
                 result['reasoning'] = match.group(1).strip()[:500]
                 break
 
+        # If no reasoning found, try to extract a meaningful summary
+        if result['reasoning'] == 'No reasoning provided' and result['decision']:
+            # Look for any substantial paragraph that explains the decision
+            paragraphs = re.split(r'\n\n+', output)
+            for para in paragraphs:
+                # Skip code blocks and short lines
+                if '```' in para or len(para.strip()) < 50:
+                    continue
+                # Look for paragraphs that discuss the PR
+                if any(word in para.lower() for word in ['pr ', 'pull request', 'code', 'changes', 'value', 'quality']):
+                    result['reasoning'] = para.strip()[:500]
+                    break
+
         # Extract scores with more patterns
-        value_patterns = [r'VALUE[_\s]?SCORE:\s*(\d+)', r'value:\s*(\d+)\s*/\s*10', r'value\s+(\d+)/10']
+        value_patterns = [
+            r'VALUE[_\s]?SCORE:\s*(\d+)',
+            r'\*\*Value[_\s]?Score\*\*:\s*(\d+)',
+            r'value:\s*(\d+)\s*/\s*10',
+            r'value\s+(\d+)/10',
+            r'value[:\s]+(\d+)\s*(?:/10|out of 10)?',
+        ]
         for pattern in value_patterns:
             match = re.search(pattern, output, re.IGNORECASE)
             if match:
                 result['value_score'] = min(10, max(1, int(match.group(1))))
                 break
 
-        quality_patterns = [r'QUALITY[_\s]?SCORE:\s*(\d+)', r'quality:\s*(\d+)\s*/\s*10', r'quality\s+(\d+)/10']
+        quality_patterns = [
+            r'QUALITY[_\s]?SCORE:\s*(\d+)',
+            r'\*\*Quality[_\s]?Score\*\*:\s*(\d+)',
+            r'quality:\s*(\d+)\s*/\s*10',
+            r'quality\s+(\d+)/10',
+            r'quality[:\s]+(\d+)\s*(?:/10|out of 10)?',
+        ]
         for pattern in quality_patterns:
             match = re.search(pattern, output, re.IGNORECASE)
             if match:
                 result['quality_score'] = min(10, max(1, int(match.group(1))))
+                break
+
+        bloat_patterns = [
+            r'BLOAT[_\s]?RISK:\s*(LOW|MEDIUM|HIGH)',
+            r'\*\*Bloat[_\s]?Risk\*\*:\s*(LOW|MEDIUM|HIGH)',
+            r'bloat[_\s]?risk[:\s]+(LOW|MEDIUM|HIGH)',
+        ]
+        for pattern in bloat_patterns:
+            match = re.search(pattern, output, re.IGNORECASE)
+            if match:
+                result['bloat_risk'] = match.group(1).upper()
                 break
 
         if result['decision']:

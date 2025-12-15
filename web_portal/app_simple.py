@@ -54,6 +54,9 @@ CHANGELOGS_DIR = WORK_DIR / 'changelogs'
 CONFIG_FILE = WORK_DIR / 'config' / 'repositories.json'
 SESSIONS_FILE = WORK_DIR / 'sessions.json'
 DECISIONS_FILE = WORK_DIR / 'tech_lead_decisions.json'
+PENDING_FEEDBACK_FILE = WORK_DIR / 'pending_feedback.json'
+SYSTEM_INSIGHTS_FILE = WORK_DIR / 'system_insights.json'
+AUDIT_HISTORY_FILE = WORK_DIR / 'audit_history.json'
 
 
 def obfuscate_session_id(session_id):
@@ -522,6 +525,63 @@ DASHBOARD_HTML = """
         .score-value.mid { color: var(--warning); }
         .score-value.low { color: var(--danger); }
 
+        /* System Health Banner */
+        .health-banner {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .health-banner.healthy { border-color: rgba(34, 197, 94, 0.3); }
+        .health-banner.fair { border-color: rgba(234, 179, 8, 0.3); }
+        .health-banner.poor { border-color: rgba(239, 68, 68, 0.3); }
+
+        .health-score {
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .health-score.healthy { border-color: var(--success); color: var(--success); }
+        .health-score.fair { border-color: var(--warning); color: var(--warning); }
+        .health-score.poor { border-color: var(--danger); color: var(--danger); }
+
+        .health-details {
+            flex: 1;
+        }
+
+        .health-issues {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .health-issue {
+            font-size: 11px;
+            padding: 4px 10px;
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border-radius: 4px;
+        }
+
+        .health-issue.warning {
+            background: rgba(234, 179, 8, 0.1);
+            color: var(--warning);
+        }
+
         /* Tech Lead Banner */
         .tech-lead-banner {
             display: flex;
@@ -569,6 +629,94 @@ DASHBOARD_HTML = """
             color: var(--text-dim);
             text-transform: uppercase;
             letter-spacing: 0.5px;
+        }
+
+        /* Pending Feedback */
+        .feedback-item {
+            padding: 12px;
+            background: var(--bg);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .feedback-item:last-child { margin-bottom: 0; }
+
+        .feedback-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .feedback-pr {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--warning);
+        }
+
+        .feedback-time {
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        .feedback-text {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Error Log */
+        .error-item {
+            padding: 10px 12px;
+            background: var(--bg);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            border-left: 3px solid var(--danger);
+        }
+
+        .error-item:last-child { margin-bottom: 0; }
+
+        .error-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+
+        .error-message {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: 'Monaco', 'Consolas', monospace;
+            word-break: break-word;
+        }
+
+        /* Cron Schedule */
+        .cron-schedule {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .cron-item {
+            text-align: center;
+            padding: 12px;
+            background: var(--bg);
+            border-radius: 8px;
+        }
+
+        .cron-agent {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .cron-time {
+            font-size: 14px;
+            font-weight: 500;
+            margin-top: 4px;
         }
 
         /* Empty State */
@@ -705,6 +853,29 @@ DASHBOARD_HTML = """
             </div>
         </div>
 
+        <!-- System Health Banner -->
+        {% if system_health %}
+        <div class="health-banner {{ system_health.status }}">
+            <div class="health-score {{ system_health.status }}">{{ system_health.health_score }}</div>
+            <div class="health-details">
+                <div style="font-weight: 500; font-size: 14px;">System Health</div>
+                <div style="font-size: 12px; color: var(--text-dim);">
+                    Last audit: {{ system_health.last_audit[:16] if system_health.last_audit else 'Never' }}
+                </div>
+                {% if system_health.system_issues %}
+                <div class="health-issues">
+                    {% for issue in system_health.system_issues[:3] %}
+                    <span class="health-issue">{{ issue[:50] }}{% if issue|length > 50 %}...{% endif %}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% if is_admin %}
+            <button class="btn" onclick="triggerAuditor()">Run Audit</button>
+            {% endif %}
+        </div>
+        {% endif %}
+
         <!-- Tech Lead Banner -->
         {% if tech_lead_decisions %}
         <div class="tech-lead-banner">
@@ -732,6 +903,9 @@ DASHBOARD_HTML = """
                     <div class="tl-stat-label">Changes</div>
                 </div>
             </div>
+            {% if is_admin %}
+            <button class="btn" onclick="triggerTechLead()">Run Review</button>
+            {% endif %}
         </div>
         {% endif %}
 
@@ -850,6 +1024,69 @@ DASHBOARD_HTML = """
                 <div class="empty">No decisions yet</div>
                 {% endif %}
             </div>
+
+            <!-- Pending Feedback -->
+            {% if pending_feedback %}
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Awaiting Fixes</div>
+                    <div class="card-meta">{{ pending_feedback|length }} PR{{ 's' if pending_feedback|length > 1 else '' }} need attention</div>
+                </div>
+                {% for key, item in pending_feedback.items() %}
+                <div class="feedback-item">
+                    <div class="feedback-header">
+                        <span class="feedback-pr">{{ item.repo }}#{{ item.pr_number }}</span>
+                        <span class="feedback-time">{{ item.timestamp[:10] if item.timestamp else '' }}</span>
+                    </div>
+                    <div class="feedback-text">{{ item.feedback[:150] }}{% if item.feedback|length > 150 %}...{% endif %}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Recent Errors -->
+            {% if recent_errors and is_admin %}
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Recent Errors</div>
+                    <div class="card-meta">From system logs</div>
+                </div>
+                {% for error in recent_errors[:5] %}
+                <div class="error-item">
+                    <div class="error-meta">
+                        <span>{{ error.file }}</span>
+                        <span>{{ error.timestamp[:16] if error.timestamp else '' }}</span>
+                    </div>
+                    <div class="error-message">{{ error.message[:120] }}{% if error.message|length > 120 %}...{% endif %}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Cron Schedule -->
+            <div class="card {{ 'full-width' if not pending_feedback and not (recent_errors and is_admin) else '' }}">
+                <div class="card-header">
+                    <div class="card-title">Schedule</div>
+                    <div class="card-meta">Automated runs</div>
+                </div>
+                <div class="cron-schedule">
+                    <div class="cron-item">
+                        <div class="cron-agent">Engineer</div>
+                        <div class="cron-time">Every hour</div>
+                    </div>
+                    <div class="cron-item">
+                        <div class="cron-agent">Tech Lead</div>
+                        <div class="cron-time">Every 5h</div>
+                    </div>
+                    <div class="cron-item">
+                        <div class="cron-agent">Auditor</div>
+                        <div class="cron-time">Daily 6AM</div>
+                    </div>
+                </div>
+                <div style="margin-top: 16px; font-size: 12px; color: var(--text-dim);">
+                    Next engineer run: <strong style="color: var(--text);">{{ next_run }}</strong>
+                </div>
+            </div>
         </div>
 
         <footer>
@@ -869,6 +1106,30 @@ DASHBOARD_HTML = """
                     .then(data => {
                         alert('Started: ' + repoName);
                         setTimeout(() => location.reload(), 2000);
+                    })
+                    .catch(e => alert('Error: ' + e));
+            }
+        }
+
+        function triggerTechLead() {
+            if (confirm('Start Tech Lead PR review session?')) {
+                fetch('/api/tech-lead/trigger', { method: 'POST' })
+                    .then(r => r.json())
+                    .then(data => {
+                        alert('Tech Lead review started');
+                        setTimeout(() => location.reload(), 2000);
+                    })
+                    .catch(e => alert('Error: ' + e));
+            }
+        }
+
+        function triggerAuditor() {
+            if (confirm('Run system health audit?')) {
+                fetch('/api/auditor/trigger', { method: 'POST' })
+                    .then(r => r.json())
+                    .then(data => {
+                        alert('Auditor started');
+                        setTimeout(() => location.reload(), 3000);
                     })
                     .catch(e => alert('Error: ' + e));
             }
@@ -1025,6 +1286,76 @@ def load_tech_lead_decisions():
     return []
 
 
+def load_pending_feedback():
+    """Load pending feedback waiting for Senior Engineer"""
+    if PENDING_FEEDBACK_FILE.exists():
+        try:
+            with open(PENDING_FEEDBACK_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+
+def load_system_insights():
+    """Load system health insights from auditor"""
+    if SYSTEM_INSIGHTS_FILE.exists():
+        try:
+            with open(SYSTEM_INSIGHTS_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+
+def load_audit_history():
+    """Load audit history"""
+    if AUDIT_HISTORY_FILE.exists():
+        try:
+            with open(AUDIT_HISTORY_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+
+def get_recent_errors(limit=10):
+    """Get recent errors from log files"""
+    errors = []
+    try:
+        log_files = sorted(LOGS_DIR.glob('*.log'), key=lambda x: x.stat().st_mtime, reverse=True)[:20]
+        for log_file in log_files:
+            try:
+                content = log_file.read_text()
+                for line in content.split('\n'):
+                    if 'ERROR' in line or 'error' in line.lower() and 'error_count' not in line.lower():
+                        # Extract timestamp and message
+                        parts = line.split(' - ', 2)
+                        if len(parts) >= 3:
+                            errors.append({
+                                'timestamp': parts[0],
+                                'level': parts[1],
+                                'message': parts[2][:200],
+                                'file': log_file.name
+                            })
+                        elif len(line) > 20:
+                            errors.append({
+                                'timestamp': '',
+                                'level': 'ERROR',
+                                'message': line[:200],
+                                'file': log_file.name
+                            })
+                        if len(errors) >= limit:
+                            break
+            except:
+                continue
+            if len(errors) >= limit:
+                break
+    except:
+        pass
+    return errors[:limit]
+
+
 def count_tech_lead_stats(decisions):
     """Calculate tech lead decision stats"""
     return {
@@ -1162,6 +1493,11 @@ def dashboard():
     tech_lead_decisions = load_tech_lead_decisions()
     tech_lead_stats = count_tech_lead_stats(tech_lead_decisions)
 
+    # Load new data sources
+    pending_feedback = load_pending_feedback()
+    system_health = load_system_insights()
+    recent_errors = get_recent_errors(10) if admin else []
+
     # Check if in revision mode (has PRs needing attention)
     revision_mode = any(
         pr.get('reviewDecision') == 'CHANGES_REQUESTED' or
@@ -1186,6 +1522,9 @@ def dashboard():
         tech_lead_merged=tech_lead_stats['merged'],
         tech_lead_closed=tech_lead_stats['closed'],
         tech_lead_changes=tech_lead_stats['changes'],
+        pending_feedback=pending_feedback,
+        system_health=system_health,
+        recent_errors=recent_errors,
         is_admin=admin,
         now=datetime.now().strftime('%Y-%m-%d %H:%M')
     )
@@ -1304,6 +1643,43 @@ def api_tech_lead_trigger():
         return jsonify({'status': 'started'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/auditor/trigger', methods=['POST'])
+@requires_auth
+def api_auditor_trigger():
+    """Trigger a system health audit (admin only)"""
+    # Run as barbossa user
+    cmd = f"su - barbossa -c 'cd {WORK_DIR} && python3 barbossa_auditor.py --days 7'"
+    try:
+        subprocess.Popen(cmd, shell=True, cwd=str(WORK_DIR))
+        return jsonify({'status': 'started'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/system-health')
+def api_system_health():
+    """API endpoint for system health data (public)"""
+    health = load_system_insights()
+    return jsonify({
+        'health_score': health.get('health_score', 0),
+        'status': health.get('status', 'unknown'),
+        'last_audit': health.get('last_audit', ''),
+        'merge_rates': health.get('merge_rates', {}),
+        'error_count': health.get('error_count', 0),
+        'system_issues': health.get('system_issues', [])
+    })
+
+
+@app.route('/api/pending-feedback')
+def api_pending_feedback():
+    """API endpoint for pending feedback (public)"""
+    feedback = load_pending_feedback()
+    return jsonify({
+        'count': len(feedback),
+        'items': list(feedback.values())
+    })
 
 
 if __name__ == '__main__':
