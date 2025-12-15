@@ -1,20 +1,19 @@
 {
-  "last_audit": "2025-12-15T03:43:36.200260",
-  "health_score": 65,
+  "last_audit": "2025-12-15T03:52:11.887764",
+  "health_score": 60,
+  "status": "fair",
   "recommendations": [
-    "Add 'with, remove, rounded' related topics to do-not-touch list for peerlytics to prevent repeated failed attempts",
-    "Review recent error logs and fix underlying issues - check for API rate limits, auth issues, or network problems"
+    "SYSTEM: High session failure rate - check Claude API connectivity, rate limits, and error handling in agent code",
+    "SYSTEM: Review error logs - common causes: API rate limits, git auth issues, network timeouts, gh CLI problems"
   ],
-  "avoid_patterns": [
-    [
-      "with",
-      "remove",
-      "rounded",
-      "corners",
-      "terminal"
-    ]
+  "system_issues": [
+    "Session failure rate is 100.0% - check for system issues",
+    "High error count (61) - check API limits, auth, network issues"
   ],
-  "focus_areas": [
-    "High error count (61) in logs - investigate root cause"
-  ]
+  "merge_rates": {
+    "peerlytics": 75.0,
+    "usdctofiat": 85.0
+  },
+  "error_count": 61,
+  "timeout_count": 0
 }

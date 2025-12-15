@@ -324,93 +324,102 @@ class BarbossaAuditor:
     # =========================================================================
 
     def _detect_patterns(self, pr_stats: Dict, log_analysis: Dict, decision_analysis: Dict) -> List[Dict]:
-        """Detect patterns and issues that need attention"""
+        """Detect SYSTEM patterns and issues - focus on mechanics, not content restrictions"""
         patterns = []
 
-        # Check merge rate
+        # Check merge rate - indicates system health
         for repo_name, stats in pr_stats.items():
             merge_rate = stats.get('merge_rate', 0)
             if merge_rate < 70:
                 patterns.append({
                     'type': 'low_merge_rate',
-                    'severity': 'high',
+                    'severity': 'medium',
                     'repo': repo_name,
                     'value': merge_rate,
-                    'message': f"{repo_name} has low merge rate ({merge_rate}%) - PRs may be too complex or missing tests"
+                    'message': f"{repo_name}: {merge_rate}% merge rate - may need prompt tuning or better PR scoping"
                 })
-            elif merge_rate > 95:
+            elif merge_rate >= 85:
                 patterns.append({
-                    'type': 'high_merge_rate',
+                    'type': 'healthy_merge_rate',
                     'severity': 'info',
                     'repo': repo_name,
                     'value': merge_rate,
-                    'message': f"{repo_name} has very high merge rate ({merge_rate}%) - system is working well"
+                    'message': f"{repo_name}: {merge_rate}% merge rate - system performing well"
                 })
 
-        # Check for repeated closed PR patterns
-        for repo_name, stats in pr_stats.items():
-            closed_titles = stats.get('closed_titles', [])
-            if len(closed_titles) >= 3:
-                # Look for similar titles
-                word_freq = defaultdict(int)
-                for title in closed_titles:
-                    words = re.findall(r'\b\w{4,}\b', title.lower())
-                    for word in words:
-                        word_freq[word] += 1
+        # Check for session failures (system issue, not content issue)
+        failed_sessions = log_analysis.get('failed_sessions', 0)
+        successful_sessions = log_analysis.get('successful_sessions', 0)
+        total_sessions = failed_sessions + successful_sessions
+        if total_sessions > 0:
+            failure_rate = failed_sessions / total_sessions * 100
+            if failure_rate > 20:
+                patterns.append({
+                    'type': 'high_session_failure_rate',
+                    'severity': 'high',
+                    'value': round(failure_rate, 1),
+                    'message': f"Session failure rate is {round(failure_rate, 1)}% - check for system issues"
+                })
 
-                repeated_words = [w for w, c in word_freq.items() if c >= 2]
-                if repeated_words:
-                    patterns.append({
-                        'type': 'repeated_failures',
-                        'severity': 'medium',
-                        'repo': repo_name,
-                        'value': repeated_words[:5],
-                        'message': f"{repo_name}: Repeated patterns in closed PRs: {', '.join(repeated_words[:5])}"
-                    })
-
-        # Check error rates
-        if log_analysis.get('error_count', 0) > 10:
+        # Check error rates - indicates system problems
+        error_count = log_analysis.get('error_count', 0)
+        if error_count > 20:
             patterns.append({
                 'type': 'high_error_rate',
                 'severity': 'high',
-                'value': log_analysis['error_count'],
-                'message': f"High error count ({log_analysis['error_count']}) in logs - investigate root cause"
+                'value': error_count,
+                'message': f"High error count ({error_count}) - check API limits, auth, network issues"
+            })
+        elif error_count > 5:
+            patterns.append({
+                'type': 'moderate_error_rate',
+                'severity': 'medium',
+                'value': error_count,
+                'message': f"Moderate error count ({error_count}) - worth investigating"
             })
 
+        # Parse failures indicate prompt/parsing issues
         if log_analysis.get('parse_failure_count', 0) > 3:
             patterns.append({
                 'type': 'parse_failures',
                 'severity': 'medium',
                 'value': log_analysis['parse_failure_count'],
-                'message': f"Multiple decision parse failures ({log_analysis['parse_failure_count']}) - may need prompt adjustment"
+                'message': f"Decision parse failures ({log_analysis['parse_failure_count']}) - Tech Lead prompt may need adjustment"
             })
 
+        # Timeouts indicate task complexity or system resource issues
         if log_analysis.get('timeout_count', 0) > 2:
             patterns.append({
                 'type': 'timeouts',
                 'severity': 'medium',
                 'value': log_analysis['timeout_count'],
-                'message': f"Multiple timeouts ({log_analysis['timeout_count']}) - consider increasing timeout or simplifying tasks"
+                'message': f"Timeouts detected ({log_analysis['timeout_count']}) - consider timeout config or task complexity"
             })
 
-        # Check Tech Lead patterns
+        # Tech Lead decision balance
         if decision_analysis:
-            avg_value = decision_analysis.get('avg_value_score', 5)
-            if avg_value < 5:
-                patterns.append({
-                    'type': 'low_value_prs',
-                    'severity': 'medium',
-                    'value': avg_value,
-                    'message': f"Average PR value score is low ({avg_value}/10) - focus on higher-impact improvements"
-                })
+            merge_rate = decision_analysis.get('merge_rate', 0)
+            changes_count = decision_analysis.get('changes_count', 0)
 
+            # If Tech Lead is requesting too many changes, feedback loop may be broken
+            if changes_count > 5 and decision_analysis.get('total_decisions', 0) > 10:
+                change_rate = changes_count / decision_analysis['total_decisions'] * 100
+                if change_rate > 30:
+                    patterns.append({
+                        'type': 'high_change_request_rate',
+                        'severity': 'medium',
+                        'value': round(change_rate, 1),
+                        'message': f"Tech Lead requesting changes on {round(change_rate, 1)}% of PRs - check if feedback is being addressed"
+                    })
+
+            # Check if close reasons indicate systemic issues
             close_reasons = decision_analysis.get('close_reasons', {})
             if close_reasons.get('missing_tests', 0) > 3:
                 patterns.append({
-                    'type': 'missing_tests_pattern',
-                    'severity': 'high',
+                    'type': 'test_enforcement_issue',
+                    'severity': 'medium',
                     'value': close_reasons['missing_tests'],
-                    'message': f"Multiple PRs closed for missing tests ({close_reasons['missing_tests']}) - enforce test requirements"
+                    'message': f"PRs closed for missing tests ({close_reasons['missing_tests']}) - Senior Engineer prompt needs stronger test requirements"
                 })
 
         return patterns
@@ -420,7 +429,7 @@ class BarbossaAuditor:
     # =========================================================================
 
     def _generate_recommendations(self, patterns: List[Dict]) -> List[str]:
-        """Generate actionable recommendations based on patterns"""
+        """Generate SYSTEM-focused recommendations - no content restrictions"""
         recommendations = []
 
         for pattern in patterns:
@@ -428,33 +437,46 @@ class BarbossaAuditor:
 
             if ptype == 'low_merge_rate':
                 recommendations.append(
-                    f"Consider simplifying PR scope for {pattern.get('repo', 'repos')} - "
-                    "smaller, focused changes are more likely to be approved"
+                    f"SYSTEM: {pattern.get('repo', 'repo')} merge rate is low - "
+                    "consider tuning Senior Engineer prompt to produce smaller, more focused PRs"
                 )
-            elif ptype == 'repeated_failures':
+            elif ptype == 'high_session_failure_rate':
                 recommendations.append(
-                    f"Add '{', '.join(pattern.get('value', [])[:3])}' related topics to do-not-touch list "
-                    f"for {pattern.get('repo', 'repo')} to prevent repeated failed attempts"
+                    "SYSTEM: High session failure rate - check Claude API connectivity, "
+                    "rate limits, and error handling in agent code"
                 )
-            elif ptype == 'high_error_rate':
+            elif ptype == 'high_error_rate' or ptype == 'moderate_error_rate':
                 recommendations.append(
-                    "Review recent error logs and fix underlying issues - "
-                    "check for API rate limits, auth issues, or network problems"
+                    "SYSTEM: Review error logs - common causes: API rate limits, "
+                    "git auth issues, network timeouts, gh CLI problems"
                 )
             elif ptype == 'parse_failures':
                 recommendations.append(
-                    "Consider adjusting Tech Lead prompt to ensure consistent decision format output"
+                    "SYSTEM: Tech Lead decision parsing failing - "
+                    "may need to adjust prompt format or improve parsing regex"
                 )
-            elif ptype == 'missing_tests_pattern':
+            elif ptype == 'timeouts':
                 recommendations.append(
-                    "Strengthen test requirements in Senior Engineer prompt - "
-                    "explicitly require tests for changes >30 lines"
+                    "SYSTEM: Timeouts occurring - consider increasing CLAUDE_TIMEOUT in config "
+                    "or optimizing prompts to reduce task complexity"
                 )
-            elif ptype == 'low_value_prs':
+            elif ptype == 'high_change_request_rate':
                 recommendations.append(
-                    "Encourage higher-impact improvements in prompts - "
-                    "focus on user-facing features, performance, or critical bugs"
+                    "SYSTEM: Feedback loop may be broken - verify pending_feedback.json is being "
+                    "read by Senior Engineer and changes are being addressed"
                 )
+            elif ptype == 'test_enforcement_issue':
+                recommendations.append(
+                    "SYSTEM: PRs failing for missing tests - strengthen MANDATORY TEST REQUIREMENTS "
+                    "section in Senior Engineer prompt"
+                )
+
+        # Always add general system health tips if no critical issues
+        if not any(p['severity'] == 'high' for p in patterns):
+            recommendations.append(
+                "SYSTEM: No critical issues detected. Consider reviewing cron schedules "
+                "and agent coordination timing for optimization."
+            )
 
         return recommendations
 
@@ -560,13 +582,16 @@ class BarbossaAuditor:
         # Save results
         self._save_audit_history(audit)
 
-        # Save insights for other agents
+        # Save insights for other agents - system health only, no content restrictions
         insights = {
             'last_audit': datetime.now().isoformat(),
             'health_score': health_score,
+            'status': 'healthy' if health_score >= 80 else 'fair' if health_score >= 60 else 'needs_attention',
             'recommendations': recommendations,
-            'avoid_patterns': [p.get('value') for p in patterns if p['type'] == 'repeated_failures'],
-            'focus_areas': [p['message'] for p in patterns if p['severity'] == 'high'],
+            'system_issues': [p['message'] for p in patterns if p['severity'] == 'high'],
+            'merge_rates': {repo: stats.get('merge_rate', 0) for repo, stats in pr_stats.items()},
+            'error_count': log_analysis.get('error_count', 0),
+            'timeout_count': log_analysis.get('timeout_count', 0),
         }
         self._save_insights(insights)
 

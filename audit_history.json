@@ -1,5 +1,93 @@
 [
   {
+    "timestamp": "2025-12-15T03:52:11.887495",
+    "period_days": 7,
+    "health_score": 60,
+    "pr_stats": {
+      "peerlytics": {
+        "total": 20,
+        "merged": 15,
+        "closed": 4,
+        "open": 1,
+        "merge_rate": 75.0,
+        "close_rate": 20.0,
+        "pr_types": {
+          "test": 6,
+          "fix": 6,
+          "feature": 5,
+          "refactor": 1,
+          "accessibility": 1,
+          "performance": 1
+        },
+        "closed_titles": [
+          "feat: add data freshness indicator with staleness warnings and manual refresh",
+          "fix: remove rounded corners to comply with terminal design system",
+          "fix: remove rounded corners from dashboard tabs to match brand guidelines",
+          "fix: remove rounded corners to enforce terminal aesthetic brand rules"
+        ],
+        "avg_additions": 292.1,
+        "avg_deletions": 10.9
+      },
+      "usdctofiat": {
+        "total": 20,
+        "merged": 17,
+        "closed": 2,
+        "open": 1,
+        "merge_rate": 85.0,
+        "close_rate": 10.0,
+        "pr_types": {
+          "other": 6,
+          "refactor": 2,
+          "test": 10,
+          "feature": 2
+        },
+        "closed_titles": [
+          "refactor: consolidate error handling into unified utility",
+          "test: add unit tests for utility functions (bignum.ts, format.ts)"
+        ],
+        "avg_additions": 525.6,
+        "avg_deletions": 51.4
+      }
+    },
+    "log_analysis": {
+      "error_count": 61,
+      "warning_count": 0,
+      "timeout_count": 0,
+      "parse_failure_count": 0,
+      "successful_sessions": 0,
+      "failed_sessions": 4,
+      "tech_lead_merges": 48,
+      "tech_lead_closes": 0,
+      "tech_lead_changes": 145
+    },
+    "decision_analysis": {},
+    "patterns": [
+      {
+        "type": "healthy_merge_rate",
+        "severity": "info",
+        "repo": "usdctofiat",
+        "value": 85.0,
+        "message": "usdctofiat: 85.0% merge rate - system performing well"
+      },
+      {
+        "type": "high_session_failure_rate",
+        "severity": "high",
+        "value": 100.0,
+        "message": "Session failure rate is 100.0% - check for system issues"
+      },
+      {
+        "type": "high_error_rate",
+        "severity": "high",
+        "value": 61,
+        "message": "High error count (61) - check API limits, auth, network issues"
+      }
+    ],
+    "recommendations": [
+      "SYSTEM: High session failure rate - check Claude API connectivity, rate limits, and error handling in agent code",
+      "SYSTEM: Review error logs - common causes: API rate limits, git auth issues, network timeouts, gh CLI problems"
+    ]
+  },
+  {
     "timestamp": "2025-12-15T03:43:36.200110",
     "period_days": 7,
     "health_score": 65,
