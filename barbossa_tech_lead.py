@@ -22,7 +22,7 @@ class BarbossaTechLead:
     Has authority to merge or close PRs based on objective criteria.
     """
 
-    VERSION = "1.0.0"
+    VERSION = "1.1.0"
     ROLE = "tech_lead"
 
     # Review criteria thresholds
@@ -37,6 +37,7 @@ class BarbossaTechLead:
         self.logs_dir = self.work_dir / 'logs'
         self.decisions_file = self.work_dir / 'tech_lead_decisions.json'
         self.config_file = self.work_dir / 'config' / 'repositories.json'
+        self.pending_feedback_file = self.work_dir / 'pending_feedback.json'
 
         self.logs_dir.mkdir(parents=True, exist_ok=True)
 
@@ -95,6 +96,47 @@ class BarbossaTechLead:
 
         with open(self.decisions_file, 'w') as f:
             json.dump(decisions, f, indent=2)
+
+    def _add_pending_feedback(self, repo_name: str, pr_number: int, feedback: str):
+        """Track a PR that needs Senior Engineer attention"""
+        pending = {}
+        if self.pending_feedback_file.exists():
+            try:
+                with open(self.pending_feedback_file, 'r') as f:
+                    pending = json.load(f)
+            except:
+                pending = {}
+
+        key = f"{repo_name}/{pr_number}"
+        pending[key] = {
+            'repo': repo_name,
+            'pr_number': pr_number,
+            'feedback': feedback,
+            'timestamp': datetime.now().isoformat(),
+            'addressed': False
+        }
+
+        with open(self.pending_feedback_file, 'w') as f:
+            json.dump(pending, f, indent=2)
+        self.logger.info(f"Saved pending feedback for {key}")
+
+    def _remove_pending_feedback(self, repo_name: str, pr_number: int):
+        """Remove a PR from pending feedback (after merge/close)"""
+        if not self.pending_feedback_file.exists():
+            return
+
+        try:
+            with open(self.pending_feedback_file, 'r') as f:
+                pending = json.load(f)
+
+            key = f"{repo_name}/{pr_number}"
+            if key in pending:
+                del pending[key]
+                with open(self.pending_feedback_file, 'w') as f:
+                    json.dump(pending, f, indent=2)
+                self.logger.info(f"Removed pending feedback for {key}")
+        except Exception as e:
+            self.logger.warning(f"Could not remove pending feedback: {e}")
 
     def _get_open_prs(self, repo_name: str) -> List[Dict]:
         """Get all open PRs for a repository"""
@@ -307,43 +349,102 @@ Be decisive. Be critical. Protect the codebase.
 Begin your review now."""
 
     def _parse_decision(self, output: str) -> Optional[Dict]:
-        """Parse the decision from Claude's output"""
+        """Parse the decision from Claude's output with robust pattern matching"""
         import re
 
-        # Look for decision block
-        decision_match = re.search(r'```decision\s*(.*?)\s*```', output, re.DOTALL)
-        if not decision_match:
-            # Try without code block
-            decision_match = re.search(r'DECISION:\s*(MERGE|CLOSE|REQUEST_CHANGES)', output, re.IGNORECASE)
-            if decision_match:
-                decision = decision_match.group(1).upper()
-                return {
-                    'decision': decision,
-                    'reasoning': 'Parsed from output',
-                    'value_score': 5,
-                    'quality_score': 5,
-                    'bloat_risk': 'MEDIUM'
-                }
-            return None
-
-        block = decision_match.group(1)
-
-        decision = re.search(r'DECISION:\s*(MERGE|CLOSE|REQUEST_CHANGES)', block, re.IGNORECASE)
-        reasoning = re.search(r'REASONING:\s*(.+?)(?=\n[A-Z_]+:|$)', block, re.DOTALL)
-        value_score = re.search(r'VALUE_SCORE:\s*(\d+)', block)
-        quality_score = re.search(r'QUALITY_SCORE:\s*(\d+)', block)
-        bloat_risk = re.search(r'BLOAT_RISK:\s*(LOW|MEDIUM|HIGH)', block, re.IGNORECASE)
-
-        if not decision:
-            return None
-
-        return {
-            'decision': decision.group(1).upper(),
-            'reasoning': reasoning.group(1).strip() if reasoning else 'No reasoning provided',
-            'value_score': int(value_score.group(1)) if value_score else 5,
-            'quality_score': int(quality_score.group(1)) if quality_score else 5,
-            'bloat_risk': bloat_risk.group(1).upper() if bloat_risk else 'MEDIUM'
+        result = {
+            'decision': None,
+            'reasoning': 'No reasoning provided',
+            'value_score': 5,
+            'quality_score': 5,
+            'bloat_risk': 'MEDIUM'
         }
+
+        # Try multiple patterns to find the decision
+
+        # Pattern 1: ```decision block
+        decision_match = re.search(r'```decision\s*(.*?)\s*```', output, re.DOTALL)
+        if decision_match:
+            block = decision_match.group(1)
+            decision = re.search(r'DECISION:\s*(MERGE|CLOSE|REQUEST_CHANGES)', block, re.IGNORECASE)
+            if decision:
+                result['decision'] = decision.group(1).upper()
+
+                reasoning = re.search(r'REASONING:\s*(.+?)(?=\n[A-Z_]+:|$)', block, re.DOTALL)
+                if reasoning:
+                    result['reasoning'] = reasoning.group(1).strip()
+
+                value_score = re.search(r'VALUE_SCORE:\s*(\d+)', block)
+                if value_score:
+                    result['value_score'] = min(10, max(1, int(value_score.group(1))))
+
+                quality_score = re.search(r'QUALITY_SCORE:\s*(\d+)', block)
+                if quality_score:
+                    result['quality_score'] = min(10, max(1, int(quality_score.group(1))))
+
+                bloat_risk = re.search(r'BLOAT_RISK:\s*(LOW|MEDIUM|HIGH)', block, re.IGNORECASE)
+                if bloat_risk:
+                    result['bloat_risk'] = bloat_risk.group(1).upper()
+
+                return result
+
+        # Pattern 2: Look for "DECISION: MERGE" anywhere in output
+        decision_patterns = [
+            r'\*\*DECISION\*\*:\s*(MERGE|CLOSE|REQUEST_CHANGES)',  # **DECISION**: MERGE
+            r'DECISION:\s*(MERGE|CLOSE|REQUEST_CHANGES)',          # DECISION: MERGE
+            r'\bdecision\s+(?:is\s+)?(?:to\s+)?(MERGE|CLOSE|REQUEST_CHANGES)\b',  # decision is to MERGE
+            r'(?:will|should|recommend)\s+(MERGE|CLOSE|REQUEST[_\s]CHANGES)',  # will MERGE
+        ]
+
+        for pattern in decision_patterns:
+            match = re.search(pattern, output, re.IGNORECASE)
+            if match:
+                decision = match.group(1).upper().replace(' ', '_')
+                if decision in ['MERGE', 'CLOSE', 'REQUEST_CHANGES']:
+                    result['decision'] = decision
+                    break
+
+        # If still no decision, look for clear indicators
+        if not result['decision']:
+            output_lower = output.lower()
+            if 'merging this pr' in output_lower or 'approve and merge' in output_lower:
+                result['decision'] = 'MERGE'
+            elif 'closing this pr' in output_lower or 'should be closed' in output_lower:
+                result['decision'] = 'CLOSE'
+            elif 'requesting changes' in output_lower or 'needs changes' in output_lower:
+                result['decision'] = 'REQUEST_CHANGES'
+
+        # Extract reasoning from common patterns
+        reasoning_patterns = [
+            r'\*\*REASONING\*\*:\s*(.+?)(?=\n\*\*|\n```|$)',
+            r'REASONING:\s*(.+?)(?=\n[A-Z_]+:|$)',
+            r'(?:because|reason|rationale):\s*(.+?)(?:\n\n|$)',
+        ]
+
+        for pattern in reasoning_patterns:
+            match = re.search(pattern, output, re.DOTALL | re.IGNORECASE)
+            if match and len(match.group(1).strip()) > 10:
+                result['reasoning'] = match.group(1).strip()[:500]
+                break
+
+        # Extract scores with more patterns
+        value_patterns = [r'VALUE[_\s]?SCORE:\s*(\d+)', r'value:\s*(\d+)\s*/\s*10', r'value\s+(\d+)/10']
+        for pattern in value_patterns:
+            match = re.search(pattern, output, re.IGNORECASE)
+            if match:
+                result['value_score'] = min(10, max(1, int(match.group(1))))
+                break
+
+        quality_patterns = [r'QUALITY[_\s]?SCORE:\s*(\d+)', r'quality:\s*(\d+)\s*/\s*10', r'quality\s+(\d+)/10']
+        for pattern in quality_patterns:
+            match = re.search(pattern, output, re.IGNORECASE)
+            if match:
+                result['quality_score'] = min(10, max(1, int(match.group(1))))
+                break
+
+        if result['decision']:
+            return result
+        return None
 
     def _execute_decision(self, repo_name: str, pr: Dict, decision: Dict) -> bool:
         """Execute the merge/close/request-changes decision"""
@@ -366,10 +467,14 @@ Begin your review now."""
                         # Add a comment so we know we tried
                         comment_cmd = f'gh pr comment {pr_number} --repo {self.owner}/{repo_name} --body "Tech Lead approved for merge (Value: {decision.get("value_score", "?")}/10, Quality: {decision.get("quality_score", "?")}/10). Waiting for conflict resolution."'
                         subprocess.run(comment_cmd, shell=True, capture_output=True, text=True, timeout=30)
+                        # Track this so Senior Engineer knows to fix conflicts
+                        self._add_pending_feedback(repo_name, pr_number, "Approved but has merge conflicts - please rebase against main")
                     else:
                         self.logger.error(f"Merge failed: {result.stderr}")
                 else:
                     self.logger.info(f"Successfully merged PR #{pr_number}")
+                    # Remove from pending feedback tracking
+                    self._remove_pending_feedback(repo_name, pr_number)
                 return success
 
             elif action == 'CLOSE':
@@ -380,11 +485,14 @@ Begin your review now."""
                 success = result.returncode == 0
                 if not success:
                     self.logger.error(f"Close failed: {result.stderr}")
+                else:
+                    # Remove from pending feedback tracking
+                    self._remove_pending_feedback(repo_name, pr_number)
                 return success
 
             elif action == 'REQUEST_CHANGES':
                 # Use PR comment instead of review (GitHub doesn't allow requesting changes on own PRs)
-                feedback = decision['reasoning'][:1000]
+                feedback = decision['reasoning'][:1000].replace('"', "'").replace('`', "'")
                 value_score = decision.get('value_score', '?')
                 quality_score = decision.get('quality_score', '?')
                 bloat_risk = decision.get('bloat_risk', '?')
@@ -399,14 +507,28 @@ Begin your review now."""
 ---
 _Senior Engineer: Please address the above feedback and push updates._"""
 
-                # Use gh pr comment instead of gh pr review (which fails on own PRs)
-                cmd = f'gh pr comment {pr_number} --repo {self.owner}/{repo_name} --body "{comment_body}"'
-                result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
-                success = result.returncode == 0
-                if not success:
-                    self.logger.error(f"Comment failed: {result.stderr}")
-                else:
-                    self.logger.info(f"Posted feedback comment on PR #{pr_number}")
+                # Write comment to temp file to avoid shell escaping issues
+                import tempfile
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+                    f.write(comment_body)
+                    temp_file = f.name
+
+                try:
+                    cmd = f'gh pr comment {pr_number} --repo {self.owner}/{repo_name} --body-file "{temp_file}"'
+                    result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
+                    success = result.returncode == 0
+                    if not success:
+                        self.logger.error(f"Comment failed: {result.stderr}")
+                    else:
+                        self.logger.info(f"Posted feedback comment on PR #{pr_number}")
+                        # Track this so Senior Engineer knows to address it
+                        self._add_pending_feedback(repo_name, pr_number, feedback)
+                finally:
+                    # Clean up temp file
+                    try:
+                        os.unlink(temp_file)
+                    except:
+                        pass
                 return success
 
         except Exception as e:
@@ -574,6 +696,56 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                 'executed': False
             }
 
+    def _cleanup_stale_prs(self, repo_name: str, prs: List[Dict]) -> List[Dict]:
+        """Auto-close PRs that have been stale (in conflict) for too long"""
+        from datetime import timedelta
+        STALE_DAYS = 5  # Close PRs that have been in conflict for 5+ days
+
+        cleaned = []
+        remaining = []
+
+        for pr in prs:
+            created_at = pr.get('createdAt', '')
+            try:
+                # Parse ISO date
+                created_date = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                age_days = (datetime.now(created_date.tzinfo) - created_date).days
+            except:
+                age_days = 0
+
+            # Check if PR is barbossa-created and old
+            branch = pr.get('headRefName', '')
+            is_barbossa_pr = branch.startswith('barbossa/')
+
+            if is_barbossa_pr and age_days >= STALE_DAYS:
+                # Auto-close stale barbossa PRs
+                self.logger.info(f"AUTO-CLOSING stale PR #{pr['number']} ({age_days} days old): {pr['title']}")
+                try:
+                    cmd = f'gh pr close {pr["number"]} --repo {self.owner}/{repo_name} --comment "Auto-closed by Tech Lead: PR has been stale for {age_days} days. If this work is still needed, please create a fresh PR from the latest main branch."'
+                    result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+                    if result.returncode == 0:
+                        cleaned.append(pr)
+                        self._save_decision({
+                            'timestamp': datetime.now().isoformat(),
+                            'repository': repo_name,
+                            'pr_number': pr['number'],
+                            'pr_title': pr['title'],
+                            'decision': 'CLOSE',
+                            'reasoning': f'Auto-closed: PR stale for {age_days} days',
+                            'auto_closed': True,
+                            'executed': True
+                        })
+                        continue
+                except Exception as e:
+                    self.logger.error(f"Failed to auto-close PR #{pr['number']}: {e}")
+
+            remaining.append(pr)
+
+        if cleaned:
+            self.logger.info(f"Auto-closed {len(cleaned)} stale PRs")
+
+        return remaining
+
     def run(self):
         """Run the Tech Lead review process"""
         self.logger.info(f"\n{'#'*70}")
@@ -593,6 +765,13 @@ _Senior Engineer: Please address the above feedback and push updates._"""
 
             if not open_prs:
                 self.logger.info(f"No open PRs in {repo_name}")
+                continue
+
+            # First, clean up any stale PRs
+            open_prs = self._cleanup_stale_prs(repo_name, open_prs)
+
+            if not open_prs:
+                self.logger.info(f"No remaining open PRs in {repo_name} after cleanup")
                 continue
 
             self.logger.info(f"Found {len(open_prs)} open PRs")

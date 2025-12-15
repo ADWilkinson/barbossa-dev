@@ -21,7 +21,7 @@ class Barbossa:
     Simple personal dev assistant that creates PRs on configured repositories.
     """
 
-    VERSION = "3.0.0"
+    VERSION = "3.1.0"
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths
@@ -33,6 +33,7 @@ class Barbossa:
         self.changelogs_dir = self.work_dir / 'changelogs'
         self.projects_dir = self.work_dir / 'projects'
         self.config_file = self.work_dir / 'config' / 'repositories.json'
+        self.pr_history_file = self.work_dir / 'pr_history.json'
 
         # Ensure directories exist
         for dir_path in [self.logs_dir, self.changelogs_dir, self.projects_dir]:
@@ -41,9 +42,10 @@ class Barbossa:
         # Setup logging
         self._setup_logging()
 
-        # Load config
+        # Load config and PR history
         self.config = self._load_config()
         self.repositories = self.config.get('repositories', [])
+        self.pr_history = self._load_pr_history()
 
         self.logger.info("=" * 60)
         self.logger.info(f"BARBOSSA v{self.VERSION} - Personal Dev Assistant")
@@ -77,17 +79,88 @@ class Barbossa:
         self.logger.error(f"Config file not found: {self.config_file}")
         return {'repositories': []}
 
+    def _load_pr_history(self) -> Dict:
+        """Load PR history to track what was already attempted"""
+        if self.pr_history_file.exists():
+            try:
+                with open(self.pr_history_file, 'r') as f:
+                    return json.load(f)
+            except:
+                pass
+        return {'closed_prs': [], 'merged_prs': [], 'failed_attempts': {}}
+
+    def _save_pr_history(self):
+        """Save PR history"""
+        try:
+            with open(self.pr_history_file, 'w') as f:
+                json.dump(self.pr_history, f, indent=2)
+        except Exception as e:
+            self.logger.warning(f"Could not save PR history: {e}")
+
+    def _get_recent_closed_prs(self, repo: Dict) -> List[str]:
+        """Get titles of recently closed PRs to avoid repeating failed attempts"""
+        owner = self.config.get('owner', 'ADWilkinson')
+        repo_name = repo['name']
+
+        try:
+            result = subprocess.run(
+                f"gh pr list --repo {owner}/{repo_name} --state closed --limit 20 --json title,closedAt,mergedAt",
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                prs = json.loads(result.stdout)
+                # Get titles of PRs that were closed (not merged)
+                closed_titles = [pr['title'] for pr in prs if not pr.get('mergedAt')]
+                return closed_titles
+        except Exception as e:
+            self.logger.warning(f"Could not fetch closed PRs for {repo_name}: {e}")
+        return []
+
+    def _extract_keywords(self, title: str) -> set:
+        """Extract keywords from a PR title for similarity matching"""
+        import re
+        # Remove common prefixes
+        title = re.sub(r'^(feat|fix|refactor|test|chore|docs|style|perf|a11y)[\(:]\s*', '', title, flags=re.IGNORECASE)
+        # Extract significant words (3+ chars, not common words)
+        words = re.findall(r'\b[a-zA-Z]{3,}\b', title.lower())
+        common_words = {'the', 'and', 'for', 'with', 'add', 'remove', 'update', 'fix', 'from', 'into'}
+        return {w for w in words if w not in common_words}
+
+    def _is_similar_to_closed_pr(self, proposed_keywords: set, closed_titles: List[str]) -> Optional[str]:
+        """Check if proposed work is similar to a recently closed PR"""
+        for closed_title in closed_titles:
+            closed_keywords = self._extract_keywords(closed_title)
+            # If more than 50% of keywords match, consider it similar
+            if closed_keywords and proposed_keywords:
+                overlap = len(proposed_keywords & closed_keywords)
+                similarity = overlap / min(len(proposed_keywords), len(closed_keywords))
+                if similarity > 0.5:
+                    return closed_title
+        return None
+
     def _generate_session_id(self) -> str:
         """Generate unique session ID"""
         return datetime.now().strftime('%Y%m%d-%H%M%S') + '-' + str(uuid.uuid4())[:8]
 
-    def _create_prompt(self, repo: Dict, session_id: str) -> str:
+    def _create_prompt(self, repo: Dict, session_id: str, closed_pr_titles: List[str] = None) -> str:
         """Create a context-rich Claude prompt for a repository"""
         timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
 
         # Get package manager (defaults to npm if not specified)
         pkg_manager = repo.get('package_manager', 'npm')
         env_file = repo.get('env_file', '.env')
+
+        # Build closed PRs section to avoid repetition
+        if closed_pr_titles:
+            closed_pr_section = "RECENTLY CLOSED PRs (DO NOT REPEAT THESE):\n"
+            for title in closed_pr_titles[:10]:
+                closed_pr_section += f"  - {title}\n"
+            closed_pr_section += "\n  These PRs were closed without merging. DO NOT attempt similar work.\n"
+        else:
+            closed_pr_section = "(no recently closed PRs)"
 
         # Build install/build commands based on package manager
         if pkg_manager == 'pnpm':
@@ -181,6 +254,8 @@ PHASE 0 - RECONNAISSANCE (do this FIRST, before any coding):
   4. Explore the codebase structure and understand what exists
   5. Think critically: What would ACTUALLY be most valuable right now?
 
+{closed_pr_section}
+
 DO NOT just pick something obvious or easy. Think like a senior engineer:
 - What's the biggest pain point in this codebase?
 - What would make the biggest impact for users or developers?
@@ -205,6 +280,13 @@ QUALITY STANDARDS
 - One focused improvement per PR - no scope creep
 - Write clean, maintainable code
 
+MANDATORY TEST REQUIREMENTS:
+- If you add or modify >50 lines of code with business logic, you MUST add tests
+- Check for existing test patterns: look for *.test.ts or *.test.tsx files
+- Tests should cover the core functionality, not just edge cases
+- If you can't add tests (e.g., no test setup), document why in PR description
+- Tech Lead WILL REJECT PRs with >50 lines and no tests
+
 ABSOLUTELY DO NOT:
 - Start coding without first reviewing repo state (PRs, commits, issues)
 - Add comments or documentation as the main change
@@ -213,6 +295,7 @@ ABSOLUTELY DO NOT:
 - Break existing functionality
 - Ignore the design system or brand rules
 - Do the same type of fix you've done in previous sessions
+- Repeat work similar to recently CLOSED PRs (see list above if any)
 
 ================================================================================
 PACKAGE MANAGER: {pkg_manager.upper()}
@@ -443,13 +526,38 @@ See: {output_file}
             self.logger.info(f"  {repo['name']}: {len(prs)} open PRs")
         return total
 
+    def _load_pending_feedback(self) -> Dict:
+        """Load pending feedback from Tech Lead"""
+        pending_file = self.work_dir / 'pending_feedback.json'
+        if pending_file.exists():
+            try:
+                with open(pending_file, 'r') as f:
+                    return json.load(f)
+            except:
+                pass
+        return {}
+
     def _get_prs_needing_attention(self, repo: Dict) -> List[Dict]:
         """Get PRs that have failing checks, merge conflicts, or need fixes"""
         prs = self._get_open_prs(repo)
         needs_attention = []
+        repo_name = repo['name']
+
+        # Load pending feedback from Tech Lead
+        pending_feedback = self._load_pending_feedback()
 
         for pr in prs:
-            # Check if PR has requested changes (highest priority)
+            pr_number = pr.get('number')
+            feedback_key = f"{repo_name}/{pr_number}"
+
+            # Check if Tech Lead has pending feedback (highest priority)
+            if feedback_key in pending_feedback:
+                pr['attention_reason'] = 'tech_lead_feedback'
+                pr['tech_lead_feedback'] = pending_feedback[feedback_key].get('feedback', 'Please address Tech Lead feedback')
+                needs_attention.append(pr)
+                continue
+
+            # Check if PR has requested changes on GitHub
             if pr.get('reviewDecision') == 'CHANGES_REQUESTED':
                 pr['attention_reason'] = 'changes_requested'
                 needs_attention.append(pr)
@@ -661,8 +769,13 @@ Begin your work now."""
         self.logger.info(f"Session ID: {session_id}")
         self.logger.info(f"{'='*60}\n")
 
-        # Create prompt
-        prompt = self._create_prompt(repo, session_id)
+        # Get recently closed PRs to avoid repeating failed attempts
+        closed_pr_titles = self._get_recent_closed_prs(repo)
+        if closed_pr_titles:
+            self.logger.info(f"Found {len(closed_pr_titles)} recently closed PRs to avoid")
+
+        # Create prompt with closed PR context
+        prompt = self._create_prompt(repo, session_id, closed_pr_titles)
 
         # Save prompt to file
         prompt_file = self.work_dir / f'prompt_{repo_name}.txt'
@@ -735,12 +848,13 @@ Begin your work now."""
                 prs_needing_attention.append((repo, pr))
 
         if prs_needing_attention:
-            # Prioritize changes_requested over failing_checks over merge_conflicts
+            # Prioritize: tech_lead_feedback > changes_requested > failing_checks > merge_conflicts
             prs_needing_attention.sort(
                 key=lambda x: (
-                    0 if x[1].get('attention_reason') == 'changes_requested'
-                    else 1 if x[1].get('attention_reason') == 'failing_checks'
-                    else 2
+                    0 if x[1].get('attention_reason') == 'tech_lead_feedback'
+                    else 1 if x[1].get('attention_reason') == 'changes_requested'
+                    else 2 if x[1].get('attention_reason') == 'failing_checks'
+                    else 3
                 )
             )
 
