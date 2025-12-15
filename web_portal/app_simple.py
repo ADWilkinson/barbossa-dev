@@ -1063,8 +1063,37 @@ DASHBOARD_HTML = """
             </div>
             {% endif %}
 
+            <!-- PR Metrics -->
+            {% if total_decisions > 0 %}
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">PR Analytics</div>
+                    <div class="card-meta">{{ total_decisions }} total</div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;">
+                    <div style="text-align: center; padding: 16px; background: var(--bg); border-radius: 8px;">
+                        <div style="font-size: 24px; font-weight: 600; color: var(--success);">{{ merge_rate }}%</div>
+                        <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase;">Merge Rate</div>
+                    </div>
+                    <div style="text-align: center; padding: 16px; background: var(--bg); border-radius: 8px;">
+                        <div style="font-size: 24px; font-weight: 600; color: {{ 'var(--danger)' if test_only_count > 5 else 'var(--text)' }};">{{ test_only_count }}</div>
+                        <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase;">Test-only PRs</div>
+                    </div>
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Type Distribution</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    {% for pr_type, count in pr_types.items() %}
+                    <div style="padding: 6px 12px; background: var(--bg); border-radius: 6px; font-size: 12px;">
+                        <span style="color: {{ 'var(--danger)' if pr_type == 'test' else 'var(--text)' }};">{{ pr_type }}</span>
+                        <span style="color: var(--text-dim); margin-left: 4px;">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Cron Schedule -->
-            <div class="card {{ 'full-width' if not pending_feedback and not (recent_errors and is_admin) else '' }}">
+            <div class="card {{ 'full-width' if not pending_feedback and not (recent_errors and is_admin) and total_decisions == 0 else '' }}">
                 <div class="card-header">
                     <div class="card-title">Schedule</div>
                     <div class="card-meta">Automated runs</div>
@@ -1505,6 +1534,20 @@ def dashboard():
         for pr in repo.get('open_prs', [])
     )
 
+    # Calculate metrics for dashboard
+    pr_types = {}
+    for d in tech_lead_decisions:
+        title = d.get('pr_title', '')
+        if ':' in title:
+            pr_type = title.split(':')[0].split('(')[0].strip().lower()
+        else:
+            pr_type = 'other'
+        pr_types[pr_type] = pr_types.get(pr_type, 0) + 1
+
+    total_decisions = len(tech_lead_decisions)
+    merge_rate = (tech_lead_stats['merged'] / total_decisions * 100) if total_decisions > 0 else 0
+    test_only_count = pr_types.get('test', 0)
+
     return render_template_string(
         DASHBOARD_HTML,
         repositories=repositories,
@@ -1525,7 +1568,12 @@ def dashboard():
         system_health=system_health,
         recent_errors=recent_errors,
         is_admin=admin,
-        now=datetime.now().strftime('%Y-%m-%d %H:%M')
+        now=datetime.now().strftime('%Y-%m-%d %H:%M'),
+        # Metrics
+        pr_types=pr_types,
+        merge_rate=round(merge_rate, 1),
+        test_only_count=test_only_count,
+        total_decisions=total_decisions
     )
 
 
@@ -1678,6 +1726,65 @@ def api_pending_feedback():
     return jsonify({
         'count': len(feedback),
         'items': list(feedback.values())
+    })
+
+
+@app.route('/api/metrics')
+def api_metrics():
+    """API endpoint for system metrics and PR analytics"""
+    config = load_config()
+    owner = config.get('owner', 'ADWilkinson')
+    decisions = load_tech_lead_decisions()
+    sessions = load_sessions()
+
+    # Calculate PR type distribution from decisions
+    pr_types = {}
+    for d in decisions:
+        title = d.get('pr_title', '')
+        # Extract type prefix (feat, fix, test, refactor, etc.)
+        if ':' in title:
+            pr_type = title.split(':')[0].split('(')[0].strip().lower()
+        else:
+            pr_type = 'other'
+        pr_types[pr_type] = pr_types.get(pr_type, 0) + 1
+
+    # Calculate merge rate
+    total_decisions = len(decisions)
+    merged = sum(1 for d in decisions if d.get('decision') == 'MERGE')
+    closed = sum(1 for d in decisions if d.get('decision') == 'CLOSE')
+    merge_rate = (merged / total_decisions * 100) if total_decisions > 0 else 0
+
+    # Calculate average scores
+    value_scores = [d.get('value_score', 0) for d in decisions if d.get('value_score')]
+    quality_scores = [d.get('quality_score', 0) for d in decisions if d.get('quality_score')]
+    avg_value = sum(value_scores) / len(value_scores) if value_scores else 0
+    avg_quality = sum(quality_scores) / len(quality_scores) if quality_scores else 0
+
+    # Session stats
+    completed_sessions = sum(1 for s in sessions if s.get('status') == 'completed')
+    failed_sessions = sum(1 for s in sessions if s.get('status') in ('failed', 'error', 'timeout'))
+    success_rate = (completed_sessions / len(sessions) * 100) if sessions else 0
+
+    # Test-only PR stats (to track if the new policy is working)
+    test_only_prs = sum(1 for d in decisions if d.get('pr_title', '').lower().startswith('test:'))
+    test_only_closed = sum(1 for d in decisions
+                          if d.get('pr_title', '').lower().startswith('test:')
+                          and d.get('decision') == 'CLOSE')
+
+    return jsonify({
+        'pr_type_distribution': pr_types,
+        'total_decisions': total_decisions,
+        'merged': merged,
+        'closed': closed,
+        'merge_rate': round(merge_rate, 1),
+        'avg_value_score': round(avg_value, 1),
+        'avg_quality_score': round(avg_quality, 1),
+        'session_success_rate': round(success_rate, 1),
+        'test_only_prs': test_only_prs,
+        'test_only_closed': test_only_closed,
+        'total_sessions': len(sessions),
+        'completed_sessions': completed_sessions,
+        'failed_sessions': failed_sessions
     })
 
 

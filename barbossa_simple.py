@@ -268,12 +268,21 @@ PRIORITY ORDER (follow this strictly):
 2. FIXES - Bugs, errors, or broken behavior
 3. IMPROVEMENTS - Performance, UX, developer experience
 4. REFACTORS - Code quality improvements that reduce complexity
-5. TESTS - ONLY if the module has ZERO tests AND is critical
 
-DO NOT CREATE TEST-ONLY PRs. Period.
+================================================================================
+HARD RULES - VIOLATIONS WILL BE AUTO-REJECTED
+================================================================================
+1. NO TEST-ONLY PRs - PRs with titles starting "test:" will be AUTO-CLOSED
+2. NO "adding test coverage" - this is busywork, not valuable engineering
+3. Tests MUST accompany features/fixes, never standalone
+4. If you can't find a feature/fix to implement, output "NO_VALUABLE_WORK_FOUND" and EXIT
+5. PR must add USER-FACING value (not just "developer convenience")
 
-Tests are only valuable when they accompany actual features or fixes.
-Creating tests for existing code is LOW VALUE busy work.
+The Tech Lead WILL AUTO-CLOSE any PR that:
+- Has title starting with "test:" or "test("
+- Only adds tests without accompanying feature/fix
+- Adds tests for code that isn't actively used
+- Is described as "adding test coverage" or "comprehensive tests"
 
 BEFORE working on ANY code, verify it's actually USED:
   grep -r "import.*ModuleName" src/  # Check if anything imports it
@@ -283,8 +292,15 @@ If a module has NO imports (dead code), DO NOT touch it.
 If a component is not rendered anywhere, DO NOT touch it.
 Focus on code that users actually interact with.
 
-"Adding test coverage" is NOT valuable work. The codebase already has tests.
-Ship features. Fix bugs. Improve UX. That's what matters.
+The codebase has ENOUGH tests. Ship features. Fix bugs. Improve UX.
+
+If after analyzing the codebase you cannot find a valuable FEATURE or FIX to implement,
+you MUST output this exact message and stop:
+
+  NO_VALUABLE_WORK_FOUND: Could not identify a high-value feature or fix.
+  Skipping PR creation to avoid low-value busywork.
+
+DO NOT create a test-only PR as a fallback. That wastes everyone's time.
 
 BE CREATIVE. You are an autonomous engineer, not a task executor.
 Your job is to identify the highest-value improvement, not follow a checklist.
@@ -451,6 +467,44 @@ Begin your work now."""
                 json.dump(sessions, f, indent=2)
         except:
             pass
+
+    def _cleanup_stale_sessions(self):
+        """Mark sessions that have been running for too long as timeout"""
+        sessions_file = self.work_dir / 'sessions.json'
+
+        if not sessions_file.exists():
+            return
+
+        try:
+            with open(sessions_file, 'r') as f:
+                sessions = json.load(f)
+
+            modified = False
+            now = datetime.now()
+
+            for session in sessions:
+                if session.get('status') == 'running':
+                    started_str = session.get('started', '')
+                    try:
+                        started = datetime.fromisoformat(started_str)
+                        age_hours = (now - started).total_seconds() / 3600
+
+                        # Mark sessions older than 2 hours as timeout
+                        if age_hours > 2:
+                            session['status'] = 'timeout'
+                            session['completed'] = now.isoformat()
+                            session['timeout_reason'] = f'Session exceeded 2 hour limit (ran for {age_hours:.1f}h)'
+                            modified = True
+                            self.logger.info(f"Marked stale session as timeout: {session.get('session_id')} ({age_hours:.1f}h old)")
+                    except (ValueError, TypeError):
+                        pass
+
+            if modified:
+                with open(sessions_file, 'w') as f:
+                    json.dump(sessions, f, indent=2)
+
+        except Exception as e:
+            self.logger.warning(f"Could not cleanup stale sessions: {e}")
 
     def _extract_pr_url(self, log_file: Path) -> Optional[str]:
         """Extract PR URL from Claude's output"""
@@ -859,6 +913,9 @@ Begin your work now."""
         self.logger.info(f"BARBOSSA RUN STARTED")
         self.logger.info(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         self.logger.info(f"{'#'*60}\n")
+
+        # Cleanup stale sessions before starting
+        self._cleanup_stale_sessions()
 
         # PRIORITY 1: Always check for PRs needing attention first (requested changes, failing CI)
         # This ensures Tech Lead feedback is addressed before creating new work

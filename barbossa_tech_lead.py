@@ -712,6 +712,25 @@ _Senior Engineer: Please address the above feedback and push updates._"""
             }
             self.logger.info(f"AUTO: Requesting changes - Too many files ({pr.get('changedFiles')})")
 
+        # Auto-close test-only PRs (they don't add user value)
+        if not quick_reject:
+            pr_title = pr.get('title', '').lower().strip()
+            is_test_only = (
+                pr_title.startswith('test:') or
+                pr_title.startswith('test(') or
+                'add test' in pr_title and 'feat' not in pr_title and 'fix' not in pr_title
+            )
+            if is_test_only:
+                quick_reject = {
+                    'decision': 'CLOSE',
+                    'reasoning': 'Test-only PRs are deprioritized per policy. Tests should accompany features or fixes, not be standalone. Focus engineering effort on user-facing improvements.',
+                    'value_score': 2,
+                    'quality_score': 5,
+                    'bloat_risk': 'LOW',
+                    'auto_rejected': True
+                }
+                self.logger.info(f"AUTO: Closing test-only PR - '{pr.get('title')}'")
+
         if quick_reject:
             # Execute the auto-decision
             self._execute_decision(repo_name, pr, quick_reject)
