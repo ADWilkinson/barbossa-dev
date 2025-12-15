@@ -1,1 +1,28 @@
-[]
+[
+  {
+    "session_id": "20251215-050002-a58f30b6",
+    "repository": "usdctofiat",
+    "started": "2025-12-15T05:00:03.084161",
+    "status": "running",
+    "output_file": "/app/logs/claude_usdctofiat_20251215_050003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================..."
+  },
+  {
+    "session_id": "20251215-050002-da3a8f85",
+    "repository": "peerlytics",
+    "started": "2025-12-15T05:00:03.039696",
+    "status": "running",
+    "output_file": "/app/logs/claude_peerlytics_20251215_050003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================..."
+  },
+  {
+    "session_id": "20251215-045452-253655b1",
+    "repository": "peerlytics",
+    "started": "2025-12-15T04:54:52.490390",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_045452.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T04:59:14.229394",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/29"
+  }
+]

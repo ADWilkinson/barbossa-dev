@@ -311,7 +311,7 @@ DO NOT use npm if the project uses pnpm or yarn!
 EXECUTION WORKFLOW
 ================================================================================
 Phase 1 - Setup (CRITICAL - must have latest code):
-  cd ~/barbossa-engineer/projects
+  cd /app/projects
   if [ ! -d "{repo['name']}" ]; then
     git clone {repo['url']} {repo['name']}
   fi
@@ -683,7 +683,7 @@ PR Details:
 WORKFLOW
 ================================================================================
 Phase 1 - Setup:
-  cd ~/barbossa-engineer/projects
+  cd /app/projects
   if [ ! -d "{repo_name}" ]; then
     git clone {repo['url']} {repo_name}
   fi
