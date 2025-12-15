@@ -846,7 +846,7 @@ _Senior Engineer: Please address the above feedback and push updates._"""
         self.logger.info(f"Invoking Claude for review...")
 
         # Run Claude
-        cmd = f"claude --dangerously-skip-permissions --model opus < {prompt_file} > {output_file} 2>&1"
+        cmd = f"cat {prompt_file} | claude --dangerously-skip-permissions -p --model opus > {output_file} 2>&1"
 
         try:
             result = subprocess.run(

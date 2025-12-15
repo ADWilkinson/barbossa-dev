@@ -808,7 +808,7 @@ Begin your work now."""
 
         self.logger.info(f"Launching Claude to fix PR #{pr['number']}...")
 
-        cmd = f"claude --dangerously-skip-permissions --model opus < {prompt_file} > {output_file} 2>&1"
+        cmd = f"cat {prompt_file} | claude --dangerously-skip-permissions -p --model opus > {output_file} 2>&1"
 
         try:
             result = subprocess.run(
@@ -872,7 +872,7 @@ Begin your work now."""
         self.logger.info(f"Launching Claude for {repo_name}...")
         self.logger.info(f"Output: {output_file}")
 
-        cmd = f"claude --dangerously-skip-permissions --model opus < {prompt_file} > {output_file} 2>&1"
+        cmd = f"cat {prompt_file} | claude --dangerously-skip-permissions -p --model opus > {output_file} 2>&1"
 
         try:
             # Run Claude (this will take a while)
