@@ -1071,16 +1071,16 @@ DASHBOARD_HTML = """
                 </div>
                 <div class="cron-schedule">
                     <div class="cron-item">
-                        <div class="cron-agent">Engineer</div>
-                        <div class="cron-time">Every hour</div>
+                        <div class="cron-agent">Tech Lead</div>
+                        <div class="cron-time">:50 odd hrs</div>
                     </div>
                     <div class="cron-item">
-                        <div class="cron-agent">Tech Lead</div>
-                        <div class="cron-time">Every 5h</div>
+                        <div class="cron-agent">Engineer</div>
+                        <div class="cron-time">:00 every hr</div>
                     </div>
                     <div class="cron-item">
                         <div class="cron-agent">Auditor</div>
-                        <div class="cron-time">Daily 6AM</div>
+                        <div class="cron-time">6:30 AM</div>
                     </div>
                 </div>
                 <div style="margin-top: 16px; font-size: 12px; color: var(--text-dim);">

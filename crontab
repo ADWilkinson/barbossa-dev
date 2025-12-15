@@ -1,22 +1,23 @@
-# Barbossa v3.2 - Cron Schedule
-# Senior Engineer: Every 1 hour to create or review PRs
-# Tech Lead: Every 2 hours to review, merge, or close PRs
-# Auditor: Daily at 6:00 AM for system health and self-improvement
+# Barbossa v3.3 - Cron Schedule
+# Tech Lead runs FIRST, then Senior Engineer picks up feedback
+# This ensures the feedback loop works properly
 
 # Load environment
 SHELL=/bin/bash
 PATH=/usr/local/bin:/usr/bin:/bin
 
-# Senior Engineer - Every hour at minute 0
-# Creates new PRs and fixes failing CI
+# Tech Lead - Every 2 hours at minute :50 (RUNS FIRST)
+# Reviews PRs with strict criteria, has authority to merge or close
+# Runs at: 1:50, 3:50, 5:50, 7:50, 9:50, 11:50, 13:50, 15:50, 17:50, 19:50, 21:50, 23:50
+50 1,3,5,7,9,11,13,15,17,19,21,23 * * * su - barbossa -c "cd /app && python3 barbossa_tech_lead.py" >> /app/logs/tech_lead_cron.log 2>&1
+
+# Senior Engineer - Every hour at minute :00 (RUNS AFTER Tech Lead)
+# Creates new PRs OR addresses feedback from Tech Lead
+# At even hours (2, 4, 6...) this runs 10 min after Tech Lead finished
 0 * * * * su - barbossa -c "cd /app && python3 barbossa_simple.py" >> /app/logs/cron.log 2>&1
 
-# Tech Lead - Every 2 hours (0:00, 2:00, 4:00, 6:00, 8:00, 10:00, 12:00, 14:00, 16:00, 18:00, 20:00, 22:00)
-# Reviews PRs with strict criteria, has authority to merge or close
-0 */2 * * * su - barbossa -c "cd /app && python3 barbossa_tech_lead.py" >> /app/logs/tech_lead_cron.log 2>&1
-
-# Auditor - Daily at 6:00 AM
+# Auditor - Daily at 6:30 AM (after the 6:00 Senior Engineer run)
 # Analyzes system performance, detects patterns, generates recommendations
-0 6 * * * su - barbossa -c "cd /app && python3 barbossa_auditor.py --days 7" >> /app/logs/auditor_cron.log 2>&1
+30 6 * * * su - barbossa -c "cd /app && python3 barbossa_auditor.py --days 7" >> /app/logs/auditor_cron.log 2>&1
 
 # Empty line required at end
