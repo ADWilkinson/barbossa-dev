@@ -1,5 +1,27 @@
 [
   {
+    "session_id": "20251215-050300-88cd04a7",
+    "repository": "usdctofiat",
+    "started": "2025-12-15T05:03:00.494608",
+    "status": "completed",
+    "output_file": "/app/logs/claude_usdctofiat_20251215_050300.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T05:09:59.425153",
+    "pr_url": "https://github.com/ADWilkinson/usdctofiat/pull/22",
+    "summary": "** Added comprehensive test coverage for the `depositSetups` module (`src/lib/depositSetups.ts`), increasing tests from 3 to 73."
+  },
+  {
+    "session_id": "20251215-050300-30903392",
+    "repository": "peerlytics",
+    "started": "2025-12-15T05:03:00.481564",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_20251215_050300.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T05:13:20.122075",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/31",
+    "summary": "Added session storage persistence and CSV export functionality to the Live Events tab in the Peerlytics dashboard:"
+  },
+  {
     "session_id": "20251215-050002-a58f30b6",
     "repository": "usdctofiat",
     "started": "2025-12-15T05:00:03.084161",

@@ -279,10 +279,22 @@ MANDATORY REJECTION CRITERIA (auto-close if ANY are true):
 6. Only adds comments/docs without meaningful code changes
 7. Duplicate of existing functionality
 8. Changes "do not touch" areas without strong justification
+9. TEST-ONLY PR that doesn't accompany a feature or fix (LOW VALUE)
+10. Tests for dead code (code that isn't imported/used anywhere)
+
+TEST-ONLY PR POLICY (STRICT - CLOSE these PRs):
+- PRs that ONLY add tests with no feature/fix = CLOSE (not request changes)
+- Tests for code that isn't imported/used anywhere = CLOSE immediately
+- "Comprehensive test coverage" PRs are busywork = CLOSE
+- The codebase has enough tests - we need features and fixes
+
+When you see a test-only PR, your decision should be CLOSE with reasoning:
+"Closing: Test-only PRs do not add user value. Focus on features and fixes."
 
 VALUE ASSESSMENT (be brutally honest):
 - Does this add GENUINE user or developer value?
 - Is this solving a real problem or just busywork?
+- Is this a test-only PR? If so, it's likely low value
 - Is this the SIMPLEST solution to the problem?
 - Could this be done better with less code?
 - Does this follow existing patterns in the codebase?

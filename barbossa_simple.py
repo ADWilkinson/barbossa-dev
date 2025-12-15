@@ -263,6 +263,29 @@ DO NOT just pick something obvious or easy. Think like a senior engineer:
 - Are there patterns that could be improved across the codebase?
 - Is there missing functionality that would be high-value?
 
+PRIORITY ORDER (follow this strictly):
+1. FEATURES - New user-facing functionality or capabilities
+2. FIXES - Bugs, errors, or broken behavior
+3. IMPROVEMENTS - Performance, UX, developer experience
+4. REFACTORS - Code quality improvements that reduce complexity
+5. TESTS - ONLY if the module has ZERO tests AND is critical
+
+DO NOT CREATE TEST-ONLY PRs. Period.
+
+Tests are only valuable when they accompany actual features or fixes.
+Creating tests for existing code is LOW VALUE busy work.
+
+BEFORE working on ANY code, verify it's actually USED:
+  grep -r "import.*ModuleName" src/  # Check if anything imports it
+  grep -r "from.*ModuleName" src/    # Check for named imports
+
+If a module has NO imports (dead code), DO NOT touch it.
+If a component is not rendered anywhere, DO NOT touch it.
+Focus on code that users actually interact with.
+
+"Adding test coverage" is NOT valuable work. The codebase already has tests.
+Ship features. Fix bugs. Improve UX. That's what matters.
+
 BE CREATIVE. You are an autonomous engineer, not a task executor.
 Your job is to identify the highest-value improvement, not follow a checklist.
 
