@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 """
-Barbossa Tech Lead v1.0 - PR Review & Governance Agent
+Barbossa Tech Lead v2.0 - PR Review & Governance Agent
 A strict, critical reviewer that manages PRs created by the Senior Engineer.
 Runs every 5 hours to review, merge, or close PRs with full authority.
+
+v2.0 Changes:
+- Removed brittle pending_feedback.json state tracking
+- GitHub is now the single source of truth
+- Claude reads PR comments directly and understands context
+- No more timestamp-based coordination - Claude makes intelligent decisions
 """
 
 import json
@@ -20,9 +26,10 @@ class BarbossaTechLead:
     """
     Tech Lead agent that reviews PRs with extreme scrutiny.
     Has authority to merge or close PRs based on objective criteria.
+    Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "1.1.0"
+    VERSION = "2.0.0"
     ROLE = "tech_lead"
 
     # Review criteria thresholds
@@ -37,7 +44,6 @@ class BarbossaTechLead:
         self.logs_dir = self.work_dir / 'logs'
         self.decisions_file = self.work_dir / 'tech_lead_decisions.json'
         self.config_file = self.work_dir / 'config' / 'repositories.json'
-        self.pending_feedback_file = self.work_dir / 'pending_feedback.json'
 
         self.logs_dir.mkdir(parents=True, exist_ok=True)
 
@@ -51,6 +57,7 @@ class BarbossaTechLead:
         self.logger.info("Role: PR Review & Governance")
         self.logger.info("Authority: MERGE / CLOSE / REQUEST CHANGES")
         self.logger.info(f"Repositories: {len(self.repositories)}")
+        self.logger.info("Mode: GitHub as single source of truth")
         self.logger.info("=" * 70)
 
     def _setup_logging(self):
@@ -97,53 +104,12 @@ class BarbossaTechLead:
         with open(self.decisions_file, 'w') as f:
             json.dump(decisions, f, indent=2)
 
-    def _add_pending_feedback(self, repo_name: str, pr_number: int, feedback: str):
-        """Track a PR that needs Senior Engineer attention"""
-        pending = {}
-        if self.pending_feedback_file.exists():
-            try:
-                with open(self.pending_feedback_file, 'r') as f:
-                    pending = json.load(f)
-            except:
-                pending = {}
-
-        key = f"{repo_name}/{pr_number}"
-        pending[key] = {
-            'repo': repo_name,
-            'pr_number': pr_number,
-            'feedback': feedback,
-            'timestamp': datetime.now().isoformat(),
-            'addressed': False
-        }
-
-        with open(self.pending_feedback_file, 'w') as f:
-            json.dump(pending, f, indent=2)
-        self.logger.info(f"Saved pending feedback for {key}")
-
-    def _remove_pending_feedback(self, repo_name: str, pr_number: int):
-        """Remove a PR from pending feedback (after merge/close)"""
-        if not self.pending_feedback_file.exists():
-            return
-
-        try:
-            with open(self.pending_feedback_file, 'r') as f:
-                pending = json.load(f)
-
-            key = f"{repo_name}/{pr_number}"
-            if key in pending:
-                del pending[key]
-                with open(self.pending_feedback_file, 'w') as f:
-                    json.dump(pending, f, indent=2)
-                self.logger.info(f"Removed pending feedback for {key}")
-        except Exception as e:
-            self.logger.warning(f"Could not remove pending feedback: {e}")
-
     def _get_open_prs(self, repo_name: str) -> List[Dict]:
-        """Get all open PRs for a repository"""
+        """Get all open PRs for a repository with full context"""
         try:
             result = subprocess.run(
                 f"gh pr list --repo {self.owner}/{repo_name} --state open "
-                f"--json number,title,headRefName,body,additions,deletions,changedFiles,author,createdAt,updatedAt,url,labels,reviews,reviewDecision "
+                f"--json number,title,headRefName,body,additions,deletions,changedFiles,author,createdAt,updatedAt,url,labels,reviews,reviewDecision,mergeable,mergeStateStatus "
                 f"--limit 50",
                 shell=True,
                 capture_output=True,
@@ -154,6 +120,23 @@ class BarbossaTechLead:
                 return json.loads(result.stdout)
         except Exception as e:
             self.logger.warning(f"Could not fetch PRs for {repo_name}: {e}")
+        return []
+
+    def _get_pr_comments(self, repo_name: str, pr_number: int) -> List[Dict]:
+        """Get all comments on a PR - this is the conversation history"""
+        try:
+            result = subprocess.run(
+                f"gh pr view {pr_number} --repo {self.owner}/{repo_name} --json comments",
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                data = json.loads(result.stdout)
+                return data.get('comments', [])
+        except Exception as e:
+            self.logger.warning(f"Could not fetch comments for PR #{pr_number}: {e}")
         return []
 
     def _get_pr_diff(self, repo_name: str, pr_number: int) -> str:
@@ -211,8 +194,27 @@ class BarbossaTechLead:
             self.logger.warning(f"Could not get files for PR #{pr_number}: {e}")
         return []
 
-    def _create_review_prompt(self, repo: Dict, pr: Dict, diff: str, checks: Dict, files: List[Dict]) -> str:
-        """Create the Claude prompt for reviewing a PR"""
+    def _format_comments_for_prompt(self, comments: List[Dict]) -> str:
+        """Format PR comments into a readable conversation history"""
+        if not comments:
+            return "(No comments on this PR)"
+
+        formatted = []
+        for comment in comments[-20:]:  # Last 20 comments max
+            author = comment.get('author', {}).get('login', 'unknown')
+            body = comment.get('body', '')[:1000]  # Truncate long comments
+            created = comment.get('createdAt', '')[:10]  # Just the date
+
+            # Skip Vercel deploy comments - they're noise
+            if author == 'vercel' or '[vc]:' in body:
+                continue
+
+            formatted.append(f"[{created}] @{author}:\n{body}\n")
+
+        return "\n---\n".join(formatted) if formatted else "(No relevant comments)"
+
+    def _create_review_prompt(self, repo: Dict, pr: Dict, diff: str, checks: Dict, files: List[Dict], comments: List[Dict]) -> str:
+        """Create the Claude prompt for reviewing a PR - includes full conversation context"""
         session_id = self._generate_session_id()
 
         # Truncate diff if too long
@@ -224,6 +226,13 @@ class BarbossaTechLead:
             file_list += f"\n  ... and {len(files) - 30} more files"
 
         checks_status = "PASSING" if checks.get('all_passing') else ("FAILING" if checks.get('any_failing') else "PENDING")
+
+        # Format the conversation history
+        conversation = self._format_comments_for_prompt(comments)
+
+        # Check merge status
+        mergeable = pr.get('mergeable', 'UNKNOWN')
+        merge_state = pr.get('mergeStateStatus', 'UNKNOWN')
 
         return f"""You are the Barbossa Tech Lead - a strict, critical code reviewer with full authority to MERGE or CLOSE pull requests.
 
@@ -242,6 +251,7 @@ PR #{pr['number']}: {pr['title']}
 URL: {pr['url']}
 Author: {pr.get('author', {}).get('login', 'unknown')}
 Created: {pr.get('createdAt', 'unknown')}
+Last Updated: {pr.get('updatedAt', 'unknown')}
 Branch: {pr.get('headRefName', 'unknown')}
 
 Lines Added: {pr.get('additions', 0)}
@@ -249,6 +259,18 @@ Lines Deleted: {pr.get('deletions', 0)}
 Files Changed: {pr.get('changedFiles', 0)}
 
 CI Status: {checks_status}
+Mergeable: {mergeable}
+Merge State: {merge_state}
+
+================================================================================
+PR CONVERSATION HISTORY (IMPORTANT - READ THIS)
+================================================================================
+This is the comment history on this PR. Use this to understand:
+- Has feedback already been given?
+- Has feedback been addressed?
+- What's the current state of the review?
+
+{conversation}
 
 ================================================================================
 FILES CHANGED
@@ -270,7 +292,12 @@ YOUR CRITICAL REVIEW CRITERIA
 ================================================================================
 You must evaluate this PR with EXTREME SCRUTINY. Be harsh but fair.
 Your job is to PROTECT the codebase from bloat, low-value changes, and bad UX.
-When in doubt, CLOSE. It's better to reject 10 mediocre PRs than merge 1 bad one.
+
+IMPORTANT: You have full conversation context above. Use it to understand:
+1. If you (Tech Lead) already requested changes, check if they were addressed
+2. If the Senior Engineer replied with verification, consider it
+3. Don't repeat feedback that was already addressed
+4. Make a FRESH decision based on current state
 
 MANDATORY REJECTION CRITERIA (auto-close if ANY are true):
 1. CI checks are FAILING - never merge broken code
@@ -282,16 +309,13 @@ MANDATORY REJECTION CRITERIA (auto-close if ANY are true):
 7. Duplicate of existing functionality
 8. Changes "do not touch" areas without strong justification
 9. TEST-ONLY PR that doesn't accompany a feature or fix (LOW VALUE)
-10. Tests for dead code (code that isn't imported/used anywhere)
+10. Has merge conflicts that weren't resolved
 
 TEST-ONLY PR POLICY (STRICT - CLOSE these PRs):
 - PRs that ONLY add tests with no feature/fix = CLOSE (not request changes)
 - Tests for code that isn't imported/used anywhere = CLOSE immediately
 - "Comprehensive test coverage" PRs are busywork = CLOSE
 - The codebase has enough tests - we need features and fixes
-
-When you see a test-only PR, your decision should be CLOSE with reasoning:
-"Closing: Test-only PRs do not add user value. Focus on features and fixes."
 
 ================================================================================
 FEATURE VALUE ASSESSMENT (BE BRUTALLY CRITICAL)
@@ -304,35 +328,11 @@ CLOSE if the feature:
 - Is a "nice to have" that clutters the interface
 - Solves a problem that doesn't really exist
 - Is over-engineered for the use case
-- Adds configuration/options most users won't use
-- Is developer-focused busy work disguised as a feature
-
-Features must pass the "so what?" test:
-- "Added a loading spinner" - So what? Does it improve UX significantly?
-- "Added error handling" - So what? Were errors actually happening?
-- "Refactored X for cleanliness" - So what? Was it actually a problem?
-- "Added accessibility" - Good, but is it done well or just checkbox compliance?
-
-Be especially skeptical of:
-- "Polish" PRs that touch many small things
-- Features that add UI elements without clear purpose
-- Abstractions that don't simplify anything
-- "Improvements" that are really just changes
 
 ================================================================================
 UI/UX QUALITY GATE (STRICT - DESIGN MATTERS)
 ================================================================================
 These apps have carefully designed UIs. PRs that harm the visual design = CLOSE.
-
-CLOSE immediately if the PR:
-- Makes the UI look CRAMPED or cluttered
-- Breaks the established visual rhythm/spacing
-- Uses colors that don't match the design system
-- Adds elements that feel out of place or jarring
-- Creates inconsistent styling vs existing components
-- Ignores the brand rules (see project context below)
-- Adds too many UI elements to one view
-- Makes the interface feel "busy" or overwhelming
 
 For peerlytics (terminal aesthetic):
 - Square corners ONLY - any border-radius = CLOSE
@@ -343,47 +343,6 @@ For usdctofiat (Davy Jones nautical theme):
 - Canvas/charcoal color palette only
 - Morion serif for headings, Wigrum sans for body
 - Warm, minimal, nautical feel must be preserved
-
-If a feature adds value but harms UI quality = REQUEST_CHANGES or CLOSE.
-Never sacrifice design quality for functionality.
-
-================================================================================
-BLOAT DETECTION (ZERO TOLERANCE)
-================================================================================
-Code bloat kills projects. Be ruthless.
-
-CLOSE if:
-- Unnecessary abstractions (wrapper for wrapper's sake)
-- Helper functions that are used once
-- Config options nobody will change
-- "Future-proofing" for scenarios that won't happen
-- Dead code or commented-out code
-- Excessive dependencies for simple tasks
-- PR does more than ONE focused thing
-- Code that could be 50% shorter with same functionality
-
-The best code is code that doesn't exist.
-If something can be removed, it should be.
-
-================================================================================
-BACKEND/API FEATURE REQUIREMENTS
-================================================================================
-Backend features (API endpoints, services, data processing) require PROOF of testing.
-
-REQUEST_CHANGES or CLOSE if backend PR:
-- Has no evidence of local testing (curl commands, test output, logs)
-- Adds an endpoint without showing it actually works
-- Modifies data logic without demonstrating correctness
-- Has no error handling for realistic failure scenarios
-- Doesn't show what happens with edge cases (empty data, nulls, etc.)
-
-The PR description or commits MUST show:
-- Actual curl/httpie commands that were run
-- Response output proving the feature works
-- Error responses for invalid inputs
-- Performance is acceptable (no obvious N+1 queries, etc.)
-
-"Trust me, it works" is NOT acceptable. Show the receipts.
 
 ================================================================================
 PROJECT CONTEXT
@@ -396,27 +355,26 @@ DO NOT TOUCH areas:
 ================================================================================
 YOUR DECISION
 ================================================================================
-After careful analysis, you MUST make ONE of these decisions:
+Based on the code, CI status, AND the conversation history, make ONE decision:
 
-1. **MERGE** - Only if:
+1. **MERGE** - If:
    - CI passes
    - Adds clear, genuine value
    - Code quality is high
-   - Changes are focused and appropriate
-   - Tests exist for non-trivial changes
+   - Any previous feedback has been addressed (check comments!)
+   - No merge conflicts
 
 2. **CLOSE** - If:
    - PR is fundamentally flawed
    - Adds bloat without value
-   - Duplicates existing work
-   - Violates core architecture
-   - Cannot be salvaged with minor fixes
+   - Cannot be salvaged
+   - Test-only PR
 
 3. **REQUEST_CHANGES** - If:
    - PR has potential but needs fixes
    - Missing tests for significant changes
-   - Minor issues that author should address
-   - Needs better documentation/description
+   - Issues that author should address
+   - BUT: Don't re-request changes that were already addressed!
 
 ================================================================================
 OUTPUT FORMAT (REQUIRED)
@@ -504,70 +462,34 @@ Begin your review now."""
 
                 return result
 
-        # Pattern 2: Look for "DECISION: MERGE" anywhere in output with many variations
+        # Pattern 2: Look for "DECISION: MERGE" anywhere in output
         decision_patterns = [
-            r'\*\*DECISION\*\*:\s*(MERGE|CLOSE|REQUEST_CHANGES)',  # **DECISION**: MERGE
-            r'\*\*Decision\*\*:\s*(MERGE|CLOSE|REQUEST_CHANGES)',  # **Decision**: MERGE
-            r'DECISION:\s*(MERGE|CLOSE|REQUEST_CHANGES)',          # DECISION: MERGE
-            r'Decision:\s*(MERGE|CLOSE|REQUEST_CHANGES)',          # Decision: MERGE
-            r'\bdecision\s*[=:]\s*(MERGE|CLOSE|REQUEST_CHANGES)\b',  # decision = MERGE
-            r'\bdecision\s+(?:is\s+)?(?:to\s+)?(MERGE|CLOSE|REQUEST_CHANGES)\b',  # decision is to MERGE
-            r'(?:will|should|recommend|going to)\s+(MERGE|CLOSE|REQUEST[_\s]?CHANGES)',  # will MERGE
-            r'I(?:\'m| am| will)\s+(?:going to\s+)?(MERGE|CLOSE|REQUEST[_\s]?CHANGES)',  # I'm going to MERGE
-            r'(?:verdict|action|outcome)[:\s]+\**(MERGE|CLOSE|REQUEST_CHANGES)\**',  # verdict: MERGE
-            r'\*\*(MERGE|CLOSE|REQUEST_CHANGES)\*\*',  # **MERGE**
+            r'\*\*DECISION\*\*:\s*(MERGE|CLOSE|REQUEST_CHANGES)',
+            r'\*\*Decision\*\*:\s*(MERGE|CLOSE|REQUEST_CHANGES)',
+            r'DECISION:\s*(MERGE|CLOSE|REQUEST_CHANGES)',
+            r'Decision:\s*(MERGE|CLOSE|REQUEST_CHANGES)',
+            r'\bdecision\s*[=:]\s*(MERGE|CLOSE|REQUEST_CHANGES)\b',
+            r'(?:will|should|recommend|going to)\s+(MERGE|CLOSE|REQUEST[_\s]?CHANGES)',
+            r'\*\*(MERGE|CLOSE|REQUEST_CHANGES)\*\*',
         ]
 
         for pattern in decision_patterns:
             match = re.search(pattern, output, re.IGNORECASE)
             if match:
                 decision = match.group(1).upper().replace(' ', '_').replace('-', '_')
-                # Normalize REQUEST CHANGES variations
                 if 'REQUEST' in decision and 'CHANGE' in decision:
                     decision = 'REQUEST_CHANGES'
                 if decision in ['MERGE', 'CLOSE', 'REQUEST_CHANGES']:
                     result['decision'] = decision
                     break
 
-        # Pattern 3: Look at the end of output for clear commands executed
-        if not result['decision']:
-            # Look for gh commands that were executed
-            gh_patterns = [
-                (r'gh pr merge', 'MERGE'),
-                (r'gh pr close', 'CLOSE'),
-                (r'gh pr review.*--request-changes', 'REQUEST_CHANGES'),
-                (r'gh pr comment', 'REQUEST_CHANGES'),  # comments typically mean feedback
-            ]
-            for pattern, action in gh_patterns:
-                if re.search(pattern, output, re.IGNORECASE):
-                    result['decision'] = action
-                    break
-
-        # Pattern 4: Look for clear natural language indicators
+        # Pattern 3: Natural language indicators
         if not result['decision']:
             output_lower = output.lower()
 
-            # Strong merge indicators
-            merge_phrases = [
-                'merging this pr', 'approve and merge', 'lgtm', 'looks good to merge',
-                'ready to merge', 'approved for merge', 'this pr is approved',
-                'merged successfully', 'proceeding to merge', 'will merge this'
-            ]
-
-            # Strong close indicators
-            close_phrases = [
-                'closing this pr', 'should be closed', 'recommend closing',
-                'this pr should be rejected', 'rejecting this pr', 'will close',
-                'does not add value', 'closing without merge'
-            ]
-
-            # Strong request changes indicators
-            change_phrases = [
-                'requesting changes', 'needs changes', 'changes requested',
-                'please address', 'needs to be fixed', 'requires changes',
-                'before this can be merged', 'cannot be merged as-is',
-                'needs work', 'needs improvement'
-            ]
+            merge_phrases = ['merging this pr', 'approve and merge', 'lgtm', 'ready to merge', 'will merge']
+            close_phrases = ['closing this pr', 'should be closed', 'rejecting this pr', 'will close']
+            change_phrases = ['requesting changes', 'needs changes', 'please address', 'needs to be fixed']
 
             for phrase in merge_phrases:
                 if phrase in output_lower:
@@ -586,72 +508,29 @@ Begin your review now."""
                         result['decision'] = 'REQUEST_CHANGES'
                         break
 
-        # Extract reasoning from common patterns
+        # Extract reasoning
         reasoning_patterns = [
-            r'\*\*REASONING\*\*:\s*(.+?)(?=\n\*\*|\n```|$)',
-            r'\*\*Reasoning\*\*:\s*(.+?)(?=\n\*\*|\n```|$)',
             r'REASONING:\s*(.+?)(?=\n[A-Z_]+:|$)',
-            r'Reasoning:\s*(.+?)(?=\n[A-Z_]+:|$)',
-            r'(?:^|\n)(?:because|reason|rationale|summary)[:\s]+(.+?)(?:\n\n|\n[A-Z]|$)',
-            r'##\s*(?:Summary|Reasoning|Verdict)\s*\n(.+?)(?=\n##|\n```|$)',
+            r'\*\*REASONING\*\*:\s*(.+?)(?=\n\*\*|\n```|$)',
         ]
-
         for pattern in reasoning_patterns:
             match = re.search(pattern, output, re.DOTALL | re.IGNORECASE)
             if match and len(match.group(1).strip()) > 10:
                 result['reasoning'] = match.group(1).strip()[:500]
                 break
 
-        # If no reasoning found, try to extract a meaningful summary
-        if result['reasoning'] == 'No reasoning provided' and result['decision']:
-            # Look for any substantial paragraph that explains the decision
-            paragraphs = re.split(r'\n\n+', output)
-            for para in paragraphs:
-                # Skip code blocks and short lines
-                if '```' in para or len(para.strip()) < 50:
-                    continue
-                # Look for paragraphs that discuss the PR
-                if any(word in para.lower() for word in ['pr ', 'pull request', 'code', 'changes', 'value', 'quality']):
-                    result['reasoning'] = para.strip()[:500]
-                    break
+        # Extract scores
+        value_match = re.search(r'VALUE[_\s]?SCORE:\s*(\d+)', output, re.IGNORECASE)
+        if value_match:
+            result['value_score'] = min(10, max(1, int(value_match.group(1))))
 
-        # Extract scores with more patterns
-        value_patterns = [
-            r'VALUE[_\s]?SCORE:\s*(\d+)',
-            r'\*\*Value[_\s]?Score\*\*:\s*(\d+)',
-            r'value:\s*(\d+)\s*/\s*10',
-            r'value\s+(\d+)/10',
-            r'value[:\s]+(\d+)\s*(?:/10|out of 10)?',
-        ]
-        for pattern in value_patterns:
-            match = re.search(pattern, output, re.IGNORECASE)
-            if match:
-                result['value_score'] = min(10, max(1, int(match.group(1))))
-                break
+        quality_match = re.search(r'QUALITY[_\s]?SCORE:\s*(\d+)', output, re.IGNORECASE)
+        if quality_match:
+            result['quality_score'] = min(10, max(1, int(quality_match.group(1))))
 
-        quality_patterns = [
-            r'QUALITY[_\s]?SCORE:\s*(\d+)',
-            r'\*\*Quality[_\s]?Score\*\*:\s*(\d+)',
-            r'quality:\s*(\d+)\s*/\s*10',
-            r'quality\s+(\d+)/10',
-            r'quality[:\s]+(\d+)\s*(?:/10|out of 10)?',
-        ]
-        for pattern in quality_patterns:
-            match = re.search(pattern, output, re.IGNORECASE)
-            if match:
-                result['quality_score'] = min(10, max(1, int(match.group(1))))
-                break
-
-        bloat_patterns = [
-            r'BLOAT[_\s]?RISK:\s*(LOW|MEDIUM|HIGH)',
-            r'\*\*Bloat[_\s]?Risk\*\*:\s*(LOW|MEDIUM|HIGH)',
-            r'bloat[_\s]?risk[:\s]+(LOW|MEDIUM|HIGH)',
-        ]
-        for pattern in bloat_patterns:
-            match = re.search(pattern, output, re.IGNORECASE)
-            if match:
-                result['bloat_risk'] = match.group(1).upper()
-                break
+        bloat_match = re.search(r'BLOAT[_\s]?RISK:\s*(LOW|MEDIUM|HIGH)', output, re.IGNORECASE)
+        if bloat_match:
+            result['bloat_risk'] = bloat_match.group(1).upper()
 
         if result['decision']:
             return result
@@ -666,43 +545,32 @@ Begin your review now."""
 
         try:
             if action == 'MERGE':
-                # Try to squash merge and delete branch
-                # If it fails due to conflicts, that's fine - Senior Engineer will fix them
                 cmd = f"gh pr merge {pr_number} --repo {self.owner}/{repo_name} --squash --delete-branch"
                 result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
                 success = result.returncode == 0
                 if not success:
                     stderr = result.stderr.lower()
                     if 'merge conflict' in stderr or 'not mergeable' in stderr:
-                        self.logger.warning(f"Merge blocked by conflicts - Senior Engineer will fix: {result.stderr}")
-                        # Add a comment so we know we tried
-                        comment_cmd = f'gh pr comment {pr_number} --repo {self.owner}/{repo_name} --body "Tech Lead approved for merge (Value: {decision.get("value_score", "?")}/10, Quality: {decision.get("quality_score", "?")}/10). Waiting for conflict resolution."'
+                        self.logger.warning(f"Merge blocked by conflicts: {result.stderr}")
+                        # Post a comment so the state is visible
+                        comment_cmd = f'gh pr comment {pr_number} --repo {self.owner}/{repo_name} --body "Tech Lead approved for merge (Value: {decision.get("value_score", "?")}/10, Quality: {decision.get("quality_score", "?")}/10). Blocked by merge conflicts - please rebase."'
                         subprocess.run(comment_cmd, shell=True, capture_output=True, text=True, timeout=30)
-                        # Track this so Senior Engineer knows to fix conflicts
-                        self._add_pending_feedback(repo_name, pr_number, "Approved but has merge conflicts - please rebase against main")
                     else:
                         self.logger.error(f"Merge failed: {result.stderr}")
                 else:
                     self.logger.info(f"Successfully merged PR #{pr_number}")
-                    # Remove from pending feedback tracking
-                    self._remove_pending_feedback(repo_name, pr_number)
                 return success
 
             elif action == 'CLOSE':
-                # Close with comment
-                reason = decision['reasoning'][:500]  # Limit comment length
+                reason = decision['reasoning'][:500]
                 cmd = f'gh pr close {pr_number} --repo {self.owner}/{repo_name} --comment "Closed by Tech Lead Review: {reason}"'
                 result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
                 success = result.returncode == 0
                 if not success:
                     self.logger.error(f"Close failed: {result.stderr}")
-                else:
-                    # Remove from pending feedback tracking
-                    self._remove_pending_feedback(repo_name, pr_number)
                 return success
 
             elif action == 'REQUEST_CHANGES':
-                # Use PR comment instead of review (GitHub doesn't allow requesting changes on own PRs)
                 feedback = decision['reasoning'][:1000].replace('"', "'").replace('`', "'")
                 value_score = decision.get('value_score', '?')
                 quality_score = decision.get('quality_score', '?')
@@ -718,7 +586,6 @@ Begin your review now."""
 ---
 _Senior Engineer: Please address the above feedback and push updates._"""
 
-                # Write comment to temp file to avoid shell escaping issues
                 import tempfile
                 with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
                     f.write(comment_body)
@@ -732,10 +599,7 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                         self.logger.error(f"Comment failed: {result.stderr}")
                     else:
                         self.logger.info(f"Posted feedback comment on PR #{pr_number}")
-                        # Track this so Senior Engineer knows to address it
-                        self._add_pending_feedback(repo_name, pr_number, feedback)
                 finally:
-                    # Clean up temp file
                     try:
                         os.unlink(temp_file)
                     except:
@@ -760,10 +624,13 @@ _Senior Engineer: Please address the above feedback and push updates._"""
         self.logger.info(f"Session: {session_id}")
         self.logger.info(f"{'='*70}\n")
 
-        # Gather PR data
+        # Gather ALL PR data including comments
         diff = self._get_pr_diff(repo_name, pr_number)
         checks = self._get_pr_checks(repo_name, pr_number)
         files = self._get_pr_files(repo_name, pr_number)
+        comments = self._get_pr_comments(repo_name, pr_number)
+
+        self.logger.info(f"Fetched {len(comments)} comments for context")
 
         # Quick rejection checks (before Claude review)
         quick_reject = None
@@ -790,7 +657,7 @@ _Senior Engineer: Please address the above feedback and push updates._"""
             }
             self.logger.info(f"AUTO: Requesting changes - Too many files ({pr.get('changedFiles')})")
 
-        # Auto-close test-only PRs (they don't add user value)
+        # Auto-close test-only PRs
         if not quick_reject:
             pr_title = pr.get('title', '').lower().strip()
             is_test_only = (
@@ -801,7 +668,7 @@ _Senior Engineer: Please address the above feedback and push updates._"""
             if is_test_only:
                 quick_reject = {
                     'decision': 'CLOSE',
-                    'reasoning': 'Test-only PRs are deprioritized per policy. Tests should accompany features or fixes, not be standalone. Focus engineering effort on user-facing improvements.',
+                    'reasoning': 'Test-only PRs are deprioritized per policy. Tests should accompany features or fixes, not be standalone.',
                     'value_score': 2,
                     'quality_score': 5,
                     'bloat_risk': 'LOW',
@@ -810,9 +677,7 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                 self.logger.info(f"AUTO: Closing test-only PR - '{pr.get('title')}'")
 
         if quick_reject:
-            # Execute the auto-decision
             self._execute_decision(repo_name, pr, quick_reject)
-
             decision_record = {
                 'session_id': session_id,
                 'timestamp': datetime.now().isoformat(),
@@ -832,20 +697,17 @@ _Senior Engineer: Please address the above feedback and push updates._"""
             self._save_decision(decision_record)
             return decision_record
 
-        # Create prompt for Claude
-        prompt = self._create_review_prompt(repo, pr, diff, checks, files)
+        # Create prompt for Claude with full context including comments
+        prompt = self._create_review_prompt(repo, pr, diff, checks, files, comments)
 
-        # Save prompt
         prompt_file = self.work_dir / f'prompt_tech_lead_{repo_name}_{pr_number}.txt'
         with open(prompt_file, 'w') as f:
             f.write(prompt)
 
-        # Output file
         output_file = self.logs_dir / f"tech_lead_{repo_name}_{pr_number}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 
-        self.logger.info(f"Invoking Claude for review...")
+        self.logger.info(f"Invoking Claude for review (with {len(comments)} comments for context)...")
 
-        # Run Claude
         cmd = f"cat {prompt_file} | claude --dangerously-skip-permissions -p --model opus > {output_file} 2>&1"
 
         try:
@@ -853,10 +715,9 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                 cmd,
                 shell=True,
                 cwd=str(self.work_dir),
-                timeout=900  # 15 minute timeout per PR review
+                timeout=900
             )
 
-            # Read output and parse decision
             output = ""
             if output_file.exists():
                 output = output_file.read_text()
@@ -873,7 +734,6 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                     'bloat_risk': 'MEDIUM'
                 }
 
-            # Execute the decision
             executed = self._execute_decision(repo_name, pr, decision)
 
             decision_record = {
@@ -887,6 +747,7 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                 'additions': pr.get('additions', 0),
                 'deletions': pr.get('deletions', 0),
                 'files_changed': pr.get('changedFiles', 0),
+                'comments_count': len(comments),
                 'decision': decision['decision'],
                 'reasoning': decision['reasoning'],
                 'value_score': decision['value_score'],
@@ -927,9 +788,9 @@ _Senior Engineer: Please address the above feedback and push updates._"""
             }
 
     def _cleanup_stale_prs(self, repo_name: str, prs: List[Dict]) -> List[Dict]:
-        """Auto-close PRs that have been stale (in conflict) for too long"""
+        """Auto-close PRs that have been stale for too long"""
         from datetime import timedelta
-        STALE_DAYS = 5  # Close PRs that have been in conflict for 5+ days
+        STALE_DAYS = 5
 
         cleaned = []
         remaining = []
@@ -937,21 +798,18 @@ _Senior Engineer: Please address the above feedback and push updates._"""
         for pr in prs:
             created_at = pr.get('createdAt', '')
             try:
-                # Parse ISO date
                 created_date = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
                 age_days = (datetime.now(created_date.tzinfo) - created_date).days
             except:
                 age_days = 0
 
-            # Check if PR is barbossa-created and old
             branch = pr.get('headRefName', '')
             is_barbossa_pr = branch.startswith('barbossa/')
 
             if is_barbossa_pr and age_days >= STALE_DAYS:
-                # Auto-close stale barbossa PRs
                 self.logger.info(f"AUTO-CLOSING stale PR #{pr['number']} ({age_days} days old): {pr['title']}")
                 try:
-                    cmd = f'gh pr close {pr["number"]} --repo {self.owner}/{repo_name} --comment "Auto-closed by Tech Lead: PR has been stale for {age_days} days. If this work is still needed, please create a fresh PR from the latest main branch."'
+                    cmd = f'gh pr close {pr["number"]} --repo {self.owner}/{repo_name} --comment "Auto-closed by Tech Lead: PR has been stale for {age_days} days."'
                     result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
                     if result.returncode == 0:
                         cleaned.append(pr)
@@ -977,9 +835,10 @@ _Senior Engineer: Please address the above feedback and push updates._"""
         return remaining
 
     def run(self):
-        """Run the Tech Lead review process"""
+        """Run the Tech Lead review process - reviews ALL open PRs"""
         self.logger.info(f"\n{'#'*70}")
-        self.logger.info("BARBOSSA TECH LEAD - PR REVIEW SESSION")
+        self.logger.info("BARBOSSA TECH LEAD v2.0 - PR REVIEW SESSION")
+        self.logger.info("Mode: GitHub as single source of truth (no file-based state)")
         self.logger.info(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         self.logger.info(f"{'#'*70}\n")
 
@@ -997,43 +856,17 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                 self.logger.info(f"No open PRs in {repo_name}")
                 continue
 
-            # First, clean up any stale PRs
+            # Clean up stale PRs first
             open_prs = self._cleanup_stale_prs(repo_name, open_prs)
 
             if not open_prs:
                 self.logger.info(f"No remaining open PRs in {repo_name} after cleanup")
                 continue
 
-            self.logger.info(f"Found {len(open_prs)} open PRs")
+            self.logger.info(f"Found {len(open_prs)} open PRs - reviewing ALL with full context")
 
-            # Load pending feedback to skip PRs already awaiting fixes
-            pending_feedback = {}
-            if self.pending_feedback_file.exists():
-                try:
-                    with open(self.pending_feedback_file, 'r') as f:
-                        pending_feedback = json.load(f)
-                except:
-                    pending_feedback = {}
-
-            # Review each PR (skip those with pending feedback unless updated)
+            # Review ALL PRs - Claude will read comments and understand context
             for pr in open_prs:
-                pr_key = f"{repo_name}/{pr['number']}"
-
-                # Check if we already requested changes
-                if pr_key in pending_feedback and not pending_feedback[pr_key].get('addressed', False):
-                    feedback_time = pending_feedback[pr_key].get('timestamp', '')
-                    pr_updated = pr.get('updatedAt', '')
-
-                    # If PR was updated AFTER feedback was posted, Senior Engineer likely addressed it
-                    # Re-review in that case
-                    if feedback_time and pr_updated and pr_updated > feedback_time:
-                        self.logger.info(f"RE-REVIEW PR #{pr['number']} - updated since feedback was posted")
-                        # Clear the pending feedback since we're re-reviewing
-                        self._remove_pending_feedback(repo_name, pr['number'])
-                    else:
-                        self.logger.info(f"SKIP PR #{pr['number']} - pending feedback, waiting for Senior Engineer")
-                        continue
-
                 result = self.review_pr(repo, pr)
                 all_results.append(result)
                 self.logger.info(f"Completed review of PR #{pr['number']}")
@@ -1059,13 +892,13 @@ _Senior Engineer: Please address the above feedback and push updates._"""
         """Show current status and recent decisions"""
         print(f"\nBarbossa Tech Lead v{self.VERSION} - Status")
         print("=" * 50)
+        print("Mode: GitHub as single source of truth")
 
         print(f"\nRepositories ({len(self.repositories)}):")
         for repo in self.repositories:
             prs = self._get_open_prs(repo['name'])
             print(f"  - {repo['name']}: {len(prs)} open PRs")
 
-        # Show recent decisions
         if self.decisions_file.exists():
             with open(self.decisions_file, 'r') as f:
                 decisions = json.load(f)
@@ -1084,7 +917,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Barbossa Tech Lead v1.0 - PR Review & Governance'
+        description='Barbossa Tech Lead v2.0 - PR Review & Governance'
     )
     parser.add_argument(
         '--status',

@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """
-Barbossa v3.0 - Personal Development Assistant
-Simple autonomous developer that creates PRs on your repositories every 4 hours.
+Barbossa v4.0 - Personal Development Assistant
+Simple autonomous developer that creates PRs on your repositories every hour.
+
+v4.0 Changes:
+- Removed brittle pending_feedback.json state tracking
+- GitHub is now the single source of truth
+- Claude reads PR comments directly and understands context
+- Simplified priority logic - Claude decides based on full context
 """
 
 import json
@@ -19,9 +25,10 @@ import uuid
 class Barbossa:
     """
     Simple personal dev assistant that creates PRs on configured repositories.
+    Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "3.1.0"
+    VERSION = "4.0.0"
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths
@@ -574,13 +581,15 @@ See: {output_file}
         self.logger.info(f"Changelog: {changelog_file}")
 
     def _get_open_prs(self, repo: Dict) -> List[Dict]:
-        """Get open PRs for a repository"""
+        """Get open PRs for a repository with full context"""
         owner = self.config.get('owner', 'ADWilkinson')
         repo_name = repo['name']
 
         try:
             result = subprocess.run(
-                f"gh pr list --repo {owner}/{repo_name} --state open --json number,title,headRefName,statusCheckRollup,reviewDecision,url,mergeable,mergeStateStatus --limit 20",
+                f"gh pr list --repo {owner}/{repo_name} --state open "
+                f"--json number,title,headRefName,statusCheckRollup,reviewDecision,url,mergeable,mergeStateStatus,updatedAt "
+                f"--limit 20",
                 shell=True,
                 capture_output=True,
                 text=True,
@@ -594,6 +603,24 @@ See: {output_file}
             self.logger.warning(f"Could not fetch PRs for {repo_name}: {e}")
         return []
 
+    def _get_pr_comments(self, repo_name: str, pr_number: int) -> List[Dict]:
+        """Get all comments on a PR - this is the conversation history"""
+        owner = self.config.get('owner', 'ADWilkinson')
+        try:
+            result = subprocess.run(
+                f"gh pr view {pr_number} --repo {owner}/{repo_name} --json comments",
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                data = json.loads(result.stdout)
+                return data.get('comments', [])
+        except Exception as e:
+            self.logger.warning(f"Could not fetch comments for PR #{pr_number}: {e}")
+        return []
+
     def _count_total_open_prs(self) -> int:
         """Count total open PRs across all repositories"""
         total = 0
@@ -603,57 +630,67 @@ See: {output_file}
             self.logger.info(f"  {repo['name']}: {len(prs)} open PRs")
         return total
 
-    def _load_pending_feedback(self) -> Dict:
-        """Load pending feedback from Tech Lead"""
-        pending_file = self.work_dir / 'pending_feedback.json'
-        if pending_file.exists():
-            try:
-                with open(pending_file, 'r') as f:
-                    return json.load(f)
-            except:
-                pass
-        return {}
-
     def _get_prs_needing_attention(self, repo: Dict) -> List[Dict]:
-        """Get PRs that have failing checks, merge conflicts, or need fixes"""
+        """Get PRs that need attention - uses GitHub as source of truth"""
         prs = self._get_open_prs(repo)
         needs_attention = []
         repo_name = repo['name']
-
-        # Load pending feedback from Tech Lead
-        pending_feedback = self._load_pending_feedback()
+        owner = self.config.get('owner', 'ADWilkinson')
 
         for pr in prs:
             pr_number = pr.get('number')
-            feedback_key = f"{repo_name}/{pr_number}"
 
-            # Check if Tech Lead has pending feedback (highest priority)
-            if feedback_key in pending_feedback:
+            # Fetch comments to understand conversation context
+            comments = self._get_pr_comments(repo_name, pr_number)
+
+            # Look for Tech Lead feedback in comments
+            has_tech_lead_feedback = False
+            feedback_addressed = False
+            tech_lead_feedback = ""
+
+            for comment in comments:
+                body = comment.get('body', '')
+                author = comment.get('author', {}).get('login', '')
+
+                # Check for Tech Lead feedback
+                if 'Tech Lead Review' in body and 'Changes Requested' in body:
+                    has_tech_lead_feedback = True
+                    # Extract the feedback
+                    if '**Feedback:**' in body:
+                        tech_lead_feedback = body.split('**Feedback:**')[1].split('---')[0].strip()
+
+                # Check if there's a response after Tech Lead feedback
+                if has_tech_lead_feedback and author == owner:
+                    # Owner responded, check if it seems like feedback was addressed
+                    if any(phrase in body.lower() for phrase in ['verification', 'fixed', 'addressed', 'updated', 'resolved']):
+                        feedback_addressed = True
+
+            # If Tech Lead gave feedback and it wasn't clearly addressed, needs attention
+            if has_tech_lead_feedback and not feedback_addressed:
                 pr['attention_reason'] = 'tech_lead_feedback'
-                pr['tech_lead_feedback'] = pending_feedback[feedback_key].get('feedback', 'Please address Tech Lead feedback')
+                pr['tech_lead_feedback'] = tech_lead_feedback[:500] if tech_lead_feedback else 'Please address Tech Lead feedback'
+                pr['comments'] = comments
                 needs_attention.append(pr)
                 continue
 
             # Check if PR has requested changes on GitHub
             if pr.get('reviewDecision') == 'CHANGES_REQUESTED':
                 pr['attention_reason'] = 'changes_requested'
+                pr['comments'] = comments
                 needs_attention.append(pr)
                 continue
 
-            # Check if PR has merge conflicts (high priority - blocks merging)
-            # mergeable can be: MERGEABLE, CONFLICTING, or UNKNOWN
-            # mergeStateStatus can be: DIRTY, CLEAN, HAS_HOOKS, UNKNOWN, etc.
+            # Check if PR has merge conflicts
             if pr.get('mergeable') == 'CONFLICTING' or pr.get('mergeStateStatus') == 'DIRTY':
                 pr['attention_reason'] = 'merge_conflicts'
+                pr['comments'] = comments
                 needs_attention.append(pr)
                 continue
 
             # Check if PR has failing checks
-            # statusCheckRollup is an array of check results
             checks = pr.get('statusCheckRollup', [])
             has_failure = False
             for check in (checks or []):
-                # CheckRun uses 'conclusion', StatusContext uses 'state'
                 conclusion = check.get('conclusion', '')
                 state = check.get('state', '')
                 if conclusion == 'FAILURE' or state == 'FAILURE':
@@ -662,12 +699,32 @@ See: {output_file}
 
             if has_failure:
                 pr['attention_reason'] = 'failing_checks'
+                pr['comments'] = comments
                 needs_attention.append(pr)
 
         return needs_attention
 
+    def _format_comments_for_prompt(self, comments: List[Dict]) -> str:
+        """Format PR comments into a readable conversation history"""
+        if not comments:
+            return "(No comments on this PR)"
+
+        formatted = []
+        for comment in comments[-15:]:  # Last 15 comments max
+            author = comment.get('author', {}).get('login', 'unknown')
+            body = comment.get('body', '')[:800]  # Truncate long comments
+            created = comment.get('createdAt', '')[:10]  # Just the date
+
+            # Skip Vercel deploy comments
+            if author == 'vercel' or '[vc]:' in body:
+                continue
+
+            formatted.append(f"[{created}] @{author}:\n{body}\n")
+
+        return "\n---\n".join(formatted) if formatted else "(No relevant comments)"
+
     def _create_review_prompt(self, repo: Dict, pr: Dict, session_id: str) -> str:
-        """Create a prompt for reviewing and fixing an existing PR"""
+        """Create a prompt for reviewing and fixing an existing PR - includes full comment context"""
         owner = self.config.get('owner', 'ADWilkinson')
         repo_name = repo['name']
         pr_number = pr['number']
@@ -681,6 +738,10 @@ See: {output_file}
             install_cmd, build_cmd, test_cmd = 'yarn install', 'yarn build', 'yarn test'
         else:
             install_cmd, build_cmd, test_cmd = 'npm install', 'npm run build', 'npm test'
+
+        # Format comment history
+        comments = pr.get('comments', [])
+        conversation = self._format_comments_for_prompt(comments)
 
         # Build issue-specific instructions
         if attention_reason == 'merge_conflicts':
@@ -711,6 +772,40 @@ Phase 3 - Verify:
 Phase 4 - Update PR:
   # Force push the rebased branch
   git push origin {pr_branch} --force-with-lease"""
+
+        elif attention_reason == 'tech_lead_feedback':
+            tech_lead_feedback = pr.get('tech_lead_feedback', 'Please address the feedback')
+            issue_instructions = f"""
+ISSUE TYPE: TECH LEAD FEEDBACK
+The Tech Lead has requested changes on this PR.
+
+TECH LEAD FEEDBACK:
+{tech_lead_feedback}
+
+IMPORTANT: Read the full conversation history below to understand:
+1. What exactly was requested
+2. If any previous attempts were made to address it
+3. What specifically needs to be done
+
+Phase 2 - Address Feedback:
+  # Carefully read the feedback and conversation
+  # Make the specific changes requested
+  # If feedback asks for verification (curl output, test results), provide it
+
+Phase 3 - Verify:
+  {build_cmd}
+  {test_cmd}
+
+Phase 4 - Update PR:
+  git add -A
+  git commit -m "fix: address Tech Lead feedback"
+  git push origin {pr_branch}
+
+  # Post a comment explaining what you fixed
+  gh pr comment {pr_number} --repo {owner}/{repo_name} --body "## Feedback Addressed
+
+<Explain what you changed to address the feedback>"
+"""
         else:
             issue_instructions = f"""
 Phase 2 - Investigate:
@@ -757,6 +852,16 @@ PR Details:
 - Issue: {attention_reason.replace('_', ' ').title()}
 
 ================================================================================
+PR CONVERSATION HISTORY (IMPORTANT - READ THIS CAREFULLY)
+================================================================================
+This is the comment history on this PR. Use this to understand:
+- What feedback was given
+- What has been tried before
+- What exactly needs to be done
+
+{conversation}
+
+================================================================================
 WORKFLOW
 ================================================================================
 Phase 1 - Setup:
@@ -778,7 +883,7 @@ Phase 1 - Setup:
 OUTPUT REQUIRED
 ================================================================================
 When complete, provide:
-1. ISSUE: What was failing
+1. ISSUE: What was failing / what feedback needed addressing
 2. FIX: What you changed to fix it
 3. RESULT: Confirmation that build/tests now pass
 4. PR URL: {pr['url']}
@@ -917,9 +1022,8 @@ Begin your work now."""
         # Cleanup stale sessions before starting
         self._cleanup_stale_sessions()
 
-        # PRIORITY 1: Always check for PRs needing attention first (requested changes, failing CI)
-        # This ensures Tech Lead feedback is addressed before creating new work
-        self.logger.info("Checking for PRs needing attention (requested changes, failing CI)...")
+        # PRIORITY 1: Check for PRs needing attention (uses GitHub as source of truth)
+        self.logger.info("Checking for PRs needing attention...")
 
         prs_needing_attention = []
         for repo in self.repositories:
@@ -928,16 +1032,6 @@ Begin your work now."""
                 prs_needing_attention.append((repo, pr))
 
         if prs_needing_attention:
-            # Prioritize: tech_lead_feedback > changes_requested > failing_checks > merge_conflicts
-            prs_needing_attention.sort(
-                key=lambda x: (
-                    0 if x[1].get('attention_reason') == 'tech_lead_feedback'
-                    else 1 if x[1].get('attention_reason') == 'changes_requested'
-                    else 2 if x[1].get('attention_reason') == 'failing_checks'
-                    else 3
-                )
-            )
-
             self.logger.info(f"\n{'!'*60}")
             self.logger.info(f"REVISION MODE: {len(prs_needing_attention)} PRs need attention")
             for repo, pr in prs_needing_attention:
@@ -958,9 +1052,9 @@ Begin your work now."""
             self.logger.info(f"\n{'#'*60}")
             self.logger.info("REVISION SUMMARY")
             self.logger.info(f"{'#'*60}")
-            for repo_name, pr_num, success in results:
+            for r_name, pr_num, success in results:
                 status = "ADDRESSED" if success else "FAILED"
-                self.logger.info(f"  {repo_name} PR #{pr_num}: {status}")
+                self.logger.info(f"  {r_name} PR #{pr_num}: {status}")
             self.logger.info(f"{'#'*60}\n")
             return
 
@@ -1063,7 +1157,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Barbossa v3.0 - Personal Development Assistant'
+        description='Barbossa v4.0 - Personal Development Assistant'
     )
     parser.add_argument(
         '--repo',
