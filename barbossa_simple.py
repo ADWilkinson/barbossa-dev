@@ -275,7 +275,23 @@ If you find that your proposed work:
 The goal is UNIQUE, HIGH-VALUE work. Not duplicating effort.
 
 ================================================================================
-CHOOSING WHAT TO BUILD
+PRIORITY 1: CHECK THE BACKLOG FIRST
+================================================================================
+Before inventing work, check if there are Issues ready to implement:
+
+  gh issue list --repo {owner}/{repo['name']} --label backlog --state open --limit 5
+
+If there ARE issues labeled "backlog":
+  1. Pick the FIRST one (already prioritized)
+  2. Read the issue description carefully
+  3. Implement exactly what's requested
+  4. Link your PR to the issue: "Closes #XX" in PR description
+
+If there are NO backlog issues:
+  → Then and ONLY then, proceed to discover your own work below.
+
+================================================================================
+PRIORITY 2: CHOOSING WHAT TO BUILD (only if backlog empty)
 ================================================================================
 DO NOT just pick something obvious or easy. Think like a senior engineer:
 - What's the biggest pain point in this codebase?
