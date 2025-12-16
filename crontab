@@ -1,35 +1,34 @@
-# Barbossa v5.0 - High-Frequency Pipeline
-# Maximize throughput: Engineers every 30min, Tech Lead every 15min
-# Discovery keeps the backlog fed autonomously
+# Barbossa v5.1 - Optimized Pipeline
+# Respects dependency chain: Discovery → Engineer → Tech Lead
+# Each role has enough time to complete before next role runs
 
 SHELL=/bin/bash
 PATH=/usr/local/bin:/usr/bin:/bin
 
 # ============================================================================
-# DISCOVERY LAYER - Autonomous feature/improvement finding
+# DISCOVERY LAYER - Feeds the backlog
 # ============================================================================
-# Runs every 3 hours, creates GitHub Issues for engineers to pick from
-# Only creates issues if backlog is low (< 5 open issues labeled "backlog")
-0 */3 * * * su - barbossa -c "cd /app && python3 barbossa_discovery.py" >> /app/logs/discovery_cron.log 2>&1
+# 3x daily - enough to keep backlog fed without spam
+# Runs at quiet hours, creates Issues for Engineers to pick from
+0 6,14,22 * * * su - barbossa -c "cd /app && python3 barbossa_discovery.py" >> /app/logs/discovery_cron.log 2>&1
 
 # ============================================================================
-# ENGINEERING LAYER - Builds features from backlog
+# ENGINEERING LAYER - Implements from backlog
 # ============================================================================
-# Every 30 minutes - doubles throughput
-# Picks from Issues first, invents work only if backlog empty
-0,30 * * * * su - barbossa -c "cd /app && python3 barbossa_simple.py" >> /app/logs/cron.log 2>&1
+# Every hour at :00
+# Has 35 minutes to complete before Tech Lead runs
+0 * * * * su - barbossa -c "cd /app && python3 barbossa_simple.py" >> /app/logs/cron.log 2>&1
 
 # ============================================================================
-# REVIEW LAYER - Fast feedback loop
+# REVIEW LAYER - Reviews Engineer's work
 # ============================================================================
-# Every 15 minutes - catches PRs quickly, reduces wait time
-# Reviews, merges, or requests changes immediately
-10,25,40,55 * * * * su - barbossa -c "cd /app && python3 barbossa_tech_lead.py" >> /app/logs/tech_lead_cron.log 2>&1
+# Every hour at :35 (gives Engineer 35 min to complete)
+# Has 25 minutes to review before next Engineer cycle
+35 * * * * su - barbossa -c "cd /app && python3 barbossa_tech_lead.py" >> /app/logs/tech_lead_cron.log 2>&1
 
 # ============================================================================
-# ANALYSIS LAYER - Daily health check
+# ANALYSIS LAYER - Daily insights
 # ============================================================================
-# Auditor runs once daily - patterns, recommendations, insights
 30 6 * * * su - barbossa -c "cd /app && python3 barbossa_auditor.py --days 7" >> /app/logs/auditor_cron.log 2>&1
 
 # Empty line required at end
