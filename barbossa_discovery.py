@@ -158,7 +158,7 @@ class BarbossaDiscovery:
 
         for pattern in patterns:
             result = self._run_cmd(
-                f"grep -rn '{pattern}' --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' . | head -20",
+                f"grep -rn '{pattern}' --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=dist . | head -20",
                 cwd=str(repo_path)
             )
             if result:
@@ -179,7 +179,7 @@ class BarbossaDiscovery:
 
         # Find files with fetch/useQuery but no loading/isLoading
         result = self._run_cmd(
-            "grep -rl 'useQuery\\|useFetch\\|fetch(' --include='*.tsx' . | head -10",
+            "grep -rl 'useQuery\\|useFetch\\|fetch(' --include='*.tsx' --exclude-dir=node_modules --exclude-dir=.next . | head -10",
             cwd=str(repo_path)
         )
 
@@ -206,7 +206,7 @@ class BarbossaDiscovery:
         findings = []
 
         result = self._run_cmd(
-            "grep -rl 'useQuery\\|useFetch\\|fetch(' --include='*.tsx' . | head -10",
+            "grep -rl 'useQuery\\|useFetch\\|fetch(' --include='*.tsx' --exclude-dir=node_modules --exclude-dir=.next . | head -10",
             cwd=str(repo_path)
         )
 
@@ -233,7 +233,7 @@ class BarbossaDiscovery:
 
         # Images without alt
         result = self._run_cmd(
-            "grep -rn '<img' --include='*.tsx' --include='*.jsx' . | grep -v 'alt=' | head -5",
+            "grep -rn '<img' --include='*.tsx' --include='*.jsx' --exclude-dir=node_modules --exclude-dir=.next . | grep -v 'alt=' | head -5",
             cwd=str(repo_path)
         )
         if result:
@@ -247,7 +247,7 @@ class BarbossaDiscovery:
 
         # Buttons without aria-label (icon buttons)
         result = self._run_cmd(
-            "grep -rn '<button' --include='*.tsx' . | grep -v 'aria-label' | grep -v '>' | head -5",
+            "grep -rn '<button' --include='*.tsx' --exclude-dir=node_modules --exclude-dir=.next . | grep -v 'aria-label' | grep -v '>' | head -5",
             cwd=str(repo_path)
         )
         if result:
@@ -266,7 +266,7 @@ class BarbossaDiscovery:
         findings = []
 
         result = self._run_cmd(
-            "grep -rn 'console\\.log' --include='*.ts' --include='*.tsx' . | grep -v node_modules | grep -v '.test.' | head -10",
+            "grep -rn 'console\\.log' --include='*.ts' --include='*.tsx' --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=dist . | grep -v '.test.' | head -10",
             cwd=str(repo_path)
         )
 
