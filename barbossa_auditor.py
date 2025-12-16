@@ -29,7 +29,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "5.1.0"
+    VERSION = "5.2.0"  # Added self-healing capabilities
     ROLE = "auditor"
 
     def __init__(self, work_dir: Optional[Path] = None):
@@ -443,6 +443,201 @@ class BarbossaAuditor:
         return patterns
 
     # =========================================================================
+    # SELF-HEALING ACTIONS
+    # =========================================================================
+
+    def _check_oauth_token(self) -> Dict:
+        """Check OAuth token status and attempt refresh if needed"""
+        result = {'action': 'oauth_check', 'status': 'ok', 'message': ''}
+
+        creds_file = Path.home() / '.claude' / '.credentials.json'
+        if not creds_file.exists():
+            creds_file = Path('/root/.claude/.credentials.json')
+
+        if not creds_file.exists():
+            result['status'] = 'error'
+            result['message'] = 'No credentials file found'
+            return result
+
+        try:
+            with open(creds_file, 'r') as f:
+                creds = json.load(f)
+
+            oauth = creds.get('claudeAiOauth', {})
+            expires_at = oauth.get('expiresAt', 0)
+
+            # Convert ms to seconds
+            expires_ts = expires_at / 1000 if expires_at > 1e12 else expires_at
+            expires_dt = datetime.fromtimestamp(expires_ts)
+            now = datetime.now()
+
+            hours_until_expiry = (expires_dt - now).total_seconds() / 3600
+
+            if hours_until_expiry < 0:
+                result['status'] = 'expired'
+                result['message'] = f'OAuth token EXPIRED at {expires_dt}'
+                self.logger.error(f"🔴 OAuth token EXPIRED! Run 'claude login' to refresh")
+            elif hours_until_expiry < 24:
+                result['status'] = 'warning'
+                result['message'] = f'OAuth token expires in {hours_until_expiry:.1f} hours at {expires_dt}'
+                self.logger.warning(f"🟡 OAuth token expires in {hours_until_expiry:.1f} hours!")
+            else:
+                result['status'] = 'ok'
+                result['message'] = f'OAuth token valid for {hours_until_expiry:.1f} hours'
+                self.logger.info(f"🟢 OAuth token valid for {hours_until_expiry:.1f} hours")
+
+        except Exception as e:
+            result['status'] = 'error'
+            result['message'] = f'Could not check OAuth: {e}'
+
+        return result
+
+    def _cleanup_stale_sessions(self) -> Dict:
+        """Clean up stale/stuck sessions"""
+        result = {'action': 'session_cleanup', 'cleaned': 0, 'message': ''}
+
+        sessions_file = self.work_dir / 'sessions.json'
+        if not sessions_file.exists():
+            result['message'] = 'No sessions file'
+            return result
+
+        try:
+            with open(sessions_file, 'r') as f:
+                sessions = json.load(f)
+
+            cutoff = datetime.now() - timedelta(hours=3)
+            cleaned = 0
+
+            for session in sessions:
+                if session.get('status') == 'running':
+                    started_str = session.get('started', '')
+                    try:
+                        started = datetime.fromisoformat(started_str)
+                        if started < cutoff:
+                            session['status'] = 'timeout'
+                            session['completed'] = datetime.now().isoformat()
+                            session['timeout_reason'] = 'Marked stale by auditor'
+                            cleaned += 1
+                    except:
+                        pass
+
+            if cleaned > 0:
+                with open(sessions_file, 'w') as f:
+                    json.dump(sessions, f, indent=2)
+                self.logger.info(f"🧹 Cleaned {cleaned} stale sessions")
+
+            result['cleaned'] = cleaned
+            result['message'] = f'Cleaned {cleaned} stale sessions'
+
+        except Exception as e:
+            result['message'] = f'Session cleanup error: {e}'
+
+        return result
+
+    def _cleanup_old_logs(self, days: int = 14) -> Dict:
+        """Clean up old log files to prevent disk fill"""
+        result = {'action': 'log_cleanup', 'deleted': 0, 'freed_mb': 0, 'message': ''}
+
+        cutoff = datetime.now() - timedelta(days=days)
+        deleted = 0
+        freed_bytes = 0
+
+        for log_file in self.logs_dir.glob("*.log"):
+            try:
+                mtime = datetime.fromtimestamp(log_file.stat().st_mtime)
+                if mtime < cutoff:
+                    size = log_file.stat().st_size
+                    log_file.unlink()
+                    deleted += 1
+                    freed_bytes += size
+            except Exception as e:
+                self.logger.warning(f"Could not delete {log_file}: {e}")
+
+        if deleted > 0:
+            freed_mb = round(freed_bytes / 1024 / 1024, 2)
+            self.logger.info(f"🧹 Deleted {deleted} old logs, freed {freed_mb}MB")
+            result['deleted'] = deleted
+            result['freed_mb'] = freed_mb
+
+        result['message'] = f'Deleted {deleted} logs older than {days} days'
+        return result
+
+    def _reset_pending_feedback(self) -> Dict:
+        """Reset broken pending feedback file"""
+        result = {'action': 'feedback_reset', 'reset': False, 'message': ''}
+
+        feedback_file = self.work_dir / 'pending_feedback.json'
+
+        try:
+            if feedback_file.exists():
+                with open(feedback_file, 'r') as f:
+                    content = f.read().strip()
+
+                # Check if file is corrupted or has very old entries
+                if content and content != '{}':
+                    try:
+                        feedback = json.loads(content)
+                        # Check for stale feedback (older than 24 hours)
+                        has_stale = False
+                        for pr_key, data in feedback.items():
+                            if isinstance(data, dict) and 'timestamp' in data:
+                                ts = datetime.fromisoformat(data['timestamp'])
+                                if ts < datetime.now() - timedelta(hours=24):
+                                    has_stale = True
+                                    break
+
+                        if has_stale:
+                            with open(feedback_file, 'w') as f:
+                                json.dump({}, f)
+                            result['reset'] = True
+                            result['message'] = 'Reset stale pending feedback'
+                            self.logger.info("🧹 Reset stale pending feedback")
+                    except json.JSONDecodeError:
+                        # Corrupted file, reset it
+                        with open(feedback_file, 'w') as f:
+                            json.dump({}, f)
+                        result['reset'] = True
+                        result['message'] = 'Reset corrupted pending feedback file'
+                        self.logger.info("🧹 Reset corrupted pending feedback file")
+            else:
+                result['message'] = 'No pending feedback file'
+
+        except Exception as e:
+            result['message'] = f'Feedback reset error: {e}'
+
+        return result
+
+    def _execute_self_healing(self) -> List[Dict]:
+        """Execute all self-healing actions"""
+        self.logger.info("\n" + "="*70)
+        self.logger.info("EXECUTING SELF-HEALING ACTIONS")
+        self.logger.info("="*70 + "\n")
+
+        actions = []
+
+        # 1. Check OAuth token
+        self.logger.info("Checking OAuth token status...")
+        oauth_result = self._check_oauth_token()
+        actions.append(oauth_result)
+
+        # 2. Clean up stale sessions
+        self.logger.info("Cleaning up stale sessions...")
+        session_result = self._cleanup_stale_sessions()
+        actions.append(session_result)
+
+        # 3. Clean old logs (keep 14 days)
+        self.logger.info("Cleaning old log files...")
+        log_result = self._cleanup_old_logs(days=14)
+        actions.append(log_result)
+
+        # 4. Reset broken feedback loop
+        self.logger.info("Checking pending feedback...")
+        feedback_result = self._reset_pending_feedback()
+        actions.append(feedback_result)
+
+        return actions
+
+    # =========================================================================
     # RECOMMENDATIONS
     # =========================================================================
 
@@ -572,8 +767,19 @@ class BarbossaAuditor:
         for i, rec in enumerate(recommendations, 1):
             self.logger.info(f"  {i}. {rec}")
 
+        # Execute self-healing actions
+        self_healing_actions = self._execute_self_healing()
+
         # Calculate health score
         health_score = self._calculate_health_score(pr_stats, log_analysis, patterns)
+
+        # Summarize self-healing results
+        self.logger.info("\n" + "="*70)
+        self.logger.info("SELF-HEALING SUMMARY")
+        self.logger.info("="*70)
+        for action in self_healing_actions:
+            status_icon = "✅" if action.get('status') == 'ok' or action.get('cleaned', 0) > 0 or action.get('deleted', 0) > 0 else "⚠️" if action.get('status') == 'warning' else "❌" if action.get('status') in ['error', 'expired'] else "➖"
+            self.logger.info(f"  {status_icon} {action['action']}: {action['message']}")
 
         self.logger.info(f"\n{'='*70}")
         self.logger.info(f"SYSTEM HEALTH SCORE: {health_score}/100")
@@ -595,10 +801,14 @@ class BarbossaAuditor:
             'decision_analysis': decision_analysis,
             'patterns': patterns,
             'recommendations': recommendations,
+            'self_healing_actions': self_healing_actions,
         }
 
         # Save results
         self._save_audit_history(audit)
+
+        # Extract OAuth status from self-healing actions
+        oauth_action = next((a for a in self_healing_actions if a['action'] == 'oauth_check'), {})
 
         # Save insights for other agents - system health only, no content restrictions
         insights = {
@@ -610,6 +820,9 @@ class BarbossaAuditor:
             'merge_rates': {repo: stats.get('merge_rate', 0) for repo, stats in pr_stats.items()},
             'error_count': log_analysis.get('error_count', 0),
             'timeout_count': log_analysis.get('timeout_count', 0),
+            'oauth_status': oauth_action.get('status', 'unknown'),
+            'oauth_message': oauth_action.get('message', ''),
+            'self_healing_actions': self_healing_actions,
         }
         self._save_insights(insights)
 

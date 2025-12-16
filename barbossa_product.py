@@ -87,9 +87,13 @@ class BarbossaProduct:
             )
             if result.returncode == 0:
                 return result.stdout.strip()
+            else:
+                self.logger.warning(f"Command failed (exit {result.returncode}): {cmd[:100]}")
+                if result.stderr:
+                    self.logger.warning(f"Stderr: {result.stderr[:500]}")
             return None
         except Exception as e:
-            self.logger.warning(f"Command failed: {cmd} - {e}")
+            self.logger.warning(f"Command failed: {cmd[:100]} - {e}")
             return None
 
     def _get_feature_backlog_count(self, repo_name: str) -> int:
@@ -163,15 +167,22 @@ class BarbossaProduct:
         with open(body_file, 'w') as f:
             f.write(body)
 
-        cmd = f'gh issue create --repo {self.owner}/{repo_name} --title "{title}" --body-file {body_file} --label "{label_str}"'
+        # Escape title for shell
+        escaped_title = title.replace('"', '\\"')
+        cmd = f'gh issue create --repo {self.owner}/{repo_name} --title "{escaped_title}" --body-file {body_file} --label "{label_str}"'
+        self.logger.info(f"Creating issue: {escaped_title}")
+
         result = self._run_cmd(cmd, timeout=30)
 
+        # Clean up temp file
         body_file.unlink(missing_ok=True)
 
         if result:
             self.logger.info(f"Created feature issue: {title}")
             self.logger.info(f"  URL: {result}")
             return True
+        else:
+            self.logger.warning(f"Failed to create issue: {title}")
         return False
 
     def _get_product_prompt(self, repo: Dict, claude_md: str) -> str:
@@ -344,6 +355,7 @@ KEY FILES:
 
     def _analyze_with_claude(self, repo: Dict, claude_md: str) -> Optional[Dict]:
         """Use Claude to analyze the product and suggest a feature."""
+        import re
         prompt = self._get_product_prompt(repo, claude_md)
 
         # Write prompt to temp file
@@ -351,29 +363,68 @@ KEY FILES:
         with open(prompt_file, 'w') as f:
             f.write(prompt)
 
-        # Call Claude CLI
+        # Call Claude CLI (15 minute timeout - matches Tech Lead complexity)
         result = self._run_cmd(
             f'cat {prompt_file} | claude -p --output-format json',
-            timeout=120
+            timeout=900
         )
 
         prompt_file.unlink(missing_ok=True)
 
-        if result:
+        if not result:
+            return None
+
+        try:
+            # Claude CLI returns wrapper JSON with result field
+            wrapper = json.loads(result)
+            if 'result' in wrapper:
+                inner_result = wrapper['result']
+
+                # Extract JSON from markdown code block if present
+                json_block_match = re.search(r'```json\s*\n([\s\S]*?)\n```', inner_result)
+                if json_block_match:
+                    json_str = json_block_match.group(1).strip()
+                    self.logger.info(f"Extracted JSON from code block: {json_str[:300]}...")
+                    data = json.loads(json_str)
+                    if 'feature_title' in data:
+                        return data
+
+                # Fallback: try to find JSON object directly
+                json_obj_match = re.search(r'\{[^{}]*"feature_title"[^{}]*("acceptance_criteria"\s*:\s*\[[^\]]*\])?[^{}]*\}', inner_result, re.DOTALL)
+                if json_obj_match:
+                    json_str = json_obj_match.group()
+                    self.logger.info(f"Extracted JSON object: {json_str[:300]}...")
+                    data = json.loads(json_str)
+                    if 'feature_title' in data:
+                        return data
+
+            # Fallback: check if wrapper itself has feature_title
+            if 'feature_title' in wrapper:
+                return wrapper
+
+        except json.JSONDecodeError as e:
+            self.logger.warning(f"JSON parse error: {e}")
+            # Last resort: try to extract any valid JSON with feature_title
             try:
-                # Parse JSON response
-                data = json.loads(result)
-                if 'feature_title' in data:
-                    return data
-            except json.JSONDecodeError:
-                # Try to extract JSON from response
-                import re
-                json_match = re.search(r'\{[\s\S]*\}', result)
-                if json_match:
-                    try:
-                        return json.loads(json_match.group())
-                    except:
-                        pass
+                # Find the start of JSON object
+                start = result.find('"feature_title"')
+                if start > 0:
+                    # Find opening brace before feature_title
+                    brace_start = result.rfind('{', 0, start)
+                    if brace_start >= 0:
+                        # Find matching closing brace
+                        depth = 0
+                        for i, c in enumerate(result[brace_start:]):
+                            if c == '{':
+                                depth += 1
+                            elif c == '}':
+                                depth -= 1
+                                if depth == 0:
+                                    json_str = result[brace_start:brace_start + i + 1]
+                                    self.logger.info(f"Extracted JSON via brace matching: {json_str[:300]}...")
+                                    return json.loads(json_str)
+            except Exception as ex:
+                self.logger.warning(f"Failed fallback JSON extraction: {ex}")
 
         return None
 
@@ -442,10 +493,14 @@ KEY FILES:
             self.logger.warning("No feature suggestion from Claude")
             return 0
 
+        self.logger.info(f"Feature parsed: {json.dumps(feature, indent=2)[:500]}")
+
         title = feature.get('feature_title', '')
         if not title:
             self.logger.warning("No feature title in response")
             return 0
+
+        self.logger.info(f"Feature title: {title}")
 
         # Check for duplicate
         title_lower = title.lower()
@@ -460,6 +515,7 @@ KEY FILES:
 
         # Check value score
         value_score = feature.get('value_score', 5)
+        self.logger.info(f"Value score: {value_score}")
         if value_score < 6:
             self.logger.info(f"Skipping low-value feature (score {value_score}): {title}")
             return 0

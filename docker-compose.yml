@@ -22,8 +22,8 @@ services:
       - ~/.config/gh:/root/.config/gh:ro
       # SSH keys for private repo access
       - ~/.ssh:/root/.ssh:ro
-      # Claude config (if needed)
-      - ~/.claude:/root/.claude:ro
+      # Claude config (writable for token refresh)
+      - ~/.claude:/root/.claude
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - TZ=Europe/London
