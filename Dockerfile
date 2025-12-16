@@ -36,6 +36,7 @@ WORKDIR /app
 COPY barbossa_simple.py .
 COPY barbossa_tech_lead.py .
 COPY barbossa_discovery.py .
+COPY barbossa_product.py .
 COPY barbossa_auditor.py .
 COPY run.sh .
 COPY config/ config/

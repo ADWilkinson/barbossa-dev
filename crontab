@@ -1,15 +1,22 @@
 # Barbossa v5.1 - Optimized Pipeline
-# Respects dependency chain: Discovery → Engineer → Tech Lead
+# Respects dependency chain: Product → Discovery → Engineer → Tech Lead
 # Each role has enough time to complete before next role runs
 
 SHELL=/bin/bash
 PATH=/usr/local/bin:/usr/bin:/bin
 
 # ============================================================================
-# DISCOVERY LAYER - Feeds the backlog
+# PRODUCT LAYER - Feature discovery
 # ============================================================================
-# 3x daily - enough to keep backlog fed without spam
-# Runs at quiet hours, creates Issues for Engineers to pick from
+# Daily at 07:00 - analyzes products and creates feature Issues
+# Uses AI to identify valuable features, UX improvements, competitive gaps
+0 7 * * * su - barbossa -c "cd /app && python3 barbossa_product.py" >> /app/logs/product_cron.log 2>&1
+
+# ============================================================================
+# DISCOVERY LAYER - Technical debt discovery
+# ============================================================================
+# 3x daily - finds TODOs, missing tests, accessibility gaps
+# Creates Issues for Engineers to pick from
 0 6,14,22 * * * su - barbossa -c "cd /app && python3 barbossa_discovery.py" >> /app/logs/discovery_cron.log 2>&1
 
 # ============================================================================

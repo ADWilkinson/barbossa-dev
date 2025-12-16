@@ -1,14 +1,17 @@
 # Barbossa v5.1 - Autonomous Development Pipeline
 
-A four-agent autonomous development system that discovers, implements, reviews, and audits code changes across your repositories.
+A five-agent autonomous development system that discovers features, finds technical debt, implements changes, reviews code, and audits system health.
 
 ## Architecture
 
 ```
-Discovery (3x daily)     Creates GitHub Issues from codebase analysis
+Product Manager (daily)  AI-powered feature discovery
          |
          v
-   GitHub Issues         Backlog of improvements to implement
+Discovery (3x daily)     Technical debt analysis (TODOs, tests, a11y)
+         |
+         v
+   GitHub Issues         Backlog: features + improvements
          |
          v
 Engineer (hourly :00)    Picks from backlog, implements, creates PRs
@@ -27,7 +30,8 @@ Auditor (daily 06:30)    Analyzes system health, identifies patterns
 
 | Agent | Schedule | Purpose |
 |-------|----------|---------|
-| **Discovery** | 06:00, 14:00, 22:00 | Analyzes codebase, creates GitHub Issues |
+| **Product Manager** | Daily at 07:00 | AI analyzes products, suggests features |
+| **Discovery** | 06:00, 14:00, 22:00 | Finds TODOs, missing tests, a11y gaps |
 | **Engineer** | Every hour at :00 | Implements from backlog, creates PRs |
 | **Tech Lead** | Every hour at :35 | Reviews PRs with strict criteria |
 | **Auditor** | Daily at 06:30 | System health and improvement insights |
@@ -123,9 +127,20 @@ Features:
 
 ## Agent Details
 
+### Product Manager Agent
+
+AI-powered feature discovery:
+- Reads CLAUDE.md and understands each product deeply
+- Analyzes competitive landscape and industry trends
+- Identifies high-value feature opportunities
+- Creates detailed feature specs with acceptance criteria
+- Scores features by value (1-10) and effort (small/medium/large)
+
+Creates GitHub Issues labeled `feature` and `backlog` for Engineers.
+
 ### Discovery Agent
 
-Analyzes codebases to find improvements:
+Analyzes codebases to find technical debt:
 - TODOs, FIXMEs, HACK comments
 - Missing loading states
 - Missing error handling
@@ -163,9 +178,10 @@ Daily analysis:
 
 ```
 barbossa-engineer/
+├── barbossa_product.py      # Product Manager agent (feature discovery)
+├── barbossa_discovery.py    # Discovery agent (technical debt)
 ├── barbossa_simple.py       # Engineer agent
 ├── barbossa_tech_lead.py    # Tech Lead agent
-├── barbossa_discovery.py    # Discovery agent
 ├── barbossa_auditor.py      # Auditor agent
 ├── web_portal/
 │   └── app_simple.py        # Flask web portal
