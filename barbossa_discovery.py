@@ -29,8 +29,8 @@ from typing import Dict, List, Optional
 class BarbossaDiscovery:
     """Autonomous discovery agent that creates GitHub Issues for the pipeline."""
 
-    VERSION = "5.1.0"
-    BACKLOG_THRESHOLD = 5  # Only discover if fewer than this many issues in backlog
+    VERSION = "5.2.0"
+    BACKLOG_THRESHOLD = 20  # Only discover if fewer than this many issues in backlog
 
     def __init__(self, work_dir: Optional[Path] = None):
         default_dir = Path(os.environ.get('BARBOSSA_DIR', '/app'))

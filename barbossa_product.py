@@ -30,9 +30,9 @@ from typing import Dict, List, Optional
 class BarbossaProduct:
     """Product Manager agent that creates feature Issues for the pipeline."""
 
-    VERSION = "5.1.0"
-    MAX_ISSUES_PER_RUN = 2  # Quality over quantity
-    FEATURE_BACKLOG_THRESHOLD = 3  # Only create if fewer feature issues exist
+    VERSION = "5.2.0"
+    MAX_ISSUES_PER_RUN = 3  # Quality over quantity
+    FEATURE_BACKLOG_THRESHOLD = 20  # Only create if fewer feature issues exist
 
     def __init__(self, work_dir: Optional[Path] = None):
         default_dir = Path(os.environ.get('BARBOSSA_DIR', '/app'))

@@ -1,41 +1,41 @@
-# Barbossa v5.1 - Optimized Pipeline
-# Respects dependency chain: Product → Discovery → Engineer → Tech Lead
-# Each role has enough time to complete before next role runs
+# Barbossa v5.2 - High-Volume Pipeline
+# Keeps backlog full (20 max) so Engineers always have work
+# 2-hour dev cycles with frequent backlog replenishment
 
 SHELL=/bin/bash
 PATH=/usr/local/bin:/usr/bin:/bin
 
 # ============================================================================
-# PRODUCT LAYER - Feature discovery
+# PRODUCT LAYER - Feature discovery (3x daily)
 # ============================================================================
-# Daily at 07:00 - analyzes products and creates feature Issues
-# Uses AI to identify valuable features, UX improvements, competitive gaps
-0 7 * * * su - barbossa -c "cd /app && python3 barbossa_product.py" >> /app/logs/product_cron.log 2>&1
+# Every 8 hours - analyzes products and creates feature Issues
+# Creates up to 3 feature issues per run (max 20 in backlog)
+0 7,15,23 * * * su - barbossa -c "cd /app && python3 barbossa_product.py" >> /app/logs/product_cron.log 2>&1
 
 # ============================================================================
-# DISCOVERY LAYER - Technical debt discovery
+# DISCOVERY LAYER - Technical debt discovery (4x daily)
 # ============================================================================
-# 3x daily - finds TODOs, missing tests, accessibility gaps
-# Creates Issues for Engineers to pick from
-0 6,14,22 * * * su - barbossa -c "cd /app && python3 barbossa_discovery.py" >> /app/logs/discovery_cron.log 2>&1
+# Every 6 hours - finds TODOs, missing tests, accessibility gaps
+# Creates Issues for Engineers to pick from (max 20 in backlog)
+0 0,6,12,18 * * * su - barbossa -c "cd /app && python3 barbossa_discovery.py" >> /app/logs/discovery_cron.log 2>&1
 
 # ============================================================================
-# ENGINEERING LAYER - Implements from backlog
+# ENGINEERING LAYER - Implements from backlog (every 2 hours)
 # ============================================================================
-# Every hour at :00
+# Every 2 hours at :00
 # Has 35 minutes to complete before Tech Lead runs
-0 * * * * su - barbossa -c "cd /app && python3 barbossa_simple.py" >> /app/logs/cron.log 2>&1
+0 0,2,4,6,8,10,12,14,16,18,20,22 * * * su - barbossa -c "cd /app && python3 barbossa_simple.py" >> /app/logs/cron.log 2>&1
 
 # ============================================================================
-# REVIEW LAYER - Reviews Engineer's work
+# REVIEW LAYER - Reviews Engineer's work (every 2 hours)
 # ============================================================================
-# Every hour at :35 (gives Engineer 35 min to complete)
-# Has 25 minutes to review before next Engineer cycle
-35 * * * * su - barbossa -c "cd /app && python3 barbossa_tech_lead.py" >> /app/logs/tech_lead_cron.log 2>&1
+# Every 2 hours at :35 (gives Engineer 35 min to complete)
+35 0,2,4,6,8,10,12,14,16,18,20,22 * * * su - barbossa -c "cd /app && python3 barbossa_tech_lead.py" >> /app/logs/tech_lead_cron.log 2>&1
 
 # ============================================================================
-# ANALYSIS LAYER - Daily insights
+# ANALYSIS LAYER - Daily health check with self-healing
 # ============================================================================
+# Daily at 06:30 - monitors OAuth, cleans stale sessions, rotates logs
 30 6 * * * su - barbossa -c "cd /app && python3 barbossa_auditor.py --days 7" >> /app/logs/auditor_cron.log 2>&1
 
 # Empty line required at end
