@@ -1,5 +1,372 @@
 [
   {
+    "timestamp": "2025-12-16T13:23:08.998635",
+    "period_days": 1,
+    "health_score": 52,
+    "pr_stats": {
+      "peerlytics": {
+        "total": 8,
+        "merged": 8,
+        "closed": 0,
+        "open": 0,
+        "merge_rate": 100.0,
+        "close_rate": 0.0,
+        "pr_types": {
+          "other": 2,
+          "feature": 6
+        },
+        "closed_titles": [],
+        "avg_additions": 470.6,
+        "avg_deletions": 21.1
+      },
+      "usdctofiat": {
+        "total": 7,
+        "merged": 6,
+        "closed": 0,
+        "open": 1,
+        "merge_rate": 85.7,
+        "close_rate": 0.0,
+        "pr_types": {
+          "other": 6,
+          "feature": 1
+        },
+        "closed_titles": [],
+        "avg_additions": 261.9,
+        "avg_deletions": 4.4
+      }
+    },
+    "log_analysis": {
+      "error_count": 35,
+      "warning_count": 0,
+      "timeout_count": 1,
+      "parse_failure_count": 0,
+      "successful_sessions": 0,
+      "failed_sessions": 4,
+      "tech_lead_merges": 67,
+      "tech_lead_closes": 0,
+      "tech_lead_changes": 80
+    },
+    "decision_analysis": {
+      "total_decisions": 32,
+      "merge_count": 19,
+      "close_count": 0,
+      "changes_count": 13,
+      "merge_rate": 59.4,
+      "avg_value_score": 7.2,
+      "avg_quality_score": 7.4,
+      "close_reasons": {}
+    },
+    "patterns": [
+      {
+        "type": "healthy_merge_rate",
+        "severity": "info",
+        "repo": "peerlytics",
+        "value": 100.0,
+        "message": "peerlytics: 100.0% merge rate - system performing well"
+      },
+      {
+        "type": "healthy_merge_rate",
+        "severity": "info",
+        "repo": "usdctofiat",
+        "value": 85.7,
+        "message": "usdctofiat: 85.7% merge rate - system performing well"
+      },
+      {
+        "type": "high_session_failure_rate",
+        "severity": "high",
+        "value": 100.0,
+        "message": "Session failure rate is 100.0% - check for system issues"
+      },
+      {
+        "type": "high_error_rate",
+        "severity": "high",
+        "value": 35,
+        "message": "High error count (35) - check API limits, auth, network issues"
+      },
+      {
+        "type": "high_change_request_rate",
+        "severity": "medium",
+        "value": 40.6,
+        "message": "Tech Lead requesting changes on 40.6% of PRs - check if feedback is being addressed"
+      }
+    ],
+    "recommendations": [
+      "SYSTEM: High session failure rate - check Claude API connectivity, rate limits, and error handling in agent code",
+      "SYSTEM: Review error logs - common causes: API rate limits, git auth issues, network timeouts, gh CLI problems",
+      "SYSTEM: Feedback loop may be broken - verify pending_feedback.json is being read by Senior Engineer and changes are being addressed"
+    ],
+    "self_healing_actions": [
+      {
+        "action": "oauth_check",
+        "status": "ok",
+        "message": "OAuth token valid for 8760.0 hours"
+      },
+      {
+        "action": "session_cleanup",
+        "cleaned": 0,
+        "message": "Cleaned 0 stale sessions"
+      },
+      {
+        "action": "log_cleanup",
+        "deleted": 0,
+        "freed_mb": 0,
+        "message": "Deleted 0 logs older than 14 days"
+      },
+      {
+        "action": "feedback_reset",
+        "reset": false,
+        "message": ""
+      }
+    ]
+  },
+  {
+    "timestamp": "2025-12-16T13:15:01.351392",
+    "period_days": 3,
+    "health_score": 40,
+    "pr_stats": {
+      "peerlytics": {
+        "total": 24,
+        "merged": 23,
+        "closed": 1,
+        "open": 0,
+        "merge_rate": 95.8,
+        "close_rate": 4.2,
+        "pr_types": {
+          "other": 2,
+          "feature": 12,
+          "test": 7,
+          "fix": 1,
+          "refactor": 1,
+          "accessibility": 1
+        },
+        "closed_titles": [
+          "test: add comprehensive unit tests for useAnalyticsSummary hook"
+        ],
+        "avg_additions": 472.3,
+        "avg_deletions": 12.9
+      },
+      "usdctofiat": {
+        "total": 23,
+        "merged": 22,
+        "closed": 0,
+        "open": 1,
+        "merge_rate": 95.7,
+        "close_rate": 0.0,
+        "pr_types": {
+          "other": 12,
+          "feature": 3,
+          "test": 7,
+          "refactor": 1
+        },
+        "closed_titles": [],
+        "avg_additions": 465.2,
+        "avg_deletions": 24.1
+      }
+    },
+    "log_analysis": {
+      "error_count": 74,
+      "warning_count": 0,
+      "timeout_count": 4,
+      "parse_failure_count": 0,
+      "successful_sessions": 0,
+      "failed_sessions": 11,
+      "tech_lead_merges": 102,
+      "tech_lead_closes": 0,
+      "tech_lead_changes": 185
+    },
+    "decision_analysis": {
+      "total_decisions": 32,
+      "merge_count": 19,
+      "close_count": 0,
+      "changes_count": 13,
+      "merge_rate": 59.4,
+      "avg_value_score": 7.2,
+      "avg_quality_score": 7.4,
+      "close_reasons": {}
+    },
+    "patterns": [
+      {
+        "type": "healthy_merge_rate",
+        "severity": "info",
+        "repo": "peerlytics",
+        "value": 95.8,
+        "message": "peerlytics: 95.8% merge rate - system performing well"
+      },
+      {
+        "type": "healthy_merge_rate",
+        "severity": "info",
+        "repo": "usdctofiat",
+        "value": 95.7,
+        "message": "usdctofiat: 95.7% merge rate - system performing well"
+      },
+      {
+        "type": "high_session_failure_rate",
+        "severity": "high",
+        "value": 100.0,
+        "message": "Session failure rate is 100.0% - check for system issues"
+      },
+      {
+        "type": "high_error_rate",
+        "severity": "high",
+        "value": 74,
+        "message": "High error count (74) - check API limits, auth, network issues"
+      },
+      {
+        "type": "timeouts",
+        "severity": "medium",
+        "value": 4,
+        "message": "Timeouts detected (4) - consider timeout config or task complexity"
+      },
+      {
+        "type": "high_change_request_rate",
+        "severity": "medium",
+        "value": 40.6,
+        "message": "Tech Lead requesting changes on 40.6% of PRs - check if feedback is being addressed"
+      }
+    ],
+    "recommendations": [
+      "SYSTEM: High session failure rate - check Claude API connectivity, rate limits, and error handling in agent code",
+      "SYSTEM: Review error logs - common causes: API rate limits, git auth issues, network timeouts, gh CLI problems",
+      "SYSTEM: Timeouts occurring - consider increasing CLAUDE_TIMEOUT in config or optimizing prompts to reduce task complexity",
+      "SYSTEM: Feedback loop may be broken - verify pending_feedback.json is being read by Senior Engineer and changes are being addressed"
+    ],
+    "self_healing_actions": [
+      {
+        "action": "oauth_check",
+        "status": "warning",
+        "message": "OAuth token expires in 7.7 hours at 2025-12-16 20:54:51.241000"
+      },
+      {
+        "action": "session_cleanup",
+        "cleaned": 0,
+        "message": "Cleaned 0 stale sessions"
+      },
+      {
+        "action": "log_cleanup",
+        "deleted": 0,
+        "freed_mb": 0,
+        "message": "Deleted 0 logs older than 14 days"
+      },
+      {
+        "action": "feedback_reset",
+        "reset": false,
+        "message": ""
+      }
+    ]
+  },
+  {
+    "timestamp": "2025-12-16T06:30:04.028005",
+    "period_days": 7,
+    "health_score": 40,
+    "pr_stats": {
+      "peerlytics": {
+        "total": 28,
+        "merged": 22,
+        "closed": 5,
+        "open": 1,
+        "merge_rate": 78.6,
+        "close_rate": 17.9,
+        "pr_types": {
+          "feature": 12,
+          "test": 7,
+          "fix": 6,
+          "refactor": 1,
+          "accessibility": 1,
+          "performance": 1
+        },
+        "closed_titles": [
+          "test: add comprehensive unit tests for useAnalyticsSummary hook",
+          "feat: add data freshness indicator with staleness warnings and manual refresh",
+          "fix: remove rounded corners to comply with terminal design system",
+          "fix: remove rounded corners from dashboard tabs to match brand guidelines",
+          "fix: remove rounded corners to enforce terminal aesthetic brand rules"
+        ],
+        "avg_additions": 352.7,
+        "avg_deletions": 13.4
+      },
+      "usdctofiat": {
+        "total": 26,
+        "merged": 23,
+        "closed": 2,
+        "open": 1,
+        "merge_rate": 88.5,
+        "close_rate": 7.7,
+        "pr_types": {
+          "other": 9,
+          "feature": 4,
+          "test": 11,
+          "refactor": 2
+        },
+        "closed_titles": [
+          "refactor: consolidate error handling into unified utility",
+          "test: add unit tests for utility functions (bignum.ts, format.ts)"
+        ],
+        "avg_additions": 503.0,
+        "avg_deletions": 43.4
+      }
+    },
+    "log_analysis": {
+      "error_count": 76,
+      "warning_count": 0,
+      "timeout_count": 4,
+      "parse_failure_count": 0,
+      "successful_sessions": 0,
+      "failed_sessions": 12,
+      "tech_lead_merges": 78,
+      "tech_lead_closes": 0,
+      "tech_lead_changes": 164
+    },
+    "decision_analysis": {
+      "total_decisions": 17,
+      "merge_count": 11,
+      "close_count": 0,
+      "changes_count": 6,
+      "merge_rate": 64.7,
+      "avg_value_score": 6.8,
+      "avg_quality_score": 7.1,
+      "close_reasons": {}
+    },
+    "patterns": [
+      {
+        "type": "healthy_merge_rate",
+        "severity": "info",
+        "repo": "usdctofiat",
+        "value": 88.5,
+        "message": "usdctofiat: 88.5% merge rate - system performing well"
+      },
+      {
+        "type": "high_session_failure_rate",
+        "severity": "high",
+        "value": 100.0,
+        "message": "Session failure rate is 100.0% - check for system issues"
+      },
+      {
+        "type": "high_error_rate",
+        "severity": "high",
+        "value": 76,
+        "message": "High error count (76) - check API limits, auth, network issues"
+      },
+      {
+        "type": "timeouts",
+        "severity": "medium",
+        "value": 4,
+        "message": "Timeouts detected (4) - consider timeout config or task complexity"
+      },
+      {
+        "type": "high_change_request_rate",
+        "severity": "medium",
+        "value": 35.3,
+        "message": "Tech Lead requesting changes on 35.3% of PRs - check if feedback is being addressed"
+      }
+    ],
+    "recommendations": [
+      "SYSTEM: High session failure rate - check Claude API connectivity, rate limits, and error handling in agent code",
+      "SYSTEM: Review error logs - common causes: API rate limits, git auth issues, network timeouts, gh CLI problems",
+      "SYSTEM: Timeouts occurring - consider increasing CLAUDE_TIMEOUT in config or optimizing prompts to reduce task complexity",
+      "SYSTEM: Feedback loop may be broken - verify pending_feedback.json is being read by Senior Engineer and changes are being addressed"
+    ]
+  },
+  {
     "timestamp": "2025-12-15T03:52:11.887495",
     "period_days": 7,
     "health_score": 60,

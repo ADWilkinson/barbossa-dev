@@ -1,50 +1,508 @@
 [
   {
-    "session_id": "20251215-050300-88cd04a7",
+    "session_id": "20251216-120004-308fb244",
     "repository": "usdctofiat",
-    "started": "2025-12-15T05:03:00.494608",
+    "started": "2025-12-16T12:00:04.100169",
     "status": "completed",
-    "output_file": "/app/logs/claude_usdctofiat_20251215_050300.log",
+    "output_file": "/app/logs/claude_usdctofiat_review_20251216_120004.log",
     "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
-    "completed": "2025-12-15T05:09:59.425153",
-    "pr_url": "https://github.com/ADWilkinson/usdctofiat/pull/22",
-    "summary": "** Added comprehensive test coverage for the `depositSetups` module (`src/lib/depositSetups.ts`), increasing tests from 3 to 73."
+    "completed": "2025-12-16T12:02:26.964521",
+    "pr_url": "https://github.com/ADWilkinson/usdctofiat/pull/30"
   },
   {
-    "session_id": "20251215-050300-30903392",
-    "repository": "peerlytics",
-    "started": "2025-12-15T05:03:00.481564",
-    "status": "completed",
-    "output_file": "/app/logs/claude_peerlytics_20251215_050300.log",
-    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
-    "completed": "2025-12-15T05:13:20.122075",
-    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/31",
-    "summary": "Added session storage persistence and CSV export functionality to the Live Events tab in the Peerlytics dashboard:"
-  },
-  {
-    "session_id": "20251215-050002-a58f30b6",
+    "session_id": "20251216-110003-7885cc4c",
     "repository": "usdctofiat",
-    "started": "2025-12-15T05:00:03.084161",
-    "status": "running",
-    "output_file": "/app/logs/claude_usdctofiat_20251215_050003.log",
-    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================..."
-  },
-  {
-    "session_id": "20251215-050002-da3a8f85",
-    "repository": "peerlytics",
-    "started": "2025-12-15T05:00:03.039696",
-    "status": "running",
-    "output_file": "/app/logs/claude_peerlytics_20251215_050003.log",
-    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================..."
-  },
-  {
-    "session_id": "20251215-045452-253655b1",
-    "repository": "peerlytics",
-    "started": "2025-12-15T04:54:52.490390",
+    "started": "2025-12-16T11:00:04.021559",
     "status": "completed",
-    "output_file": "/app/logs/claude_peerlytics_review_20251215_045452.log",
+    "output_file": "/app/logs/claude_usdctofiat_20251216_110004.log",
     "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
-    "completed": "2025-12-15T04:59:14.229394",
-    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/29"
+    "completed": "2025-12-16T11:07:50.910192",
+    "pr_url": "https://github.com/ADWilkinson/usdctofiat/pull/30",
+    "summary": "** Added a rate competitiveness indicator to the ManageDepositCard component that shows makers how their deposit rate compares to the current market."
+  },
+  {
+    "session_id": "20251216-110003-1e88da93",
+    "repository": "peerlytics",
+    "started": "2025-12-16T11:00:03.976973",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_20251216_110003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T11:10:09.879178",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/40",
+    "summary": "** Added watchlist activity notifications to the Live Events tab. When addresses in a user's watchlist have activity (signals, fulfills, deposits, withdrawals), users now receive:"
+  },
+  {
+    "session_id": "20251216-100310-b698fca9",
+    "repository": "usdctofiat",
+    "started": "2025-12-16T10:03:10.615342",
+    "status": "completed",
+    "output_file": "/app/logs/claude_usdctofiat_review_20251216_100310.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T10:06:55.058247",
+    "pr_url": "https://github.com/ADWilkinson/usdctofiat/pull/28"
+  },
+  {
+    "session_id": "20251216-100003-872b7a92",
+    "repository": "peerlytics",
+    "started": "2025-12-16T10:00:03.579304",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251216_100003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T10:03:10.613958",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/39"
+  },
+  {
+    "session_id": "20251216-090003-b9476572",
+    "repository": "peerlytics",
+    "started": "2025-12-16T09:00:04.002622",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_20251216_090004.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T09:08:18.601052",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/39",
+    "summary": "**WHAT**: Added comprehensive sorting and filtering controls to the watchlist section on the profile page."
+  },
+  {
+    "session_id": "20251216-090003-d6e86f54",
+    "repository": "usdctofiat",
+    "started": "2025-12-16T09:00:03.911968",
+    "status": "completed",
+    "output_file": "/app/logs/claude_usdctofiat_20251216_090003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T09:06:29.066570",
+    "pr_url": "https://github.com/ADWilkinson/usdctofiat/pull/29",
+    "summary": "**WHAT**: Added a withdrawal confirmation panel to the ManageDepositCard component to prevent accidental deposit closures."
+  },
+  {
+    "session_id": "20251216-080002-e2f45ad4",
+    "repository": "usdctofiat",
+    "started": "2025-12-16T08:00:02.395924",
+    "status": "completed",
+    "output_file": "/app/logs/claude_usdctofiat_review_20251216_080002.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T08:04:54.195253",
+    "pr_url": "https://github.com/ADWilkinson/usdctofiat/pull/28"
+  },
+  {
+    "session_id": "20251216-070002-9053e989",
+    "repository": "usdctofiat",
+    "started": "2025-12-16T07:00:03.295999",
+    "status": "completed",
+    "output_file": "/app/logs/claude_usdctofiat_20251216_070003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T07:07:59.815762",
+    "pr_url": "https://github.com/ADWilkinson/usdctofiat/pull/28",
+    "summary": "** Added rate update functionality to the ManageDepositCard component, allowing makers to adjust their conversion rate on existing deposits without needing to close and recreate them."
+  },
+  {
+    "session_id": "20251216-070002-65920a61",
+    "repository": "peerlytics",
+    "started": "2025-12-16T07:00:03.294336",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_20251216_070003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T07:07:52.464616",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/38",
+    "summary": "** Added a data freshness indicator to the dashboard that shows users when data was last updated with a manual refresh button."
+  },
+  {
+    "session_id": "20251216-060002-1bb7711e",
+    "repository": "usdctofiat",
+    "started": "2025-12-16T06:00:03.338674",
+    "status": "completed",
+    "output_file": "/app/logs/claude_usdctofiat_20251216_060003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T06:05:28.954053",
+    "pr_url": "https://github.com/ADWilkinson/usdctofiat/pull/27",
+    "summary": "** Added an Earnings Summary feature to the Manage Deposits tab that aggregates and displays total performance metrics across all user deposits."
+  },
+  {
+    "session_id": "20251216-060002-48ddd2fe",
+    "repository": "peerlytics",
+    "started": "2025-12-16T06:00:03.237199",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_20251216_060003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T06:08:52.220867",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/37",
+    "summary": "**WHAT**: Enhanced the profile watchlist section with real-time analytics for watched addresses:"
+  },
+  {
+    "session_id": "20251216-050003-262154d8",
+    "repository": "peerlytics",
+    "started": "2025-12-16T05:00:03.648831",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_20251216_050003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T05:08:04.746407",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/36",
+    "summary": "** Added a tier progress indicator to the taker leaderboard that shows users how close they are to reaching the next tier level."
+  },
+  {
+    "session_id": "20251216-050003-6be5b8b2",
+    "repository": "usdctofiat",
+    "started": "2025-12-16T05:00:03.647847",
+    "status": "completed",
+    "output_file": "/app/logs/claude_usdctofiat_20251216_050003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T05:05:40.208312",
+    "pr_url": "https://github.com/ADWilkinson/usdctofiat/pull/26",
+    "summary": "** Fixed a UX gap in ManageDepositCard where intent lists were truncated at 5 items without any indication that more existed."
+  },
+  {
+    "session_id": "20251216-030002-2b63eddb",
+    "repository": "peerlytics",
+    "started": "2025-12-16T03:00:03.106494",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_20251216_030003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T03:07:24.275690",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/35",
+    "summary": "** Added share functionality to all explorer detail pages (intent, deposit, address) by creating a reusable ShareButton component."
+  },
+  {
+    "session_id": "20251216-030002-f50e09d8",
+    "repository": "usdctofiat",
+    "started": "2025-12-16T03:00:03.078119",
+    "status": "completed",
+    "output_file": "/app/logs/claude_usdctofiat_20251216_030003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T03:05:53.584079",
+    "pr_url": "https://github.com/ADWilkinson/usdctofiat/pull/25",
+    "summary": "**WHAT**: Added inline rate display with quick adjustment controls to the deposit calculator."
+  },
+  {
+    "session_id": "20251216-020003-e6bf3093",
+    "repository": "usdctofiat",
+    "started": "2025-12-16T02:00:03.694738",
+    "status": "completed",
+    "output_file": "/app/logs/claude_usdctofiat_20251216_020003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T02:06:44.452184",
+    "pr_url": "https://github.com/ADWilkinson/usdctofiat/pull/24",
+    "summary": "**WHAT**: Added a \"Repeat\" button to deposit cards in the Manage tab that allows users to quickly create a new deposit with the same platform, currency, and rate settings."
+  },
+  {
+    "session_id": "20251216-020003-3d32d1c5",
+    "repository": "peerlytics",
+    "started": "2025-12-16T02:00:03.651169",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_20251216_020003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T02:08:05.775309",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/34",
+    "summary": "** Added context-aware error states to the explorer detail pages (address, deposit, intent) via a new `ExplorerErrorState` component."
+  },
+  {
+    "session_id": "20251216-010002-de4ded2d",
+    "repository": "peerlytics",
+    "started": "2025-12-16T01:00:02.519431",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251216_010002.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T01:03:18.291498",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/32"
+  },
+  {
+    "session_id": "20251216-000004-6141d346",
+    "repository": "peerlytics",
+    "started": "2025-12-16T00:00:04.088847",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251216_000004.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-16T00:03:41.754858",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/32"
+  },
+  {
+    "session_id": "20251215-230002-b03efb15",
+    "repository": "peerlytics",
+    "started": "2025-12-15T23:00:02.062818",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_230002.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T23:11:41.125490",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/32"
+  },
+  {
+    "session_id": "20251215-220002-a0760e48",
+    "repository": "peerlytics",
+    "started": "2025-12-15T22:00:02.175804",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_220002.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T22:02:36.279670",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/32"
+  },
+  {
+    "session_id": "20251215-210002-4f2fa123",
+    "repository": "peerlytics",
+    "started": "2025-12-15T21:00:02.602366",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_210002.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T21:03:28.374003",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/32"
+  },
+  {
+    "session_id": "20251215-200002-670e20a8",
+    "repository": "peerlytics",
+    "started": "2025-12-15T20:00:02.476393",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_200002.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T20:04:57.771174",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/32"
+  },
+  {
+    "session_id": "20251215-190002-8e4c9c90",
+    "repository": "peerlytics",
+    "started": "2025-12-15T19:00:02.117661",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_190002.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T19:03:04.758258",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/32"
+  },
+  {
+    "session_id": "20251215-180002-ddad50ee",
+    "repository": "peerlytics",
+    "started": "2025-12-15T18:00:02.443145",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_180002.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T18:03:48.425793",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/32"
+  },
+  {
+    "session_id": "20251215-170002-1ecb7783",
+    "repository": "peerlytics",
+    "started": "2025-12-15T17:00:02.267866",
+    "status": "failed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_170002.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T17:04:18.160828"
+  },
+  {
+    "session_id": "20251215-163246-f4e8b2d0",
+    "repository": "peerlytics",
+    "started": "2025-12-15T16:32:46.865776",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_20251215_163246.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T16:40:49.437335",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/33",
+    "summary": "** Added a recent searches feature to the explorer page that allows users to quickly access previously searched addresses, deposits, and intent hashes."
+  },
+  {
+    "session_id": "20251215-162624-f459dce1",
+    "repository": "usdctofiat",
+    "started": "2025-12-15T16:26:24.492779",
+    "status": "timeout",
+    "output_file": "/app/logs/claude_usdctofiat_review_20251215_162624.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T19:00:01.210500",
+    "timeout_reason": "Session exceeded 2 hour limit (ran for 2.6h)"
+  },
+  {
+    "session_id": "20251215-162018-2c38bd12",
+    "repository": "usdctofiat",
+    "started": "2025-12-15T16:20:18.629759",
+    "status": "completed",
+    "output_file": "/app/logs/claude_usdctofiat_review_20251215_162018.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T16:25:42.798446",
+    "pr_url": "https://github.com/ADWilkinson/usdctofiat/pull/23"
+  },
+  {
+    "session_id": "20251215-161839-0148312d",
+    "repository": "usdctofiat",
+    "started": "2025-12-15T16:18:39.952068",
+    "status": "completed",
+    "output_file": "/app/logs/claude_usdctofiat_review_20251215_161839.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T16:25:29.403469",
+    "pr_url": "https://github.com/ADWilkinson/usdctofiat/pull/23"
+  },
+  {
+    "session_id": "20251215-161339-988242d9",
+    "repository": "peerlytics",
+    "started": "2025-12-15T16:13:39.388744",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_161339.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T16:20:18.629116",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/32"
+  },
+  {
+    "session_id": "20251215-161109-bbb8f03f",
+    "repository": "peerlytics",
+    "started": "2025-12-15T16:11:09.575252",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_161109.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T16:18:39.950949",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/32"
+  },
+  {
+    "session_id": "20251215-160830-462c205f",
+    "repository": "peerlytics",
+    "started": "2025-12-15T16:08:30.429015",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_160830.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T16:26:24.491618",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/32"
+  },
+  {
+    "session_id": "20251215-160009-e3bf1f22",
+    "repository": "usdctofiat",
+    "started": "2025-12-15T16:00:09.251048",
+    "status": "failed",
+    "output_file": "/app/logs/claude_usdctofiat_review_20251215_160009.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T16:00:12.636819"
+  },
+  {
+    "session_id": "20251215-160002-d1f63058",
+    "repository": "peerlytics",
+    "started": "2025-12-15T16:00:02.469039",
+    "status": "failed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_160002.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T16:00:09.250014"
+  },
+  {
+    "session_id": "20251215-150009-fb2458ce",
+    "repository": "usdctofiat",
+    "started": "2025-12-15T15:00:09.685413",
+    "status": "failed",
+    "output_file": "/app/logs/claude_usdctofiat_review_20251215_150009.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T15:00:13.314961"
+  },
+  {
+    "session_id": "20251215-150002-2457ce2e",
+    "repository": "peerlytics",
+    "started": "2025-12-15T15:00:02.333709",
+    "status": "failed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_150002.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T15:00:09.670439"
+  },
+  {
+    "session_id": "20251215-140007-48a1d842",
+    "repository": "usdctofiat",
+    "started": "2025-12-15T14:00:07.774737",
+    "status": "failed",
+    "output_file": "/app/logs/claude_usdctofiat_review_20251215_140007.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T14:00:20.007223"
+  },
+  {
+    "session_id": "20251215-140002-ab9d1718",
+    "repository": "peerlytics",
+    "started": "2025-12-15T14:00:02.998436",
+    "status": "failed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_140002.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T14:00:07.774212"
+  },
+  {
+    "session_id": "20251215-130009-c54a79ec",
+    "repository": "usdctofiat",
+    "started": "2025-12-15T13:00:09.528259",
+    "status": "failed",
+    "output_file": "/app/logs/claude_usdctofiat_review_20251215_130009.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T13:00:12.566180"
+  },
+  {
+    "session_id": "20251215-130003-3867ee7c",
+    "repository": "peerlytics",
+    "started": "2025-12-15T13:00:03.095477",
+    "status": "failed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_130003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T13:00:09.526741"
+  },
+  {
+    "session_id": "20251215-120005-ef2a9811",
+    "repository": "usdctofiat",
+    "started": "2025-12-15T12:00:05.576058",
+    "status": "failed",
+    "output_file": "/app/logs/claude_usdctofiat_review_20251215_120005.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T12:00:09.362756"
+  },
+  {
+    "session_id": "20251215-120003-acddef4d",
+    "repository": "peerlytics",
+    "started": "2025-12-15T12:00:03.506247",
+    "status": "failed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_120003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T12:00:05.574795"
+  },
+  {
+    "session_id": "20251215-110530-4a75445d",
+    "repository": "peerlytics",
+    "started": "2025-12-15T11:05:30.481625",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_20251215_110530.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T11:12:25.193966",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/32",
+    "summary": "Intent Lifecycle Timeline Feature"
+  },
+  {
+    "session_id": "20251215-110530-da000323",
+    "repository": "usdctofiat",
+    "started": "2025-12-15T11:05:30.475008",
+    "status": "completed",
+    "output_file": "/app/logs/claude_usdctofiat_20251215_110530.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T11:12:01.493268",
+    "pr_url": "https://github.com/ADWilkinson/usdctofiat/pull/23",
+    "summary": "** Added a deposit history feature that allows users to store and quickly repeat up to 5 recent deposit configurations instead of just one."
+  },
+  {
+    "session_id": "20251215-110437-3cf1cd29",
+    "repository": "usdctofiat",
+    "started": "2025-12-15T11:04:38.098686",
+    "status": "failed",
+    "output_file": "/app/logs/claude_usdctofiat_20251215_110438.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T11:04:38.914485",
+    "summary": "--dangerously-skip-permissions cannot be used with root/sudo privileges for security reasons"
+  },
+  {
+    "session_id": "20251215-110437-60e48882",
+    "repository": "peerlytics",
+    "started": "2025-12-15T11:04:38.018081",
+    "status": "failed",
+    "output_file": "/app/logs/claude_peerlytics_20251215_110438.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T11:04:38.884448",
+    "summary": "--dangerously-skip-permissions cannot be used with root/sudo privileges for security reasons"
+  },
+  {
+    "session_id": "20251215-110002-a104c9d9",
+    "repository": "peerlytics",
+    "started": "2025-12-15T11:00:02.123603",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_110002.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T11:03:09.159428",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/31"
+  },
+  {
+    "session_id": "20251215-100003-b345c63d",
+    "repository": "peerlytics",
+    "started": "2025-12-15T10:00:03.064798",
+    "status": "completed",
+    "output_file": "/app/logs/claude_peerlytics_review_20251215_100003.log",
+    "prompt_preview": "You are Barbossa, an autonomous personal development assistant.\n\n================================================================================\nSESSION METADATA\n=====================================...",
+    "completed": "2025-12-15T10:03:11.130305",
+    "pr_url": "https://github.com/ADWilkinson/peerlytics/pull/31"
   }
 ]
