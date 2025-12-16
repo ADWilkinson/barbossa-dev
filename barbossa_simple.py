@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Barbossa v4.0 - Personal Development Assistant
-Simple autonomous developer that creates PRs on your repositories every hour.
+Barbossa Engineer v5.1 - Autonomous Development Agent
+Creates PRs from the backlog every hour at :00.
+Picks from GitHub Issues first, invents work only if backlog empty.
 
-v4.0 Changes:
-- Removed brittle pending_feedback.json state tracking
-- GitHub is now the single source of truth
-- Claude reads PR comments directly and understands context
-- Simplified priority logic - Claude decides based on full context
+Part of the v5.1 Pipeline:
+- Discovery (3x daily) → creates Issues in backlog
+- Engineer (:00) → implements from backlog, creates PRs  <-- THIS AGENT
+- Tech Lead (:35) → reviews PRs, merges or requests changes
+- Auditor (daily 06:30) → system health analysis
 """
 
 import json
@@ -28,7 +29,7 @@ class Barbossa:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "4.0.0"
+    VERSION = "5.1.0"
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths

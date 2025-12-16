@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 """
-Barbossa Auditor v1.0 - Self-Improving System Audit Agent
-Runs daily to analyze logs, PR outcomes, and system health.
+Barbossa Auditor v5.1 - Self-Improving System Audit Agent
+Runs daily at 06:30 to analyze logs, PR outcomes, and system health.
 Identifies patterns, issues, and opportunities for improvement.
+
+Part of the v5.1 Pipeline:
+- Discovery (3x daily) → creates Issues
+- Engineer (:00) → implements from backlog, creates PRs
+- Tech Lead (:35) → reviews PRs, merges or requests changes
+- Auditor (daily 06:30) → system health analysis
 """
 
 import json
@@ -23,7 +29,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "1.0.0"
+    VERSION = "5.1.0"
     ROLE = "auditor"
 
     def __init__(self, work_dir: Optional[Path] = None):

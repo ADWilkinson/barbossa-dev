@@ -32,9 +32,11 @@ RUN useradd -m -s /bin/bash -u 1000 barbossa \
 # Set working directory
 WORKDIR /app
 
-# Copy application files
+# Copy application files - all v5.1 agents
 COPY barbossa_simple.py .
 COPY barbossa_tech_lead.py .
+COPY barbossa_discovery.py .
+COPY barbossa_auditor.py .
 COPY run.sh .
 COPY config/ config/
 COPY web_portal/app_simple.py web_portal/

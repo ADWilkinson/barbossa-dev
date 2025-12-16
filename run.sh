@@ -1,15 +1,15 @@
 #!/bin/bash
-# Barbossa v3.0 - Run Script
+# Barbossa v5.1 - Run Script
 # Creates PRs for configured repositories
 
 cd /home/dappnode/barbossa-engineer
 
 echo "=========================================="
-echo "Barbossa v3.0 - Starting Run"
+echo "Barbossa v5.1 - Starting Run"
 echo "Time: $(date)"
 echo "=========================================="
 
-# Run Barbossa
+# Run Barbossa Engineer
 python3 barbossa_simple.py "$@"
 
 echo ""

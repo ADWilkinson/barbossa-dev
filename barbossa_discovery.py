@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """
-Barbossa Discovery Agent v1.0
-Autonomous feature/improvement discovery - feeds the engineering pipeline.
+Barbossa Discovery v5.1 - Autonomous Feature Discovery Agent
+Runs 3x daily (06:00, 14:00, 22:00) to find improvements and create Issues.
+Keeps the backlog fed so Engineers always have work to pick from.
 
-This agent explores codebases and creates GitHub Issues for engineers to implement.
-It finds opportunities that humans might miss, keeping the backlog full.
+Part of the v5.1 Pipeline:
+- Discovery (3x daily) → creates Issues in backlog  <-- THIS AGENT
+- Engineer (:00) → implements from backlog, creates PRs
+- Tech Lead (:35) → reviews PRs, merges or requests changes
+- Auditor (daily 06:30) → system health analysis
 
 Discovery Types:
 1. Code Analysis - TODOs, FIXMEs, missing tests, accessibility gaps
-2. Pattern Detection - DRY violations, inconsistencies, modernization opportunities
-3. UX Improvements - Loading states, error handling, empty states
-4. Performance - Bundle size, unused dependencies, optimization opportunities
+2. UX Improvements - Loading states, error handling, empty states
+3. Cleanup - Console.logs, dead code, inconsistencies
 """
 
 import json
@@ -26,7 +29,7 @@ from typing import Dict, List, Optional
 class BarbossaDiscovery:
     """Autonomous discovery agent that creates GitHub Issues for the pipeline."""
 
-    VERSION = "1.0.0"
+    VERSION = "5.1.0"
     BACKLOG_THRESHOLD = 5  # Only discover if fewer than this many issues in backlog
 
     def __init__(self, work_dir: Optional[Path] = None):

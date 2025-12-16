@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Barbossa Tech Lead v2.0 - PR Review & Governance Agent
+Barbossa Tech Lead v5.1 - PR Review & Governance Agent
 A strict, critical reviewer that manages PRs created by the Senior Engineer.
-Runs every 5 hours to review, merge, or close PRs with full authority.
+Runs hourly at :35 (after Engineer completes) for fast feedback loops.
 
-v2.0 Changes:
-- Removed brittle pending_feedback.json state tracking
-- GitHub is now the single source of truth
-- Claude reads PR comments directly and understands context
-- No more timestamp-based coordination - Claude makes intelligent decisions
+Part of the v5.1 Pipeline:
+- Discovery (3x daily) → creates Issues
+- Engineer (:00) → implements from backlog, creates PRs
+- Tech Lead (:35) → reviews PRs, merges or requests changes
+- Auditor (daily) → system health analysis
 """
 
 import json
@@ -29,7 +29,7 @@ class BarbossaTechLead:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "2.0.0"
+    VERSION = "5.1.0"
     ROLE = "tech_lead"
 
     # Review criteria thresholds
