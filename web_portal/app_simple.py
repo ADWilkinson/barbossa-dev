@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Barbossa v3.1 - Web Portal
+Barbossa v4.0 - Web Portal
 Minimal black/off-white public dashboard with secure admin features.
+Now uses GitHub as single source of truth (no pending_feedback.json).
 """
 
 from flask import Flask, render_template_string, jsonify, request, Response
@@ -1025,24 +1026,7 @@ DASHBOARD_HTML = """
                 {% endif %}
             </div>
 
-            <!-- Pending Feedback -->
-            {% if pending_feedback %}
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Awaiting Fixes</div>
-                    <div class="card-meta">{{ pending_feedback|length }} PR{{ 's' if pending_feedback|length > 1 else '' }} need attention</div>
-                </div>
-                {% for key, item in pending_feedback.items() %}
-                <div class="feedback-item">
-                    <div class="feedback-header">
-                        <span class="feedback-pr">{{ item.repo }}#{{ item.pr_number }}</span>
-                        <span class="feedback-time">{{ item.timestamp[:10] if item.timestamp else '' }}</span>
-                    </div>
-                    <div class="feedback-text">{{ item.feedback[:150] }}{% if item.feedback|length > 150 %}...{% endif %}</div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
+            <!-- Note: Pending feedback now tracked via GitHub PR comments (v4.0 refactor) -->
 
             <!-- Recent Errors -->
             {% if recent_errors and is_admin %}
@@ -1093,24 +1077,27 @@ DASHBOARD_HTML = """
             {% endif %}
 
             <!-- Cron Schedule -->
-            <div class="card {{ 'full-width' if not pending_feedback and not (recent_errors and is_admin) and total_decisions == 0 else '' }}">
+            <div class="card {{ 'full-width' if not (recent_errors and is_admin) and total_decisions == 0 else '' }}">
                 <div class="card-header">
                     <div class="card-title">Schedule</div>
                     <div class="card-meta">Automated runs</div>
                 </div>
                 <div class="cron-schedule">
                     <div class="cron-item">
-                        <div class="cron-agent">Tech Lead</div>
-                        <div class="cron-time">:45</div>
-                    </div>
-                    <div class="cron-item">
                         <div class="cron-agent">Engineer</div>
                         <div class="cron-time">:00</div>
+                    </div>
+                    <div class="cron-item">
+                        <div class="cron-agent">Tech Lead</div>
+                        <div class="cron-time">:45</div>
                     </div>
                     <div class="cron-item">
                         <div class="cron-agent">Auditor</div>
                         <div class="cron-time">6:30 AM</div>
                     </div>
+                </div>
+                <div style="margin-top: 8px; font-size: 11px; color: var(--text-dim);">
+                    Engineer → Tech Lead → Engineer → ...
                 </div>
                 <div style="margin-top: 16px; font-size: 12px; color: var(--text-dim);">
                     Next engineer run: <strong style="color: var(--text);">{{ next_run }}</strong>
@@ -1119,7 +1106,7 @@ DASHBOARD_HTML = """
         </div>
 
         <footer>
-            Barbossa v3.1 · Updated {{ now }}
+            Barbossa v4.0 · Updated {{ now }}
             {% if is_admin %}
             · <a href="/admin">Admin Panel</a>
             {% endif %}
@@ -1522,7 +1509,7 @@ def dashboard():
     tech_lead_stats = count_tech_lead_stats(tech_lead_decisions)
 
     # Load new data sources
-    pending_feedback = load_pending_feedback()
+    # Note: pending_feedback.json is deprecated - feedback now via GitHub PR comments
     system_health = load_system_insights()
     recent_errors = get_recent_errors(10) if admin else []
 
@@ -1564,7 +1551,6 @@ def dashboard():
         tech_lead_merged=tech_lead_stats['merged'],
         tech_lead_closed=tech_lead_stats['closed'],
         tech_lead_changes=tech_lead_stats['changes'],
-        pending_feedback=pending_feedback,
         system_health=system_health,
         recent_errors=recent_errors,
         is_admin=admin,
@@ -1611,7 +1597,7 @@ def api_status():
     running = get_running_sessions()
 
     return jsonify({
-        'version': '3.1.0',
+        'version': '4.0.0',
         'running': len(running) > 0,
         'sessions': stats['total'],
         'completed': stats['completed'],
@@ -1721,11 +1707,13 @@ def api_system_health():
 
 @app.route('/api/pending-feedback')
 def api_pending_feedback():
-    """API endpoint for pending feedback (public)"""
-    feedback = load_pending_feedback()
+    """DEPRECATED: Pending feedback now tracked via GitHub PR comments.
+    This endpoint returns empty data for backwards compatibility."""
     return jsonify({
-        'count': len(feedback),
-        'items': list(feedback.values())
+        'deprecated': True,
+        'message': 'Feedback now tracked via GitHub PR comments (v4.0 refactor)',
+        'count': 0,
+        'items': []
     })
 
 
