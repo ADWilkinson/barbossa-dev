@@ -143,7 +143,7 @@ class BarbossaTechLead:
         try:
             result = subprocess.run(
                 f"gh pr list --repo {self.owner}/{repo_name} --state open "
-                f"--json number,title,headRefName,body,additions,deletions,changedFiles,author,createdAt,url,labels,reviews,reviewDecision "
+                f"--json number,title,headRefName,body,additions,deletions,changedFiles,author,createdAt,updatedAt,url,labels,reviews,reviewDecision "
                 f"--limit 50",
                 shell=True,
                 capture_output=True,
