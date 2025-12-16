@@ -126,28 +126,6 @@ class Barbossa:
             self.logger.warning(f"Could not fetch closed PRs for {repo_name}: {e}")
         return []
 
-    def _extract_keywords(self, title: str) -> set:
-        """Extract keywords from a PR title for similarity matching"""
-        import re
-        # Remove common prefixes
-        title = re.sub(r'^(feat|fix|refactor|test|chore|docs|style|perf|a11y)[\(:]\s*', '', title, flags=re.IGNORECASE)
-        # Extract significant words (3+ chars, not common words)
-        words = re.findall(r'\b[a-zA-Z]{3,}\b', title.lower())
-        common_words = {'the', 'and', 'for', 'with', 'add', 'remove', 'update', 'fix', 'from', 'into'}
-        return {w for w in words if w not in common_words}
-
-    def _is_similar_to_closed_pr(self, proposed_keywords: set, closed_titles: List[str]) -> Optional[str]:
-        """Check if proposed work is similar to a recently closed PR"""
-        for closed_title in closed_titles:
-            closed_keywords = self._extract_keywords(closed_title)
-            # If more than 50% of keywords match, consider it similar
-            if closed_keywords and proposed_keywords:
-                overlap = len(proposed_keywords & closed_keywords)
-                similarity = overlap / min(len(proposed_keywords), len(closed_keywords))
-                if similarity > 0.5:
-                    return closed_title
-        return None
-
     def _generate_session_id(self) -> str:
         """Generate unique session ID"""
         return datetime.now().strftime('%Y%m%d-%H%M%S') + '-' + str(uuid.uuid4())[:8]
@@ -252,17 +230,53 @@ YOUR MISSION
 ================================================================================
 Create ONE meaningful Pull Request that adds real value to this codebase.
 
-CRITICAL: Before writing any code, you MUST first understand the current state:
+================================================================================
+PHASE 0 - MANDATORY STATE CHECK (you MUST do this FIRST)
+================================================================================
+Before writing ANY code, you MUST understand what already exists. This is NOT optional.
 
-PHASE 0 - RECONNAISSANCE (do this FIRST, before any coding):
-  1. Check open PRs: gh pr list --state open --repo {owner}/{repo['name']}
-  2. Check recent commits: git log --oneline -15
-  3. Check for any GitHub issues: gh issue list --state open --repo {owner}/{repo['name']} --limit 10
-  4. Explore the codebase structure and understand what exists
-  5. Think critically: What would ACTUALLY be most valuable right now?
+Step 1 - Check what's already in progress:
+  gh pr list --state open --repo {owner}/{repo['name']}
+
+  For EACH open PR, read its title and understand what feature/fix it addresses.
+  You MUST NOT create a PR that overlaps with any open PR.
+
+Step 2 - Check what was recently added:
+  git log --oneline -20
+
+  Read the commit messages. Understand what was recently shipped.
+  You MUST NOT duplicate work that was just merged.
+
+Step 3 - Check what's being requested:
+  gh issue list --state open --repo {owner}/{repo['name']} --limit 10
+
+  Open issues are opportunities. Prioritize fixing reported issues over inventing work.
+
+Step 4 - Explore the actual codebase:
+  Look at the file structure. Read key files. Understand what features EXIST.
+  You MUST NOT add a feature that already exists in the codebase.
+
+Step 5 - STOP AND VERIFY before proceeding:
+  Ask yourself:
+  - Does any open PR already address what I'm thinking of doing? → SKIP IT
+  - Was this recently merged in the last 20 commits? → SKIP IT
+  - Does this feature/component already exist in the codebase? → SKIP IT
+  - Is there an open issue I could address instead? → DO THAT
 
 {closed_pr_section}
 
+DUPLICATE DETECTION - READ CAREFULLY:
+If you find that your proposed work:
+  - Overlaps with an OPEN PR → You MUST pick something else
+  - Was recently MERGED → You MUST pick something else
+  - Already EXISTS in the codebase → You MUST pick something else
+  - Is similar to a CLOSED (rejected) PR → You MUST pick something else
+
+The goal is UNIQUE, HIGH-VALUE work. Not duplicating effort.
+
+================================================================================
+CHOOSING WHAT TO BUILD
+================================================================================
 DO NOT just pick something obvious or easy. Think like a senior engineer:
 - What's the biggest pain point in this codebase?
 - What would make the biggest impact for users or developers?
@@ -334,14 +348,16 @@ MANDATORY TEST REQUIREMENTS:
 - Tech Lead WILL REJECT PRs with >50 lines and no tests
 
 ABSOLUTELY DO NOT:
-- Start coding without first reviewing repo state (PRs, commits, issues)
+- Start coding without completing PHASE 0 (state check) first
+- Create a PR that duplicates an OPEN PR - check first!
+- Create a PR for something that was RECENTLY MERGED - check git log first!
+- Add a feature that ALREADY EXISTS in the codebase - explore first!
+- Repeat work similar to CLOSED (rejected) PRs - they were rejected for a reason
 - Add comments or documentation as the main change
 - Create empty or trivial PRs
 - Touch configuration for services you don't understand
 - Break existing functionality
 - Ignore the design system or brand rules
-- Do the same type of fix you've done in previous sessions
-- Repeat work similar to recently CLOSED PRs (see list above if any)
 
 ================================================================================
 PACKAGE MANAGER: {pkg_manager.upper()}
