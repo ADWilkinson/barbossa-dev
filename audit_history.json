@@ -1,5 +1,433 @@
 [
   {
+    "timestamp": "2025-12-17T10:10:02.955997",
+    "period_days": 7,
+    "health_score": 0,
+    "pr_stats": {
+      "peerlytics": {
+        "total": 37,
+        "merged": 31,
+        "closed": 5,
+        "open": 1,
+        "merge_rate": 83.8,
+        "close_rate": 13.5,
+        "pr_types": {
+          "feature": 19,
+          "other": 2,
+          "test": 7,
+          "fix": 6,
+          "refactor": 1,
+          "accessibility": 1,
+          "performance": 1
+        },
+        "closed_titles": [
+          "test: add comprehensive unit tests for useAnalyticsSummary hook",
+          "feat: add data freshness indicator with staleness warnings and manual refresh",
+          "fix: remove rounded corners to comply with terminal design system",
+          "fix: remove rounded corners from dashboard tabs to match brand guidelines",
+          "fix: remove rounded corners to enforce terminal aesthetic brand rules"
+        ],
+        "avg_additions": 401.1,
+        "avg_deletions": 12.1
+      },
+      "usdctofiat": {
+        "total": 35,
+        "merged": 31,
+        "closed": 2,
+        "open": 2,
+        "merge_rate": 88.6,
+        "close_rate": 5.7,
+        "pr_types": {
+          "accessibility": 1,
+          "other": 17,
+          "feature": 4,
+          "test": 11,
+          "refactor": 2
+        },
+        "closed_titles": [
+          "refactor: consolidate error handling into unified utility",
+          "test: add unit tests for utility functions (bignum.ts, format.ts)"
+        ],
+        "avg_additions": 499.3,
+        "avg_deletions": 33.9
+      }
+    },
+    "log_analysis": {
+      "error_count": 76,
+      "warning_count": 0,
+      "timeout_count": 4,
+      "parse_failure_count": 0,
+      "successful_sessions": 0,
+      "failed_sessions": 12,
+      "tech_lead_merges": 132,
+      "tech_lead_closes": 0,
+      "tech_lead_changes": 230
+    },
+    "decision_analysis": {
+      "total_decisions": 50,
+      "merge_count": 27,
+      "close_count": 0,
+      "changes_count": 23,
+      "merge_rate": 54.0,
+      "avg_value_score": 7.6,
+      "avg_quality_score": 7.8,
+      "close_reasons": {}
+    },
+    "quality_stats": {
+      "peerlytics": {
+        "coverage": {
+          "has_coverage": false,
+          "coverage_percentage": 0,
+          "trend": "unknown",
+          "uncovered_critical_files": [],
+          "status": "no_recent_coverage"
+        },
+        "integration_tests": {
+          "has_integration_tests": false,
+          "integration_test_count": 0,
+          "integration_test_files": [],
+          "has_api_integration_tests": false,
+          "has_db_integration_tests": false,
+          "status": "none"
+        },
+        "e2e_tests": {
+          "has_e2e_tests": false,
+          "e2e_test_count": 0,
+          "e2e_framework": "playwright",
+          "critical_flows_covered": [],
+          "status": "none"
+        },
+        "ui_assessment": {
+          "ui_pr_count": 24,
+          "style_only_pr_count": 0,
+          "untested_ui_pr_count": 11,
+          "ui_churn_files": [
+            {
+              "file": "src/components/dashboard/DashboardV2.tsx",
+              "change_count": 12
+            },
+            {
+              "file": "src/components/dashboard/tabs/LiveEventsTab.tsx",
+              "change_count": 4
+            },
+            {
+              "file": "src/app/explorer/intent/[hash]/page.tsx",
+              "change_count": 3
+            }
+          ],
+          "status": "needs_attention"
+        },
+        "cross_layer": {
+          "contract_changes_without_frontend": 0,
+          "api_changes_without_client": 0,
+          "breaking_changes_detected": 0,
+          "orphaned_changes": [],
+          "status": "healthy"
+        }
+      },
+      "usdctofiat": {
+        "coverage": {
+          "has_coverage": false,
+          "coverage_percentage": 0,
+          "trend": "unknown",
+          "uncovered_critical_files": [],
+          "status": "no_recent_coverage"
+        },
+        "integration_tests": {
+          "has_integration_tests": false,
+          "integration_test_count": 0,
+          "integration_test_files": [],
+          "has_api_integration_tests": false,
+          "has_db_integration_tests": false,
+          "status": "none"
+        },
+        "e2e_tests": {
+          "has_e2e_tests": false,
+          "e2e_test_count": 0,
+          "e2e_framework": null,
+          "critical_flows_covered": [],
+          "status": "no_framework"
+        },
+        "ui_assessment": {
+          "ui_pr_count": 20,
+          "style_only_pr_count": 0,
+          "untested_ui_pr_count": 8,
+          "ui_churn_files": [
+            {
+              "file": "src/components/ManageDeposits.tsx",
+              "change_count": 6
+            },
+            {
+              "file": "src/components/DepositCalculator.tsx",
+              "change_count": 9
+            },
+            {
+              "file": "src/components/ManageDepositCard.tsx",
+              "change_count": 6
+            }
+          ],
+          "status": "needs_attention"
+        },
+        "cross_layer": {
+          "contract_changes_without_frontend": 0,
+          "api_changes_without_client": 0,
+          "breaking_changes_detected": 0,
+          "orphaned_changes": [],
+          "status": "healthy"
+        }
+      }
+    },
+    "patterns": [
+      {
+        "type": "no_integration_tests",
+        "severity": "high",
+        "repo": "peerlytics",
+        "message": "peerlytics: No integration tests found - API/DB integration is untested"
+      },
+      {
+        "type": "ui_changes_need_attention",
+        "severity": "medium",
+        "repo": "peerlytics",
+        "message": "peerlytics: UI changes need better test coverage and reduced churn"
+      },
+      {
+        "type": "high_ui_churn",
+        "severity": "medium",
+        "repo": "peerlytics",
+        "value": 3,
+        "message": "peerlytics: 3 UI files changed in 3+ PRs - indicates instability or frivolous changes"
+      },
+      {
+        "type": "no_integration_tests",
+        "severity": "high",
+        "repo": "usdctofiat",
+        "message": "usdctofiat: No integration tests found - API/DB integration is untested"
+      },
+      {
+        "type": "no_e2e_framework",
+        "severity": "medium",
+        "repo": "usdctofiat",
+        "message": "usdctofiat: No E2E testing framework (Playwright/Cypress) configured"
+      },
+      {
+        "type": "ui_changes_need_attention",
+        "severity": "medium",
+        "repo": "usdctofiat",
+        "message": "usdctofiat: UI changes need better test coverage and reduced churn"
+      },
+      {
+        "type": "high_ui_churn",
+        "severity": "medium",
+        "repo": "usdctofiat",
+        "value": 3,
+        "message": "usdctofiat: 3 UI files changed in 3+ PRs - indicates instability or frivolous changes"
+      },
+      {
+        "type": "healthy_merge_rate",
+        "severity": "info",
+        "repo": "usdctofiat",
+        "value": 88.6,
+        "message": "usdctofiat: 88.6% merge rate - system performing well"
+      },
+      {
+        "type": "high_session_failure_rate",
+        "severity": "high",
+        "value": 100.0,
+        "message": "Session failure rate is 100.0% - check for system issues"
+      },
+      {
+        "type": "high_error_rate",
+        "severity": "high",
+        "value": 76,
+        "message": "High error count (76) - check API limits, auth, network issues"
+      },
+      {
+        "type": "timeouts",
+        "severity": "medium",
+        "value": 4,
+        "message": "Timeouts detected (4) - consider timeout config or task complexity"
+      },
+      {
+        "type": "high_change_request_rate",
+        "severity": "medium",
+        "value": 46.0,
+        "message": "Tech Lead requesting changes on 46.0% of PRs - check if feedback is being addressed"
+      }
+    ],
+    "recommendations": [
+      "QUALITY: peerlytics lacks integration tests - API endpoints and database operations must have integration test coverage",
+      "QUALITY: peerlytics UI changes need better testing - all component changes should include or update tests",
+      "QUALITY: peerlytics has high UI churn - same components changed repeatedly indicates instability or unclear design",
+      "QUALITY: usdctofiat lacks integration tests - API endpoints and database operations must have integration test coverage",
+      "QUALITY: usdctofiat needs E2E testing - install Playwright or Cypress to test critical user flows",
+      "QUALITY: usdctofiat UI changes need better testing - all component changes should include or update tests",
+      "QUALITY: usdctofiat has high UI churn - same components changed repeatedly indicates instability or unclear design",
+      "SYSTEM: High session failure rate - check Claude API connectivity, rate limits, and error handling in agent code",
+      "SYSTEM: Review error logs - common causes: API rate limits, git auth issues, network timeouts, gh CLI problems",
+      "SYSTEM: Timeouts occurring - consider increasing CLAUDE_TIMEOUT in config or optimizing prompts to reduce task complexity",
+      "SYSTEM: Feedback loop may be broken - verify pending_feedback.json is being read by Senior Engineer and changes are being addressed"
+    ],
+    "self_healing_actions": [
+      {
+        "action": "oauth_check",
+        "status": "ok",
+        "message": "OAuth token valid for 8739.2 hours"
+      },
+      {
+        "action": "session_cleanup",
+        "cleaned": 0,
+        "message": "Cleaned 0 stale sessions"
+      },
+      {
+        "action": "log_cleanup",
+        "deleted": 0,
+        "freed_mb": 0,
+        "message": "Deleted 0 logs older than 14 days"
+      },
+      {
+        "action": "feedback_reset",
+        "reset": false,
+        "message": ""
+      }
+    ]
+  },
+  {
+    "timestamp": "2025-12-17T06:30:04.584421",
+    "period_days": 7,
+    "health_score": 40,
+    "pr_stats": {
+      "peerlytics": {
+        "total": 35,
+        "merged": 29,
+        "closed": 5,
+        "open": 1,
+        "merge_rate": 82.9,
+        "close_rate": 14.3,
+        "pr_types": {
+          "feature": 17,
+          "other": 2,
+          "test": 7,
+          "fix": 6,
+          "refactor": 1,
+          "accessibility": 1,
+          "performance": 1
+        },
+        "closed_titles": [
+          "test: add comprehensive unit tests for useAnalyticsSummary hook",
+          "feat: add data freshness indicator with staleness warnings and manual refresh",
+          "fix: remove rounded corners to comply with terminal design system",
+          "fix: remove rounded corners from dashboard tabs to match brand guidelines",
+          "fix: remove rounded corners to enforce terminal aesthetic brand rules"
+        ],
+        "avg_additions": 394.0,
+        "avg_deletions": 12.7
+      },
+      "usdctofiat": {
+        "total": 33,
+        "merged": 29,
+        "closed": 2,
+        "open": 2,
+        "merge_rate": 87.9,
+        "close_rate": 6.1,
+        "pr_types": {
+          "other": 16,
+          "feature": 4,
+          "test": 11,
+          "refactor": 2
+        },
+        "closed_titles": [
+          "refactor: consolidate error handling into unified utility",
+          "test: add unit tests for utility functions (bignum.ts, format.ts)"
+        ],
+        "avg_additions": 493.3,
+        "avg_deletions": 35.9
+      }
+    },
+    "log_analysis": {
+      "error_count": 76,
+      "warning_count": 0,
+      "timeout_count": 4,
+      "parse_failure_count": 0,
+      "successful_sessions": 0,
+      "failed_sessions": 12,
+      "tech_lead_merges": 120,
+      "tech_lead_closes": 0,
+      "tech_lead_changes": 224
+    },
+    "decision_analysis": {
+      "total_decisions": 50,
+      "merge_count": 24,
+      "close_count": 0,
+      "changes_count": 26,
+      "merge_rate": 48.0,
+      "avg_value_score": 7.4,
+      "avg_quality_score": 7.5,
+      "close_reasons": {}
+    },
+    "patterns": [
+      {
+        "type": "healthy_merge_rate",
+        "severity": "info",
+        "repo": "usdctofiat",
+        "value": 87.9,
+        "message": "usdctofiat: 87.9% merge rate - system performing well"
+      },
+      {
+        "type": "high_session_failure_rate",
+        "severity": "high",
+        "value": 100.0,
+        "message": "Session failure rate is 100.0% - check for system issues"
+      },
+      {
+        "type": "high_error_rate",
+        "severity": "high",
+        "value": 76,
+        "message": "High error count (76) - check API limits, auth, network issues"
+      },
+      {
+        "type": "timeouts",
+        "severity": "medium",
+        "value": 4,
+        "message": "Timeouts detected (4) - consider timeout config or task complexity"
+      },
+      {
+        "type": "high_change_request_rate",
+        "severity": "medium",
+        "value": 52.0,
+        "message": "Tech Lead requesting changes on 52.0% of PRs - check if feedback is being addressed"
+      }
+    ],
+    "recommendations": [
+      "SYSTEM: High session failure rate - check Claude API connectivity, rate limits, and error handling in agent code",
+      "SYSTEM: Review error logs - common causes: API rate limits, git auth issues, network timeouts, gh CLI problems",
+      "SYSTEM: Timeouts occurring - consider increasing CLAUDE_TIMEOUT in config or optimizing prompts to reduce task complexity",
+      "SYSTEM: Feedback loop may be broken - verify pending_feedback.json is being read by Senior Engineer and changes are being addressed"
+    ],
+    "self_healing_actions": [
+      {
+        "action": "oauth_check",
+        "status": "ok",
+        "message": "OAuth token valid for 8742.9 hours"
+      },
+      {
+        "action": "session_cleanup",
+        "cleaned": 0,
+        "message": "Cleaned 0 stale sessions"
+      },
+      {
+        "action": "log_cleanup",
+        "deleted": 0,
+        "freed_mb": 0,
+        "message": "Deleted 0 logs older than 14 days"
+      },
+      {
+        "action": "feedback_reset",
+        "reset": false,
+        "message": ""
+      }
+    ]
+  },
+  {
     "timestamp": "2025-12-16T13:23:08.998635",
     "period_days": 1,
     "health_score": 52,

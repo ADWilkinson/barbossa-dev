@@ -29,7 +29,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "5.2.0"  # Added self-healing capabilities
+    VERSION = "5.3.0"  # Added quality assurance checks (coverage, E2E, integration, UI assessment)
     ROLE = "auditor"
 
     def __init__(self, work_dir: Optional[Path] = None):
@@ -329,13 +329,569 @@ class BarbossaAuditor:
         }
 
     # =========================================================================
+    # QUALITY ASSURANCE CHECKS
+    # =========================================================================
+
+    def _analyze_test_coverage(self, repo_name: str) -> Dict:
+        """Analyze test coverage from recent PRs"""
+        result = {
+            'has_coverage': False,
+            'coverage_percentage': 0,
+            'trend': 'unknown',
+            'uncovered_critical_files': [],
+            'status': 'unknown'
+        }
+
+        try:
+            # Check if repo has coverage reports
+            repo_path = Path.home() / 'projects' / repo_name
+            if not repo_path.exists():
+                # Try alternate path for monorepo
+                for monorepo in ['zkp2p', 'davy-jones-intern']:
+                    alt_path = Path.home() / 'projects' / monorepo / repo_name
+                    if alt_path.exists():
+                        repo_path = alt_path
+                        break
+
+            if not repo_path.exists():
+                result['status'] = 'repo_not_found'
+                return result
+
+            # Check for coverage config
+            coverage_configs = ['vitest.config.ts', 'jest.config.js', 'playwright.config.ts']
+            has_coverage_config = any((repo_path / cfg).exists() for cfg in coverage_configs)
+
+            if not has_coverage_config:
+                result['status'] = 'no_coverage_config'
+                return result
+
+            # Try to find recent coverage reports
+            coverage_dirs = [
+                repo_path / 'coverage',
+                repo_path / '.coverage',
+                repo_path / 'coverage-report'
+            ]
+
+            coverage_dir = None
+            for cdir in coverage_dirs:
+                if cdir.exists():
+                    coverage_dir = cdir
+                    break
+
+            if not coverage_dir:
+                result['status'] = 'no_recent_coverage'
+                return result
+
+            # Parse coverage summary if it exists
+            summary_files = [
+                coverage_dir / 'coverage-summary.json',
+                coverage_dir / 'coverage-final.json',
+                coverage_dir / 'lcov-report' / 'index.html'
+            ]
+
+            for summary_file in summary_files:
+                if summary_file.exists() and summary_file.suffix == '.json':
+                    try:
+                        with open(summary_file, 'r') as f:
+                            coverage_data = json.load(f)
+
+                        # Extract total coverage percentage
+                        if 'total' in coverage_data:
+                            total = coverage_data['total']
+                            if 'lines' in total and 'pct' in total['lines']:
+                                result['coverage_percentage'] = total['lines']['pct']
+                                result['has_coverage'] = True
+
+                                # Determine status
+                                if result['coverage_percentage'] >= 80:
+                                    result['status'] = 'excellent'
+                                elif result['coverage_percentage'] >= 70:
+                                    result['status'] = 'good'
+                                elif result['coverage_percentage'] >= 60:
+                                    result['status'] = 'fair'
+                                else:
+                                    result['status'] = 'poor'
+
+                        # Find uncovered critical files
+                        critical_patterns = ['api', 'service', 'controller', 'store', 'context', 'hook']
+                        for file_path, file_data in coverage_data.items():
+                            if file_path == 'total':
+                                continue
+                            if isinstance(file_data, dict) and 'lines' in file_data:
+                                coverage_pct = file_data['lines'].get('pct', 100)
+                                # Check if this is a critical file
+                                if coverage_pct < 50 and any(pattern in file_path.lower() for pattern in critical_patterns):
+                                    result['uncovered_critical_files'].append({
+                                        'file': file_path,
+                                        'coverage': coverage_pct
+                                    })
+
+                        break
+                    except Exception as e:
+                        self.logger.warning(f"Could not parse coverage file {summary_file}: {e}")
+
+            if not result['has_coverage']:
+                result['status'] = 'no_parseable_coverage'
+
+        except Exception as e:
+            self.logger.error(f"Error analyzing coverage for {repo_name}: {e}")
+            result['status'] = 'error'
+
+        return result
+
+    def _detect_integration_tests(self, repo_name: str) -> Dict:
+        """Detect presence and health of integration tests"""
+        result = {
+            'has_integration_tests': False,
+            'integration_test_count': 0,
+            'integration_test_files': [],
+            'has_api_integration_tests': False,
+            'has_db_integration_tests': False,
+            'status': 'none'
+        }
+
+        try:
+            repo_path = Path.home() / 'projects' / repo_name
+            if not repo_path.exists():
+                for monorepo in ['zkp2p', 'davy-jones-intern']:
+                    alt_path = Path.home() / 'projects' / monorepo / repo_name
+                    if alt_path.exists():
+                        repo_path = alt_path
+                        break
+
+            if not repo_path.exists():
+                return result
+
+            # Search for integration test files
+            integration_patterns = [
+                '*.integration.test.ts',
+                '*.integration.test.js',
+                '*.integration.spec.ts',
+                '*.e2e.test.ts',
+                '**/integration/**/*.test.ts',
+                '**/integration/**/*.spec.ts'
+            ]
+
+            for pattern in integration_patterns:
+                for test_file in repo_path.rglob(pattern):
+                    if 'node_modules' not in str(test_file):
+                        result['integration_test_files'].append(str(test_file.relative_to(repo_path)))
+                        result['integration_test_count'] += 1
+
+            result['has_integration_tests'] = result['integration_test_count'] > 0
+
+            # Check for specific integration test types
+            for test_file in result['integration_test_files']:
+                content_path = repo_path / test_file
+                try:
+                    content = content_path.read_text()
+                    if 'api' in content.lower() or 'endpoint' in content.lower() or 'request' in content.lower():
+                        result['has_api_integration_tests'] = True
+                    if 'database' in content.lower() or 'prisma' in content.lower() or 'migrate' in content.lower():
+                        result['has_db_integration_tests'] = True
+                except:
+                    pass
+
+            # Determine status
+            if result['integration_test_count'] >= 10:
+                result['status'] = 'excellent'
+            elif result['integration_test_count'] >= 5:
+                result['status'] = 'good'
+            elif result['integration_test_count'] >= 1:
+                result['status'] = 'minimal'
+            else:
+                result['status'] = 'none'
+
+        except Exception as e:
+            self.logger.error(f"Error detecting integration tests for {repo_name}: {e}")
+            result['status'] = 'error'
+
+        return result
+
+    def _analyze_e2e_test_health(self, repo_name: str) -> Dict:
+        """Analyze E2E test health (Playwright, Cypress, etc.)"""
+        result = {
+            'has_e2e_tests': False,
+            'e2e_test_count': 0,
+            'e2e_framework': None,
+            'critical_flows_covered': [],
+            'status': 'none'
+        }
+
+        try:
+            repo_path = Path.home() / 'projects' / repo_name
+            if not repo_path.exists():
+                for monorepo in ['zkp2p', 'davy-jones-intern']:
+                    alt_path = Path.home() / 'projects' / monorepo / repo_name
+                    if alt_path.exists():
+                        repo_path = alt_path
+                        break
+
+            if not repo_path.exists():
+                return result
+
+            # Detect E2E framework
+            if (repo_path / 'playwright.config.ts').exists() or (repo_path / 'playwright.config.js').exists():
+                result['e2e_framework'] = 'playwright'
+            elif (repo_path / 'cypress.config.ts').exists() or (repo_path / 'cypress.json').exists():
+                result['e2e_framework'] = 'cypress'
+
+            if not result['e2e_framework']:
+                result['status'] = 'no_framework'
+                return result
+
+            # Find E2E test files
+            e2e_patterns = [
+                'e2e/**/*.spec.ts',
+                'e2e/**/*.test.ts',
+                'tests/e2e/**/*.spec.ts',
+                'cypress/e2e/**/*.cy.ts',
+                'playwright/**/*.spec.ts'
+            ]
+
+            e2e_files = []
+            for pattern in e2e_patterns:
+                for test_file in repo_path.glob(pattern):
+                    if 'node_modules' not in str(test_file):
+                        e2e_files.append(test_file)
+                        result['e2e_test_count'] += 1
+
+            result['has_e2e_tests'] = result['e2e_test_count'] > 0
+
+            # Check for critical user flow coverage
+            critical_flows = ['login', 'signup', 'checkout', 'payment', 'deposit', 'withdraw', 'create', 'delete']
+            for test_file in e2e_files:
+                try:
+                    content = test_file.read_text().lower()
+                    for flow in critical_flows:
+                        if flow in content and flow not in result['critical_flows_covered']:
+                            result['critical_flows_covered'].append(flow)
+                except:
+                    pass
+
+            # Determine status
+            if result['e2e_test_count'] >= 10 and len(result['critical_flows_covered']) >= 3:
+                result['status'] = 'excellent'
+            elif result['e2e_test_count'] >= 5 and len(result['critical_flows_covered']) >= 2:
+                result['status'] = 'good'
+            elif result['e2e_test_count'] >= 1:
+                result['status'] = 'minimal'
+            else:
+                result['status'] = 'none'
+
+        except Exception as e:
+            self.logger.error(f"Error analyzing E2E tests for {repo_name}: {e}")
+            result['status'] = 'error'
+
+        return result
+
+    def _assess_ui_changes(self, repo_name: str, days: int = 7) -> Dict:
+        """Assess UI changes for frivolousness and proper testing"""
+        result = {
+            'ui_pr_count': 0,
+            'style_only_pr_count': 0,
+            'untested_ui_pr_count': 0,
+            'ui_churn_files': [],
+            'status': 'healthy'
+        }
+
+        try:
+            # Get recent PRs
+            cmd = f"gh pr list --repo {self.owner}/{repo_name} --state all --limit 50 " \
+                  f"--json number,title,state,mergedAt,files"
+
+            proc = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
+            if proc.returncode != 0:
+                return result
+
+            prs = json.loads(proc.stdout) if proc.stdout.strip() else []
+
+            # Filter to recent merged PRs
+            cutoff = datetime.now() - timedelta(days=days)
+            recent_prs = []
+
+            for pr in prs:
+                if pr.get('state') == 'MERGED' and pr.get('mergedAt'):
+                    try:
+                        merged_dt = datetime.fromisoformat(pr['mergedAt'].replace('Z', '+00:00'))
+                        if merged_dt.replace(tzinfo=None) >= cutoff:
+                            recent_prs.append(pr)
+                    except:
+                        pass
+
+            # Analyze UI changes
+            ui_file_patterns = ['.tsx', '.jsx', '.css', '.scss', '.styled.ts', '.styled.js']
+            test_file_patterns = ['.test.', '.spec.', '.e2e.']
+
+            ui_file_change_count = defaultdict(int)
+
+            for pr in recent_prs:
+                files = pr.get('files', [])
+                if not files:
+                    continue
+
+                ui_files = [f for f in files if any(pattern in f.get('path', '') for pattern in ui_file_patterns)]
+                test_files = [f for f in files if any(pattern in f.get('path', '') for pattern in test_file_patterns)]
+
+                if ui_files:
+                    result['ui_pr_count'] += 1
+
+                    # Check if this is style-only (only CSS/SCSS changes)
+                    style_only = all(any(ext in f.get('path', '') for ext in ['.css', '.scss']) for f in ui_files)
+                    if style_only:
+                        result['style_only_pr_count'] += 1
+
+                    # Check if UI changes lack tests
+                    if not test_files:
+                        result['untested_ui_pr_count'] += 1
+
+                    # Track UI file churn
+                    for ui_file in ui_files:
+                        path = ui_file.get('path', '')
+                        if path:
+                            ui_file_change_count[path] += 1
+
+            # Identify high-churn UI files (changed in 3+ PRs)
+            result['ui_churn_files'] = [
+                {'file': path, 'change_count': count}
+                for path, count in ui_file_change_count.items()
+                if count >= 3
+            ]
+
+            # Determine status
+            untested_ratio = result['untested_ui_pr_count'] / result['ui_pr_count'] if result['ui_pr_count'] > 0 else 0
+            style_only_ratio = result['style_only_pr_count'] / result['ui_pr_count'] if result['ui_pr_count'] > 0 else 0
+
+            if untested_ratio > 0.5 or style_only_ratio > 0.3:
+                result['status'] = 'concerning'
+            elif untested_ratio > 0.3 or len(result['ui_churn_files']) >= 5:
+                result['status'] = 'needs_attention'
+            else:
+                result['status'] = 'healthy'
+
+        except Exception as e:
+            self.logger.error(f"Error assessing UI changes for {repo_name}: {e}")
+            result['status'] = 'error'
+
+        return result
+
+    def _verify_cross_layer_integration(self, repo_name: str, days: int = 7) -> Dict:
+        """Verify integration between frontend, backend, and contracts"""
+        result = {
+            'contract_changes_without_frontend': 0,
+            'api_changes_without_client': 0,
+            'breaking_changes_detected': 0,
+            'orphaned_changes': [],
+            'status': 'healthy'
+        }
+
+        try:
+            # Get recent merged PRs with their files
+            cmd = f"gh pr list --repo {self.owner}/{repo_name} --state merged --limit 30 " \
+                  f"--json number,title,mergedAt,files"
+
+            proc = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
+            if proc.returncode != 0:
+                return result
+
+            prs = json.loads(proc.stdout) if proc.stdout.strip() else []
+
+            # Filter to recent
+            cutoff = datetime.now() - timedelta(days=days)
+            recent_prs = []
+
+            for pr in prs:
+                if pr.get('mergedAt'):
+                    try:
+                        merged_dt = datetime.fromisoformat(pr['mergedAt'].replace('Z', '+00:00'))
+                        if merged_dt.replace(tzinfo=None) >= cutoff:
+                            recent_prs.append(pr)
+                    except:
+                        pass
+
+            # Analyze cross-layer changes
+            for pr in recent_prs:
+                files = pr.get('files', [])
+                if not files:
+                    continue
+
+                file_paths = [f.get('path', '') for f in files]
+
+                # Check for contract changes without frontend updates
+                has_contract_changes = any('contract' in p.lower() or '.sol' in p for p in file_paths)
+                has_frontend_changes = any(
+                    any(ext in p for ext in ['.tsx', '.jsx', '.ts', '.js'])
+                    and 'src' in p
+                    and 'contract' not in p.lower()
+                    for p in file_paths
+                )
+
+                if has_contract_changes and not has_frontend_changes:
+                    result['contract_changes_without_frontend'] += 1
+                    result['orphaned_changes'].append({
+                        'pr': pr['number'],
+                        'title': pr['title'],
+                        'type': 'contract_only'
+                    })
+
+                # Check for API changes without client updates
+                has_api_changes = any(
+                    'api' in p.lower() or 'controller' in p.lower() or 'route' in p.lower()
+                    for p in file_paths
+                )
+                has_client_changes = any('client' in p.lower() or 'frontend' in p.lower() for p in file_paths)
+
+                if has_api_changes and not has_client_changes and not has_frontend_changes:
+                    result['api_changes_without_client'] += 1
+                    result['orphaned_changes'].append({
+                        'pr': pr['number'],
+                        'title': pr['title'],
+                        'type': 'api_only'
+                    })
+
+            # Determine status
+            total_orphaned = len(result['orphaned_changes'])
+            if total_orphaned >= 5:
+                result['status'] = 'concerning'
+            elif total_orphaned >= 3:
+                result['status'] = 'needs_attention'
+            else:
+                result['status'] = 'healthy'
+
+        except Exception as e:
+            self.logger.error(f"Error verifying cross-layer integration for {repo_name}: {e}")
+            result['status'] = 'error'
+
+        return result
+
+    # =========================================================================
     # PATTERN DETECTION
     # =========================================================================
 
-    def _detect_patterns(self, pr_stats: Dict, log_analysis: Dict, decision_analysis: Dict) -> List[Dict]:
-        """Detect SYSTEM patterns and issues - focus on mechanics, not content restrictions"""
+    def _detect_patterns(self, pr_stats: Dict, log_analysis: Dict, decision_analysis: Dict, quality_stats: Dict = None) -> List[Dict]:
+        """Detect SYSTEM and QUALITY patterns - mechanics + test coverage + integration"""
         patterns = []
 
+        # ===== QUALITY PATTERNS (NEW) =====
+        if quality_stats:
+            for repo_name, qa in quality_stats.items():
+                # Test coverage patterns
+                coverage = qa.get('coverage', {})
+                if coverage.get('status') == 'poor':
+                    patterns.append({
+                        'type': 'low_test_coverage',
+                        'severity': 'high',
+                        'repo': repo_name,
+                        'value': coverage.get('coverage_percentage', 0),
+                        'message': f"{repo_name}: Test coverage is {coverage.get('coverage_percentage', 0)}% - below acceptable threshold"
+                    })
+                elif coverage.get('status') == 'fair':
+                    patterns.append({
+                        'type': 'marginal_test_coverage',
+                        'severity': 'medium',
+                        'repo': repo_name,
+                        'value': coverage.get('coverage_percentage', 0),
+                        'message': f"{repo_name}: Test coverage is {coverage.get('coverage_percentage', 0)}% - should aim for 80%+"
+                    })
+
+                # Uncovered critical files
+                uncovered = coverage.get('uncovered_critical_files', [])
+                if len(uncovered) > 0:
+                    patterns.append({
+                        'type': 'uncovered_critical_files',
+                        'severity': 'high',
+                        'repo': repo_name,
+                        'value': len(uncovered),
+                        'message': f"{repo_name}: {len(uncovered)} critical files have <50% coverage (APIs, services, hooks)"
+                    })
+
+                # Integration test patterns
+                integration = qa.get('integration_tests', {})
+                if integration.get('status') == 'none':
+                    patterns.append({
+                        'type': 'no_integration_tests',
+                        'severity': 'high',
+                        'repo': repo_name,
+                        'message': f"{repo_name}: No integration tests found - API/DB integration is untested"
+                    })
+                elif integration.get('status') == 'minimal':
+                    patterns.append({
+                        'type': 'minimal_integration_tests',
+                        'severity': 'medium',
+                        'repo': repo_name,
+                        'value': integration.get('integration_test_count', 0),
+                        'message': f"{repo_name}: Only {integration.get('integration_test_count', 0)} integration tests - need more coverage"
+                    })
+
+                # E2E test patterns
+                e2e = qa.get('e2e_tests', {})
+                if e2e.get('status') == 'no_framework':
+                    patterns.append({
+                        'type': 'no_e2e_framework',
+                        'severity': 'medium',
+                        'repo': repo_name,
+                        'message': f"{repo_name}: No E2E testing framework (Playwright/Cypress) configured"
+                    })
+                elif e2e.get('status') == 'minimal':
+                    flows = len(e2e.get('critical_flows_covered', []))
+                    patterns.append({
+                        'type': 'minimal_e2e_coverage',
+                        'severity': 'medium',
+                        'repo': repo_name,
+                        'value': flows,
+                        'message': f"{repo_name}: Only {flows} critical user flows covered by E2E tests"
+                    })
+
+                # UI change patterns
+                ui = qa.get('ui_assessment', {})
+                if ui.get('status') == 'concerning':
+                    untested = ui.get('untested_ui_pr_count', 0)
+                    style_only = ui.get('style_only_pr_count', 0)
+                    patterns.append({
+                        'type': 'problematic_ui_changes',
+                        'severity': 'high',
+                        'repo': repo_name,
+                        'message': f"{repo_name}: {untested} untested UI PRs, {style_only} style-only PRs - UI quality is concerning"
+                    })
+                elif ui.get('status') == 'needs_attention':
+                    patterns.append({
+                        'type': 'ui_changes_need_attention',
+                        'severity': 'medium',
+                        'repo': repo_name,
+                        'message': f"{repo_name}: UI changes need better test coverage and reduced churn"
+                    })
+
+                # UI churn patterns
+                churn_files = ui.get('ui_churn_files', [])
+                if len(churn_files) >= 3:
+                    patterns.append({
+                        'type': 'high_ui_churn',
+                        'severity': 'medium',
+                        'repo': repo_name,
+                        'value': len(churn_files),
+                        'message': f"{repo_name}: {len(churn_files)} UI files changed in 3+ PRs - indicates instability or frivolous changes"
+                    })
+
+                # Cross-layer integration patterns
+                cross_layer = qa.get('cross_layer', {})
+                if cross_layer.get('status') == 'concerning':
+                    orphaned = len(cross_layer.get('orphaned_changes', []))
+                    patterns.append({
+                        'type': 'poor_cross_layer_integration',
+                        'severity': 'high',
+                        'repo': repo_name,
+                        'value': orphaned,
+                        'message': f"{repo_name}: {orphaned} orphaned changes (contract/API changes without frontend integration)"
+                    })
+                elif cross_layer.get('status') == 'needs_attention':
+                    patterns.append({
+                        'type': 'cross_layer_integration_gaps',
+                        'severity': 'medium',
+                        'repo': repo_name,
+                        'message': f"{repo_name}: Some contract/API changes lack corresponding frontend integration"
+                    })
+
+        # ===== SYSTEM PATTERNS (EXISTING) =====
         # Check merge rate - indicates system health
         for repo_name, stats in pr_stats.items():
             merge_rate = stats.get('merge_rate', 0)
@@ -642,13 +1198,76 @@ class BarbossaAuditor:
     # =========================================================================
 
     def _generate_recommendations(self, patterns: List[Dict]) -> List[str]:
-        """Generate SYSTEM-focused recommendations - no content restrictions"""
+        """Generate SYSTEM and QUALITY recommendations"""
         recommendations = []
 
         for pattern in patterns:
             ptype = pattern['type']
 
-            if ptype == 'low_merge_rate':
+            # ===== QUALITY RECOMMENDATIONS (NEW) =====
+            if ptype == 'low_test_coverage':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} test coverage is critically low - "
+                    "Tech Lead should reject PRs that decrease coverage or lack tests for new code"
+                )
+            elif ptype == 'marginal_test_coverage':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} test coverage is marginal - "
+                    "require tests for all new features and gradually increase coverage"
+                )
+            elif ptype == 'uncovered_critical_files':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} has critical files with poor coverage - "
+                    "prioritize adding tests for APIs, services, and business logic"
+                )
+            elif ptype == 'no_integration_tests':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} lacks integration tests - "
+                    "API endpoints and database operations must have integration test coverage"
+                )
+            elif ptype == 'minimal_integration_tests':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} needs more integration tests - "
+                    "each API endpoint should have at least one integration test"
+                )
+            elif ptype == 'no_e2e_framework':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} needs E2E testing - "
+                    "install Playwright or Cypress to test critical user flows"
+                )
+            elif ptype == 'minimal_e2e_coverage':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} needs more E2E tests - "
+                    "cover all critical user flows (auth, payments, core features)"
+                )
+            elif ptype == 'problematic_ui_changes':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} has too many untested/frivolous UI changes - "
+                    "Tech Lead should require E2E tests for UI PRs and reject style-only changes"
+                )
+            elif ptype == 'ui_changes_need_attention':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} UI changes need better testing - "
+                    "all component changes should include or update tests"
+                )
+            elif ptype == 'high_ui_churn':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} has high UI churn - "
+                    "same components changed repeatedly indicates instability or unclear design"
+                )
+            elif ptype == 'poor_cross_layer_integration':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} has orphaned changes - "
+                    "contract/API changes MUST include corresponding frontend integration"
+                )
+            elif ptype == 'cross_layer_integration_gaps':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} integration could be better - "
+                    "ensure backend changes are properly integrated with frontend"
+                )
+
+            # ===== SYSTEM RECOMMENDATIONS (EXISTING) =====
+            elif ptype == 'low_merge_rate':
                 recommendations.append(
                     f"SYSTEM: {pattern.get('repo', 'repo')} merge rate is low - "
                     "consider tuning Senior Engineer prompt to produce smaller, more focused PRs"
@@ -756,8 +1375,86 @@ class BarbossaAuditor:
             self.logger.info(f"  Merge rate: {decision_analysis.get('merge_rate', 0)}%")
             self.logger.info(f"  Avg value score: {decision_analysis.get('avg_value_score', 0)}/10")
 
+        # ===== QUALITY ASSURANCE CHECKS (NEW) =====
+        self.logger.info("\n" + "="*70)
+        self.logger.info("QUALITY ASSURANCE ANALYSIS")
+        self.logger.info("="*70)
+
+        quality_stats = {}
+        for repo in self.repositories:
+            repo_name = repo['name']
+            self.logger.info(f"\n{repo_name}:")
+
+            # Test coverage
+            self.logger.info("  Analyzing test coverage...")
+            coverage = self._analyze_test_coverage(repo_name)
+            if coverage.get('has_coverage'):
+                self.logger.info(f"    Coverage: {coverage['coverage_percentage']}% ({coverage['status']})")
+                if coverage.get('uncovered_critical_files'):
+                    self.logger.info(f"    ⚠️  {len(coverage['uncovered_critical_files'])} critical files under 50% coverage")
+            else:
+                self.logger.info(f"    ⚠️  No coverage data ({coverage.get('status', 'unknown')})")
+
+            # Integration tests
+            self.logger.info("  Checking integration tests...")
+            integration = self._detect_integration_tests(repo_name)
+            if integration['has_integration_tests']:
+                self.logger.info(f"    Integration tests: {integration['integration_test_count']} found ({integration['status']})")
+                if integration['has_api_integration_tests']:
+                    self.logger.info("    ✓ API integration tests present")
+                if integration['has_db_integration_tests']:
+                    self.logger.info("    ✓ Database integration tests present")
+            else:
+                self.logger.info(f"    ⚠️  No integration tests ({integration['status']})")
+
+            # E2E tests
+            self.logger.info("  Checking E2E tests...")
+            e2e = self._analyze_e2e_test_health(repo_name)
+            if e2e['e2e_framework']:
+                self.logger.info(f"    Framework: {e2e['e2e_framework']}")
+                self.logger.info(f"    E2E tests: {e2e['e2e_test_count']} found ({e2e['status']})")
+                if e2e.get('critical_flows_covered'):
+                    flows = ', '.join(e2e['critical_flows_covered'][:5])
+                    self.logger.info(f"    ✓ Critical flows: {flows}")
+            else:
+                self.logger.info(f"    ⚠️  No E2E framework configured")
+
+            # UI changes assessment
+            self.logger.info("  Assessing UI changes...")
+            ui = self._assess_ui_changes(repo_name, days)
+            if ui['ui_pr_count'] > 0:
+                self.logger.info(f"    UI PRs: {ui['ui_pr_count']} ({ui['status']})")
+                if ui['untested_ui_pr_count'] > 0:
+                    self.logger.info(f"    ⚠️  {ui['untested_ui_pr_count']} UI PRs without tests")
+                if ui['style_only_pr_count'] > 0:
+                    self.logger.info(f"    ⚠️  {ui['style_only_pr_count']} style-only PRs (frivolous)")
+                if ui['ui_churn_files']:
+                    self.logger.info(f"    ⚠️  {len(ui['ui_churn_files'])} high-churn UI files")
+            else:
+                self.logger.info("    No recent UI changes")
+
+            # Cross-layer integration
+            self.logger.info("  Verifying cross-layer integration...")
+            cross_layer = self._verify_cross_layer_integration(repo_name, days)
+            if cross_layer['orphaned_changes']:
+                self.logger.info(f"    ⚠️  {len(cross_layer['orphaned_changes'])} orphaned changes ({cross_layer['status']})")
+                for change in cross_layer['orphaned_changes'][:3]:
+                    self.logger.info(f"      PR #{change['pr']}: {change['type']}")
+            else:
+                self.logger.info(f"    ✓ Cross-layer integration looks good ({cross_layer['status']})")
+
+            quality_stats[repo_name] = {
+                'coverage': coverage,
+                'integration_tests': integration,
+                'e2e_tests': e2e,
+                'ui_assessment': ui,
+                'cross_layer': cross_layer
+            }
+
+        self.logger.info("\n" + "="*70)
+
         self.logger.info("\nDetecting patterns...")
-        patterns = self._detect_patterns(pr_stats, log_analysis, decision_analysis)
+        patterns = self._detect_patterns(pr_stats, log_analysis, decision_analysis, quality_stats)
         for p in patterns:
             icon = "🔴" if p['severity'] == 'high' else "🟡" if p['severity'] == 'medium' else "🟢"
             self.logger.info(f"  {icon} {p['message']}")
@@ -799,6 +1496,7 @@ class BarbossaAuditor:
             'pr_stats': pr_stats,
             'log_analysis': {k: v for k, v in log_analysis.items() if k != 'recent_errors'},
             'decision_analysis': decision_analysis,
+            'quality_stats': quality_stats,  # NEW: Quality assurance metrics
             'patterns': patterns,
             'recommendations': recommendations,
             'self_healing_actions': self_healing_actions,
@@ -810,7 +1508,7 @@ class BarbossaAuditor:
         # Extract OAuth status from self-healing actions
         oauth_action = next((a for a in self_healing_actions if a['action'] == 'oauth_check'), {})
 
-        # Save insights for other agents - system health only, no content restrictions
+        # Save insights for other agents - ENHANCED with quality metrics for Tech Lead
         insights = {
             'last_audit': datetime.now().isoformat(),
             'health_score': health_score,
@@ -823,6 +1521,25 @@ class BarbossaAuditor:
             'oauth_status': oauth_action.get('status', 'unknown'),
             'oauth_message': oauth_action.get('message', ''),
             'self_healing_actions': self_healing_actions,
+            # NEW: Quality insights for Tech Lead to enforce during PR review
+            'quality_metrics': {
+                repo: {
+                    'test_coverage': qa.get('coverage', {}).get('coverage_percentage', 0),
+                    'coverage_status': qa.get('coverage', {}).get('status', 'unknown'),
+                    'has_integration_tests': qa.get('integration_tests', {}).get('has_integration_tests', False),
+                    'has_e2e_tests': qa.get('e2e_tests', {}).get('has_e2e_tests', False),
+                    'e2e_framework': qa.get('e2e_tests', {}).get('e2e_framework', None),
+                    'ui_health': qa.get('ui_assessment', {}).get('status', 'unknown'),
+                    'cross_layer_health': qa.get('cross_layer', {}).get('status', 'unknown'),
+                    'untested_ui_prs': qa.get('ui_assessment', {}).get('untested_ui_pr_count', 0),
+                    'style_only_prs': qa.get('ui_assessment', {}).get('style_only_pr_count', 0),
+                }
+                for repo, qa in quality_stats.items()
+            },
+            'quality_issues': [
+                p['message'] for p in patterns
+                if p.get('type', '').startswith(('low_test', 'no_integration', 'no_e2e', 'problematic_ui', 'poor_cross'))
+            ],
         }
         self._save_insights(insights)
 
