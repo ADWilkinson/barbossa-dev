@@ -158,20 +158,65 @@ class BarbossaTechLead:
     def _get_pr_checks(self, repo_name: str, pr_number: int) -> Dict:
         """Get CI check status for a PR"""
         try:
+            # Use gh pr view --json statusCheckRollup instead of gh pr checks
+            # because gh pr checks doesn't support --json flag
             result = subprocess.run(
-                f"gh pr checks {pr_number} --repo {self.owner}/{repo_name} --json name,status,conclusion",
+                f"gh pr view {pr_number} --repo {self.owner}/{repo_name} --json statusCheckRollup",
                 shell=True,
                 capture_output=True,
                 text=True,
                 timeout=30
             )
             if result.returncode == 0 and result.stdout.strip():
-                checks = json.loads(result.stdout)
+                data = json.loads(result.stdout)
+                checks = data.get('statusCheckRollup', [])
+
+                # Normalize check data - handle both CheckRun and StatusContext
+                normalized_checks = []
+                for check in checks:
+                    check_type = check.get('__typename', 'Unknown')
+
+                    if check_type == 'CheckRun':
+                        # CheckRun uses 'status' and 'conclusion'
+                        status = check.get('status', '').upper()
+                        conclusion = check.get('conclusion', '').upper()
+                        normalized_checks.append({
+                            'name': check.get('name', 'Unknown'),
+                            'status': status,
+                            'conclusion': conclusion
+                        })
+                    elif check_type == 'StatusContext':
+                        # StatusContext uses 'state' instead of conclusion
+                        state = check.get('state', '').upper()
+                        normalized_checks.append({
+                            'name': check.get('context', 'Unknown'),
+                            'status': 'COMPLETED' if state in ['SUCCESS', 'FAILURE', 'ERROR'] else 'PENDING',
+                            'conclusion': state  # Use state as conclusion
+                        })
+
+                # Check if all passing: completed with SUCCESS, or NEUTRAL/SKIPPED are acceptable
+                all_passing = all(
+                    c['status'] == 'COMPLETED' and c['conclusion'] in ['SUCCESS', 'NEUTRAL', 'SKIPPED']
+                    for c in normalized_checks
+                ) if normalized_checks else False
+
+                # Check if any failing: conclusion is FAILURE or ERROR
+                any_failing = any(
+                    c['conclusion'] in ['FAILURE', 'ERROR']
+                    for c in normalized_checks
+                )
+
+                # Check if any pending: status is not COMPLETED
+                pending = any(
+                    c['status'] != 'COMPLETED'
+                    for c in normalized_checks
+                )
+
                 return {
-                    'checks': checks,
-                    'all_passing': all(c.get('conclusion') == 'success' for c in checks if c.get('status') == 'completed'),
-                    'any_failing': any(c.get('conclusion') == 'failure' for c in checks),
-                    'pending': any(c.get('status') != 'completed' for c in checks)
+                    'checks': normalized_checks,
+                    'all_passing': all_passing,
+                    'any_failing': any_failing,
+                    'pending': pending
                 }
         except Exception as e:
             self.logger.warning(f"Could not get checks for PR #{pr_number}: {e}")
