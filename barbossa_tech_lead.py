@@ -34,6 +34,7 @@ class BarbossaTechLead:
 
     # Review criteria thresholds
     MIN_LINES_FOR_TESTS = 50  # PRs with >50 lines changed should have tests
+    MIN_LINES_FOR_UI_TESTS = 30  # UI changes >30 lines MUST have tests
     MAX_FILES_PER_PR = 15     # More than this is likely scope creep
 
     def __init__(self, work_dir: Optional[Path] = None):
@@ -347,14 +348,22 @@ IMPORTANT: You have full conversation context above. Use it to understand:
 MANDATORY REJECTION CRITERIA (auto-close if ANY are true):
 1. CI checks are FAILING - never merge broken code
 2. No tests added for code changes >50 lines that affect logic
-3. PR touches >15 files - likely scope creep, needs to be split
-4. Changes do not match PR title/description - unclear intent
-5. Introduces obvious bugs, security issues, or anti-patterns
-6. Only adds comments/docs without meaningful code changes
-7. Duplicate of existing functionality
-8. Changes "do not touch" areas without strong justification
-9. TEST-ONLY PR that doesn't accompany a feature or fix (LOW VALUE)
-10. Has merge conflicts that weren't resolved
+3. UI component changes >30 lines WITHOUT tests - REQUEST_CHANGES (see UI test policy below)
+4. PR touches >15 files - likely scope creep, needs to be split
+5. Changes do not match PR title/description - unclear intent
+6. Introduces obvious bugs, security issues, or anti-patterns
+7. Only adds comments/docs without meaningful code changes
+8. Duplicate of existing functionality
+9. Changes "do not touch" areas without strong justification
+10. TEST-ONLY PR that doesn't accompany a feature or fix (LOW VALUE)
+11. Has merge conflicts that weren't resolved
+
+UI COMPONENT TEST POLICY (STRICT - HIGH PRIORITY):
+- ANY UI component change >30 lines MUST include tests (component tests or E2E tests)
+- Changes to core components (DashboardV2, ManageDepositCard, etc.) MUST have tests
+- New UI features without tests = REQUEST_CHANGES (not MERGE)
+- Test files must be in the PR's changed files (.test.tsx, .spec.tsx, .test.ts, etc.)
+- Rationale: UI churn analysis shows core components changing 10+ times without adequate test coverage
 
 TEST-ONLY PR POLICY (STRICT - CLOSE these PRs):
 - PRs that ONLY add tests with no feature/fix = CLOSE (not request changes)
@@ -641,7 +650,12 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                     result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
                     success = result.returncode == 0
                     if not success:
-                        self.logger.error(f"Comment failed: {result.stderr}")
+                        # Suppress expected "can't review own PR" errors (GitHub API limitation)
+                        if "Can not request changes on your own pull request" in result.stderr:
+                            self.logger.info(f"Posted comment on PR #{pr_number} (GitHub doesn't allow formal review on own PRs)")
+                            success = True  # Treat as success - comment was posted
+                        else:
+                            self.logger.error(f"Comment failed: {result.stderr}")
                     else:
                         self.logger.info(f"Posted feedback comment on PR #{pr_number}")
                 finally:
@@ -720,6 +734,34 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                     'auto_rejected': True
                 }
                 self.logger.info(f"AUTO: Closing test-only PR - '{pr.get('title')}'")
+
+        # Check UI component changes without tests (new strict policy)
+        if not quick_reject and files:
+            # Detect UI component files
+            ui_component_patterns = [
+                'components/', 'pages/', 'app/', '.tsx', '.jsx',
+                'DashboardV2', 'ManageDepositCard', 'ManageDeposits', 'DepositCalculator'
+            ]
+            ui_files = [f for f in files if any(pattern in f.get('path', '') for pattern in ui_component_patterns)]
+
+            # Check if there are test files
+            test_files = [f for f in files if any(test_pattern in f.get('path', '')
+                for test_pattern in ['.test.', '.spec.', '__tests__/', 'test/', 'tests/'])]
+
+            # Calculate total UI changes
+            ui_additions = sum(f.get('additions', 0) for f in ui_files)
+
+            # Enforce UI test policy: >30 lines of UI changes require tests
+            if ui_additions > self.MIN_LINES_FOR_UI_TESTS and not test_files:
+                quick_reject = {
+                    'decision': 'REQUEST_CHANGES',
+                    'reasoning': f'UI components changed ({ui_additions} lines) without accompanying tests. Per Tech Lead policy, UI changes >30 lines MUST include component tests or E2E tests. Add test coverage for the UI changes.',
+                    'value_score': 6,
+                    'quality_score': 4,
+                    'bloat_risk': 'MEDIUM',
+                    'auto_rejected': True
+                }
+                self.logger.info(f"AUTO: Requesting changes - UI changes ({ui_additions} lines) without tests")
 
         if quick_reject:
             self._execute_decision(repo_name, pr, quick_reject)
