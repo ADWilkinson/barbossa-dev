@@ -9,7 +9,7 @@ Get Barbossa running in 5 minutes.
 Before you start, you need:
 
 1. **Docker** - [Install Docker](https://docs.docker.com/get-docker/)
-2. **Claude Max subscription** - $100/month from [Anthropic](https://claude.ai)
+2. **Claude Max subscription** - from [Anthropic](https://claude.ai)
 3. **GitHub account** with a Personal Access Token
 
 ---
@@ -17,8 +17,8 @@ Before you start, you need:
 ## Step 1: Clone Barbossa
 
 ```bash
-git clone https://github.com/ADWilkinson/barbossa.git
-cd barbossa
+git clone https://github.com/ADWilkinson/barbossa-engineer.git
+cd barbossa-engineer
 ```
 
 ---

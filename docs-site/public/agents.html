@@ -102,7 +102,7 @@
 <p>├──────────────────────────────────────────────────────────────┤</p>
 <p>│                                                              │</p>
 <p>│  Product Manager ──→ Discovery ──→ GitHub Issues            │</p>
-<p>│        (daily)        (4x daily)      (backlog)             │</p>
+<p>│       (3x daily)      (4x daily)      (backlog)             │</p>
 <p>│                                          │                   │</p>
 <p>│                                          ▼                   │</p>
 <p>│                     Engineer ──→ Pull Request                │</p>
@@ -123,7 +123,7 @@
 <h2>Product Manager Agent</h2>
 
 <strong>File:</strong> <code>barbossa_product.py</code>
-<strong>Schedule:</strong> Daily at 07:00
+<strong>Schedule:</strong> 3x daily (07:00, 15:00, 23:00)
 
 <h3>Purpose</h3>
 
@@ -163,7 +163,8 @@
 <p>"settings": {</p>
 <p>"product_manager": {</p>
 <p>"enabled": true,</p>
-<p>"max_feature_issues": 10</p>
+<p>"max_issues_per_run": 3,</p>
+<p>"max_feature_issues": 20</p>
 <p>}</p>
 <p>}</p>
 <p>}</code></pre></p>
@@ -268,12 +269,12 @@
 <pre><code class="language-json">{
 <p>"settings": {</p>
 <p>"engineer": {</p>
-<p>"schedule": "every_2_hours",</p>
-<p>"timeout_minutes": 30,</p>
-<p>"max_files_changed": 15</p>
+<p>"enabled": true</p>
 <p>}</p>
 <p>}</p>
 <p>}</code></pre></p>
+
+<p>Schedule is configured separately in <code>settings.schedule.engineer</code>.</p>
 
 <p>---</p>
 
@@ -318,17 +319,18 @@
 <pre><code class="language-json">{
 <p>"settings": {</p>
 <p>"tech_lead": {</p>
-<p>"auto_merge": false,</p>
-<p>"auto_merge_threshold": 8,</p>
-<p>"require_tests_for_ui": true,</p>
-<p>"max_lines_without_tests": 50</p>
+<p>"enabled": true,</p>
+<p>"auto_merge": true,</p>
+<p>"min_lines_for_tests": 50,</p>
+<p>"max_files_per_pr": 15,</p>
+<p>"stale_days": 5</p>
 <p>}</p>
 <p>}</p>
 <p>}</code></pre></p>
 
 <h3>Auto-Merge</h3>
 
-<p>When <code>auto_merge: true</code>, PRs scoring above the threshold are automatically merged.</p>
+<p>When <code>auto_merge: true</code> (the default), PRs passing quality checks are automatically merged.</p>
 
 <p>---</p>
 
@@ -382,7 +384,7 @@
 <p>"settings": {</p>
 <p>"auditor": {</p>
 <p>"enabled": true,</p>
-<p>"notify_email": "you@example.com"</p>
+<p>"analysis_days": 7</p>
 <p>}</p>
 <p>}</p>
 <p>}</code></pre></p>
@@ -453,7 +455,7 @@
 <p>}</p>
 <p>}</code></pre></p>
 
-<p>Or comment out lines in <code>crontab</code>.</p>
+<p>Or set the schedule to <code>"disabled"</code> in <code>settings.schedule</code>.</p>
 
     </div>
 

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-Barbossa Auditor v5.1 - Self-Improving System Audit Agent
+Barbossa Auditor v5.3 - Self-Improving System Audit Agent
 Runs daily at 06:30 to analyze logs, PR outcomes, and system health.
 Identifies patterns, issues, and opportunities for improvement.
 
-Part of the v5.1 Pipeline:
-- Discovery (3x daily) → creates Issues
+Part of the Barbossa Pipeline:
+- Product Manager (3x daily) → creates feature specs
+- Discovery (4x daily) → creates Issues
 - Engineer (:00) → implements from backlog, creates PRs
 - Tech Lead (:35) → reviews PRs, merges or requests changes
 - Auditor (daily 06:30) → system health analysis
@@ -1010,7 +1011,7 @@ class BarbossaAuditor:
 
         creds_file = Path.home() / '.claude' / '.credentials.json'
         if not creds_file.exists():
-            creds_file = Path('/root/.claude/.credentials.json')
+            creds_file = Path('/home/barbossa/.claude/.credentials.json')
 
         if not creds_file.exists():
             result['status'] = 'error'
@@ -1553,7 +1554,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Barbossa Auditor v1.0 - System Health & Self-Improvement'
+        description='Barbossa Auditor v5.3 - System Health & Self-Improvement'
     )
     parser.add_argument(
         '--days',

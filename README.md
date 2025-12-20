@@ -38,8 +38,8 @@ You review the PRs, merge the good ones, and your codebase improves continuously
 ### 1. Clone and Configure
 
 ```bash
-git clone https://github.com/ADWilkinson/barbossa.git
-cd barbossa
+git clone https://github.com/ADWilkinson/barbossa-engineer.git
+cd barbossa-engineer
 
 # Create minimal config (just 3 fields!)
 cat > config/repositories.json << 'EOF'
@@ -200,7 +200,7 @@ docker compose build && docker compose up -d
 
 | Requirement | Details |
 |-------------|---------|
-| **Claude Max** | $100/month to Anthropic - provides the AI |
+| **Claude Max** | Subscription to Anthropic - provides the AI |
 | **GitHub Token** | Personal access token with `repo` scope |
 | **Docker** | To run the container |
 | **SSH Keys** | For private repo access (optional for public repos) |
@@ -305,7 +305,7 @@ This helps us know how many unique users are using Barbossa. That's it.
 ## Project Structure
 
 ```
-barbossa/
+barbossa-engineer/
 ├── barbossa                  # CLI tool
 ├── barbossa_engineer.py      # Implements PRs
 ├── barbossa_tech_lead.py     # Reviews PRs
@@ -335,8 +335,8 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Support
 
-- **Issues:** [GitHub Issues](https://github.com/ADWilkinson/barbossa/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/ADWilkinson/barbossa/discussions)
+- **Issues:** [GitHub Issues](https://github.com/ADWilkinson/barbossa-engineer/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/ADWilkinson/barbossa-engineer/discussions)
 
 If Barbossa helps you ship faster, consider [sponsoring](https://github.com/sponsors/ADWilkinson).
 

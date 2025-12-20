@@ -136,8 +136,8 @@
 
 <h1>Ensure ~/.claude is mounted writable (not :ro)</h1>
 <h1>Check docker-compose.yml:</h1>
-<h1>  - ~/.claude:/root/.claude  (correct)</h1>
-<h1>  - ~/.claude:/root/.claude:ro  (wrong - read only)</h1>
+<h1>  - ~/.claude:/home/barbossa/.claude  (correct)</h1>
+<h1>  - ~/.claude:/home/barbossa/.claude:ro  (wrong - read only)</h1>
 
 <p>docker compose restart</code></pre></p>
 
@@ -166,7 +166,7 @@
 
 <p># Ensure keys are mounted</p>
 <p># Check docker-compose.yml has:</p>
-<p>#   - ~/.ssh:/root/.ssh:ro</code></pre></p>
+<p>#   - ~/.ssh:/home/barbossa/.ssh:ro</code></pre></p>
 
 <h3>"Repository not found"</h3>
 
@@ -237,7 +237,7 @@
 
 <h1>Verify mounts</h1>
 <p>docker exec barbossa ls -la /app/config/</p>
-<p>docker exec barbossa ls -la /root/.claude/</code></pre></p>
+<p>docker exec barbossa ls -la /home/barbossa/.claude/</code></pre></p>
 
 <p>---</p>
 
@@ -368,8 +368,8 @@
 
 <p>If you're still stuck:</p>
 
-<p>1. <strong>Check existing issues:</strong> <a href="https://github.com/ADWilkinson/barbossa/issues">GitHub Issues</a></p>
-<p>2. <strong>Ask the community:</strong> <a href="https://github.com/ADWilkinson/barbossa/discussions">GitHub Discussions</a></p>
+<p>1. <strong>Check existing issues:</strong> <a href="https://github.com/ADWilkinson/barbossa-engineer/issues">GitHub Issues</a></p>
+<p>2. <strong>Ask the community:</strong> <a href="https://github.com/ADWilkinson/barbossa-engineer/discussions">GitHub Discussions</a></p>
 <p>3. <strong>Include in your report:</strong></p>
 <ul>
 <li>Docker logs (<code>docker compose logs</code>)</li>

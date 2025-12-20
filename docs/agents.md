@@ -10,7 +10,7 @@ Barbossa consists of five specialized agents that work together autonomously.
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
 │  Product Manager ──→ Discovery ──→ GitHub Issues            │
-│        (daily)        (4x daily)      (backlog)             │
+│       (3x daily)      (4x daily)      (backlog)             │
 │                                          │                   │
 │                                          ▼                   │
 │                     Engineer ──→ Pull Request                │
@@ -32,7 +32,7 @@ Barbossa consists of five specialized agents that work together autonomously.
 ## Product Manager Agent
 
 **File:** `barbossa_product.py`
-**Schedule:** Daily at 07:00
+**Schedule:** 3x daily (07:00, 15:00, 23:00)
 
 ### Purpose
 
@@ -73,7 +73,8 @@ Controlled by `product_manager` settings:
   "settings": {
     "product_manager": {
       "enabled": true,
-      "max_feature_issues": 10
+      "max_issues_per_run": 3,
+      "max_feature_issues": 20
     }
   }
 }
@@ -178,13 +179,13 @@ Each run has a 30-minute timeout. If implementation takes longer, it will retry 
 {
   "settings": {
     "engineer": {
-      "schedule": "every_2_hours",
-      "timeout_minutes": 30,
-      "max_files_changed": 15
+      "enabled": true
     }
   }
 }
 ```
+
+Schedule is configured separately in `settings.schedule.engineer`.
 
 ---
 
@@ -228,10 +229,11 @@ Each PR is scored on:
 {
   "settings": {
     "tech_lead": {
-      "auto_merge": false,
-      "auto_merge_threshold": 8,
-      "require_tests_for_ui": true,
-      "max_lines_without_tests": 50
+      "enabled": true,
+      "auto_merge": true,
+      "min_lines_for_tests": 50,
+      "max_files_per_pr": 15,
+      "stale_days": 5
     }
   }
 }
@@ -239,7 +241,7 @@ Each PR is scored on:
 
 ### Auto-Merge
 
-When `auto_merge: true`, PRs scoring above the threshold are automatically merged.
+When `auto_merge: true` (the default), PRs passing quality checks are automatically merged.
 
 ---
 
@@ -292,7 +294,7 @@ Generates `system_insights.json` with recommendations:
   "settings": {
     "auditor": {
       "enabled": true,
-      "notify_email": "you@example.com"
+      "analysis_days": 7
     }
   }
 }
@@ -366,4 +368,4 @@ Disable specific agents in configuration:
 }
 ```
 
-Or comment out lines in `crontab`.
+Or set the schedule to `"disabled"` in `settings.schedule`.

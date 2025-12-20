@@ -20,7 +20,7 @@ You sleep, Barbossa works, you wake up to PRs.
 
 Yes. Barbossa is free and open source under the MIT license.
 
-However, you need a **Claude Max subscription** ($100/month from Anthropic) to provide the AI. Barbossa uses Claude CLI with your subscription.
+However, you need a **Claude Max subscription** from Anthropic to provide the AI. Barbossa uses Claude CLI with your subscription.
 
 ### What's the catch?
 
@@ -35,7 +35,7 @@ If you find it valuable, consider [sponsoring the project](https://github.com/sp
 ### What do I need to run Barbossa?
 
 1. **Docker** - To run the container
-2. **Claude Max subscription** - $100/month from Anthropic
+2. **Claude Max subscription** - from Anthropic
 3. **GitHub account** - With a Personal Access Token
 4. **SSH keys** - For private repository access
 
@@ -157,10 +157,8 @@ Yes, when required. The Tech Lead rejects PRs with >50 lines of changes and no t
 | Item | Cost |
 |------|------|
 | Barbossa | Free |
-| Claude Max | $100/month |
+| Claude Max | See [Anthropic pricing](https://claude.ai) |
 | Server (optional) | $5-20/month |
-
-Total: ~$100-120/month
 
 ### Is Claude Max usage unlimited?
 
@@ -178,7 +176,7 @@ Barbossa makes several Claude calls per cycle (every 2 hours). With 12 cycles pe
 
 - Code stays on your machine and GitHub
 - Claude sees code for analysis (standard Claude usage)
-- No external servers or telemetry
+- Firebase used for prompts and anonymous user counting (see README for transparency details)
 - Open source - audit the code yourself
 
 ### What permissions does the GitHub token need?
@@ -250,5 +248,5 @@ Probably! Open an issue to discuss first. Popular requests:
 
 ## More Questions?
 
-- [GitHub Issues](https://github.com/ADWilkinson/barbossa/issues) - Bug reports
-- [GitHub Discussions](https://github.com/ADWilkinson/barbossa/discussions) - Questions and ideas
+- [GitHub Issues](https://github.com/ADWilkinson/barbossa-engineer/issues) - Bug reports
+- [GitHub Discussions](https://github.com/ADWilkinson/barbossa-engineer/discussions) - Questions and ideas

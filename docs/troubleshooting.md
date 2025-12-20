@@ -44,8 +44,8 @@ claude login
 
 # Ensure ~/.claude is mounted writable (not :ro)
 # Check docker-compose.yml:
-#   - ~/.claude:/root/.claude  (correct)
-#   - ~/.claude:/root/.claude:ro  (wrong - read only)
+#   - ~/.claude:/home/barbossa/.claude  (correct)
+#   - ~/.claude:/home/barbossa/.claude:ro  (wrong - read only)
 
 docker compose restart
 ```
@@ -80,7 +80,7 @@ docker compose restart
 
    # Ensure keys are mounted
    # Check docker-compose.yml has:
-   #   - ~/.ssh:/root/.ssh:ro
+   #   - ~/.ssh:/home/barbossa/.ssh:ro
    ```
 
 ### "Repository not found"
@@ -161,7 +161,7 @@ docker compose up -d
 
 # Verify mounts
 docker exec barbossa ls -la /app/config/
-docker exec barbossa ls -la /root/.claude/
+docker exec barbossa ls -la /home/barbossa/.claude/
 ```
 
 ---
@@ -303,8 +303,8 @@ docker inspect barbossa
 
 If you're still stuck:
 
-1. **Check existing issues:** [GitHub Issues](https://github.com/ADWilkinson/barbossa/issues)
-2. **Ask the community:** [GitHub Discussions](https://github.com/ADWilkinson/barbossa/discussions)
+1. **Check existing issues:** [GitHub Issues](https://github.com/ADWilkinson/barbossa-engineer/issues)
+2. **Ask the community:** [GitHub Discussions](https://github.com/ADWilkinson/barbossa-engineer/discussions)
 3. **Include in your report:**
    - Docker logs (`docker compose logs`)
    - Your config (redact tokens)
