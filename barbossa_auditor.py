@@ -10,6 +10,10 @@ Part of the Barbossa Pipeline:
 - Engineer (:00) → implements from backlog, creates PRs
 - Tech Lead (:35) → reviews PRs, merges or requests changes
 - Auditor (daily 06:30) → system health analysis
+
+Firebase Integration:
+- Version compatibility checking
+- Installation registration
 """
 
 import json
@@ -22,6 +26,9 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from collections import defaultdict
 import re
+
+# Firebase integration
+from barbossa_firebase import get_firebase
 
 
 class BarbossaAuditor:
@@ -46,6 +53,11 @@ class BarbossaAuditor:
         self.logs_dir.mkdir(parents=True, exist_ok=True)
 
         self._setup_logging()
+
+        # Initialize Firebase and check version
+        self.firebase = get_firebase()
+        self._check_version()
+
         self.config = self._load_config()
         self.repositories = self.config.get('repositories', [])
         self.owner = self.config.get('owner')
@@ -73,6 +85,18 @@ class BarbossaAuditor:
 
         self.logger = logging.getLogger('auditor')
         self.logger.info(f"Logging to: {log_file}")
+
+    def _check_version(self):
+        """Check version compatibility with cloud."""
+        try:
+            version_info = self.firebase.check_version()
+            if version_info and not version_info.get('compatible', True):
+                self.logger.warning(
+                    f"Version {self.VERSION} may be outdated. "
+                    f"Latest: {version_info.get('latestVersion', 'unknown')}"
+                )
+        except Exception as e:
+            self.logger.debug(f"Version check skipped: {e}")
 
     def _load_config(self) -> Dict:
         """Load repository configuration"""
