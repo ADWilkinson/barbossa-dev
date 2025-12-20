@@ -519,6 +519,53 @@ Gross margin:             $42.58/month (87%)
 
 ---
 
+## Product Defensibility
+
+> See [DEFENSIBILITY_AND_UPDATES.md](./DEFENSIBILITY_AND_UPDATES.md) for full technical details.
+
+### Code Protection (Multi-Layer)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  LAYER 1: Nuitka Compilation                                   │
+│  Python → C → Native binary (no readable source in container)  │
+├─────────────────────────────────────────────────────────────────┤
+│  LAYER 2: Server-Side Prompts                                  │
+│  Agent prompts fetched from barbossa.dev (not in image)        │
+├─────────────────────────────────────────────────────────────────┤
+│  LAYER 3: License-Gated Execution                              │
+│  Every agent run requires valid license + server handshake     │
+├─────────────────────────────────────────────────────────────────┤
+│  LAYER 4: PyArmor Obfuscation (V2)                             │
+│  Additional bytecode encryption and anti-tampering             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key principle:** The Docker image contains compiled binaries only. The "secret sauce" (agent prompts, scoring algorithms) lives on barbossa.dev and is fetched at runtime.
+
+### Over-The-Air Updates
+
+**Recommended: Watchtower integration**
+
+Users add Watchtower to their docker-compose.yml:
+
+```yaml
+watchtower:
+  image: containrrr/watchtower
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  command: --interval 3600  # Check hourly
+```
+
+Watchtower automatically pulls new `barbossa/agent:latest` images and restarts the container. Zero user intervention.
+
+**Update notifications:**
+- Container checks `/api/v1/version` on startup
+- Logs message if update available
+- Optional email for critical security updates
+
+---
+
 ## Next Immediate Actions
 
 1. **Register barbossa.dev domain**
