@@ -31,8 +31,8 @@ class BarbossaProduct:
     """Product Manager agent that creates feature Issues for the pipeline."""
 
     VERSION = "5.2.0"
-    MAX_ISSUES_PER_RUN = 3  # Quality over quantity
-    FEATURE_BACKLOG_THRESHOLD = 20  # Only create if fewer feature issues exist
+    DEFAULT_MAX_ISSUES_PER_RUN = 3
+    DEFAULT_FEATURE_BACKLOG_THRESHOLD = 20
 
     def __init__(self, work_dir: Optional[Path] = None):
         default_dir = Path(os.environ.get('BARBOSSA_DIR', '/app'))
@@ -53,9 +53,16 @@ class BarbossaProduct:
         if not self.owner:
             raise ValueError("'owner' is required in config/repositories.json")
 
+        # Load settings from config
+        settings = self.config.get('settings', {}).get('product_manager', {})
+        self.enabled = settings.get('enabled', True)
+        self.MAX_ISSUES_PER_RUN = settings.get('max_issues_per_run', self.DEFAULT_MAX_ISSUES_PER_RUN)
+        self.FEATURE_BACKLOG_THRESHOLD = settings.get('max_feature_issues', self.DEFAULT_FEATURE_BACKLOG_THRESHOLD)
+
         self.logger.info("=" * 60)
         self.logger.info(f"BARBOSSA PRODUCT MANAGER v{self.VERSION}")
         self.logger.info(f"Repositories: {len(self.repositories)}")
+        self.logger.info(f"Settings: max_issues_per_run={self.MAX_ISSUES_PER_RUN}, max_feature_issues={self.FEATURE_BACKLOG_THRESHOLD}")
         self.logger.info("=" * 60)
 
     def _setup_logging(self):
@@ -532,6 +539,10 @@ KEY FILES:
 
     def run(self):
         """Run product analysis for all repositories."""
+        if not self.enabled:
+            self.logger.info("Product Manager is disabled in config. Skipping.")
+            return 0
+
         self.logger.info(f"\n{'#'*60}")
         self.logger.info("BARBOSSA PRODUCT MANAGER RUN")
         self.logger.info(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

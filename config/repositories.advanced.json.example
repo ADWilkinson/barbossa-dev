@@ -57,8 +57,6 @@
   ],
 
   "settings": {
-    "max_open_prs": 5,
-
     "engineer": {
       "enabled": true
     },
@@ -67,7 +65,9 @@
       "enabled": true,
       "auto_merge": false,
       "min_lines_for_tests": 50,
-      "max_files_per_pr": 15
+      "min_lines_for_ui_tests": 30,
+      "max_files_per_pr": 15,
+      "stale_days": 5
     },
 
     "discovery": {
@@ -77,6 +77,7 @@
 
     "product_manager": {
       "enabled": true,
+      "max_issues_per_run": 3,
       "max_feature_issues": 20
     },
 

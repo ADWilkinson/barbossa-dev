@@ -232,8 +232,6 @@ Control agent behavior:
 ```json
 {
   "settings": {
-    "max_open_prs": 5,
-
     "engineer": {
       "enabled": true
     },
@@ -242,7 +240,9 @@ Control agent behavior:
       "enabled": true,
       "auto_merge": false,
       "min_lines_for_tests": 50,
-      "max_files_per_pr": 15
+      "min_lines_for_ui_tests": 30,
+      "max_files_per_pr": 15,
+      "stale_days": 5
     },
 
     "discovery": {
@@ -251,7 +251,9 @@ Control agent behavior:
     },
 
     "product_manager": {
-      "enabled": false
+      "enabled": true,
+      "max_issues_per_run": 3,
+      "max_feature_issues": 20
     },
 
     "auditor": {
@@ -262,7 +264,33 @@ Control agent behavior:
 }
 ```
 
-Disable agents you don't need.
+### Tech Lead Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `enabled` | `true` | Enable/disable the tech lead agent |
+| `auto_merge` | `false` | Auto-merge approved PRs (use with caution) |
+| `min_lines_for_tests` | `50` | Require tests for PRs with more lines |
+| `min_lines_for_ui_tests` | `30` | Require tests for UI changes with more lines |
+| `max_files_per_pr` | `15` | Reject PRs touching more files (scope creep) |
+| `stale_days` | `5` | Auto-close PRs older than this many days |
+
+### Discovery Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `enabled` | `true` | Enable/disable discovery agent |
+| `max_backlog_issues` | `20` | Stop creating issues when backlog is full |
+
+### Product Manager Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `enabled` | `true` | Enable/disable product manager agent |
+| `max_issues_per_run` | `3` | Max feature issues to create per run |
+| `max_feature_issues` | `20` | Stop when this many feature issues exist |
+
+Disable agents you don't need by setting `enabled: false`.
 
 ---
 

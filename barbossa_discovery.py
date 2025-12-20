@@ -30,7 +30,7 @@ class BarbossaDiscovery:
     """Autonomous discovery agent that creates GitHub Issues for the pipeline."""
 
     VERSION = "5.2.0"
-    BACKLOG_THRESHOLD = 20  # Only discover if fewer than this many issues in backlog
+    DEFAULT_BACKLOG_THRESHOLD = 20
 
     def __init__(self, work_dir: Optional[Path] = None):
         default_dir = Path(os.environ.get('BARBOSSA_DIR', '/app'))
@@ -51,9 +51,15 @@ class BarbossaDiscovery:
         if not self.owner:
             raise ValueError("'owner' is required in config/repositories.json")
 
+        # Load settings from config
+        settings = self.config.get('settings', {}).get('discovery', {})
+        self.enabled = settings.get('enabled', True)
+        self.BACKLOG_THRESHOLD = settings.get('max_backlog_issues', self.DEFAULT_BACKLOG_THRESHOLD)
+
         self.logger.info("=" * 60)
         self.logger.info(f"BARBOSSA DISCOVERY v{self.VERSION}")
         self.logger.info(f"Repositories: {len(self.repositories)}")
+        self.logger.info(f"Settings: max_backlog_issues={self.BACKLOG_THRESHOLD}")
         self.logger.info("=" * 60)
 
     def _setup_logging(self):
@@ -461,6 +467,10 @@ Found console.log statements in production code that should be removed.
 
     def run(self):
         """Run discovery for all repositories."""
+        if not self.enabled:
+            self.logger.info("Discovery is disabled in config. Skipping.")
+            return 0
+
         self.logger.info(f"\n{'#'*60}")
         self.logger.info("BARBOSSA DISCOVERY RUN")
         self.logger.info(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

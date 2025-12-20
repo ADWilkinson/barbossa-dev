@@ -29,13 +29,15 @@ class BarbossaTechLead:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "5.1.0"
+    VERSION = "5.2.0"
     ROLE = "tech_lead"
 
-    # Review criteria thresholds
-    MIN_LINES_FOR_TESTS = 50  # PRs with >50 lines changed should have tests
-    MIN_LINES_FOR_UI_TESTS = 30  # UI changes >30 lines MUST have tests
-    MAX_FILES_PER_PR = 15     # More than this is likely scope creep
+    # Default review criteria (can be overridden in config)
+    DEFAULT_MIN_LINES_FOR_TESTS = 50
+    DEFAULT_MIN_LINES_FOR_UI_TESTS = 30
+    DEFAULT_MAX_FILES_PER_PR = 15
+    DEFAULT_AUTO_MERGE = False
+    DEFAULT_STALE_DAYS = 5
 
     def __init__(self, work_dir: Optional[Path] = None):
         default_dir = Path(os.environ.get('BARBOSSA_DIR', '/app'))
@@ -55,12 +57,22 @@ class BarbossaTechLead:
         if not self.owner:
             raise ValueError("'owner' is required in config/repositories.json")
 
+        # Load settings from config (with defaults)
+        settings = self.config.get('settings', {}).get('tech_lead', {})
+        self.enabled = settings.get('enabled', True)
+        self.auto_merge = settings.get('auto_merge', self.DEFAULT_AUTO_MERGE)
+        self.MIN_LINES_FOR_TESTS = settings.get('min_lines_for_tests', self.DEFAULT_MIN_LINES_FOR_TESTS)
+        self.MIN_LINES_FOR_UI_TESTS = settings.get('min_lines_for_ui_tests', self.DEFAULT_MIN_LINES_FOR_UI_TESTS)
+        self.MAX_FILES_PER_PR = settings.get('max_files_per_pr', self.DEFAULT_MAX_FILES_PER_PR)
+        self.STALE_DAYS = settings.get('stale_days', self.DEFAULT_STALE_DAYS)
+
         self.logger.info("=" * 70)
         self.logger.info(f"BARBOSSA TECH LEAD v{self.VERSION}")
         self.logger.info("Role: PR Review & Governance")
         self.logger.info("Authority: MERGE / CLOSE / REQUEST CHANGES")
         self.logger.info(f"Repositories: {len(self.repositories)}")
         self.logger.info("Mode: GitHub as single source of truth")
+        self.logger.info(f"Settings: min_lines_for_tests={self.MIN_LINES_FOR_TESTS}, max_files={self.MAX_FILES_PER_PR}, stale_days={self.STALE_DAYS}")
         self.logger.info("=" * 70)
 
     def _setup_logging(self):
@@ -879,7 +891,7 @@ _Senior Engineer: Please address the above feedback and push updates._"""
     def _cleanup_stale_prs(self, repo_name: str, prs: List[Dict]) -> List[Dict]:
         """Auto-close PRs that have been stale for too long"""
         from datetime import timedelta
-        STALE_DAYS = 5
+        STALE_DAYS = self.STALE_DAYS
 
         cleaned = []
         remaining = []
@@ -925,6 +937,10 @@ _Senior Engineer: Please address the above feedback and push updates._"""
 
     def run(self):
         """Run the Tech Lead review process - reviews ALL open PRs"""
+        if not self.enabled:
+            self.logger.info("Tech Lead is disabled in config. Skipping.")
+            return []
+
         self.logger.info(f"\n{'#'*70}")
         self.logger.info("BARBOSSA TECH LEAD v2.0 - PR REVIEW SESSION")
         self.logger.info("Mode: GitHub as single source of truth (no file-based state)")
