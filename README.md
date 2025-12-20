@@ -90,13 +90,15 @@ Your first PR should appear within minutes!
 
 ## The Five Agents
 
-| Agent | Schedule | Purpose |
-|-------|----------|---------|
+| Agent | Default Schedule | Purpose |
+|-------|------------------|---------|
 | **Product Manager** | 3x daily | Analyzes your product, suggests valuable features |
 | **Discovery** | 4x daily | Finds TODOs, missing tests, accessibility gaps |
 | **Engineer** | Every 2 hours | Implements issues, creates PRs |
-| **Tech Lead** | Every 2 hours | Reviews PRs with strict criteria, merges or rejects |
+| **Tech Lead** | Every 2 hours | Reviews PRs with strict criteria, auto-merges |
 | **Auditor** | Daily | Monitors health, identifies patterns, suggests improvements |
+
+All schedules are configurable. See [Configuration](docs/configuration.md).
 
 ---
 
@@ -134,6 +136,24 @@ Your first PR should appear within minutes!
 ```
 
 See [config/repositories.advanced.json.example](config/repositories.advanced.json.example) for all options.
+
+### Customize Schedule
+
+```json
+{
+  "settings": {
+    "schedule": {
+      "engineer": "every_hour",
+      "discovery": "2x_daily",
+      "product_manager": "disabled"
+    }
+  }
+}
+```
+
+Presets: `every_hour`, `every_2_hours`, `every_4_hours`, `2x_daily`, `3x_daily`, `4x_daily`, `daily_morning`, `disabled`
+
+Or use cron: `"0 9 * * *"` = daily at 9am
 
 ---
 
@@ -268,6 +288,7 @@ barbossa/
 ├── barbossa_product.py       # Discovers features
 ├── barbossa_auditor.py       # Monitors health
 ├── validate.py               # Startup validation
+├── generate_crontab.py       # Dynamic schedule generator
 ├── config/
 │   ├── repositories.json.example          # Minimal config
 │   └── repositories.advanced.json.example # Full config

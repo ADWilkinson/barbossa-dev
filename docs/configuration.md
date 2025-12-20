@@ -227,51 +227,67 @@ Barbossa works on each in sequence.
 
 ## Schedule Settings
 
-Customize when agents run:
+Customize when agents run. Use simple presets or cron expressions.
+
+### Quick Example
+
+Run engineer more frequently, disable product manager:
 
 ```json
 {
   "settings": {
     "schedule": {
-      "engineer": "every_2_hours",
-      "tech_lead": "35 0,2,4,6,8,10,12,14,16,18,20,22 * * *",
-      "discovery": "4x_daily",
-      "product_manager": "3x_daily",
-      "auditor": "30 6 * * *"
+      "engineer": "every_hour",
+      "product_manager": "disabled"
     }
   }
 }
 ```
 
-### Schedule Presets
+### Available Presets
 
-Use these presets or raw cron expressions:
+| Preset | When it runs |
+|--------|--------------|
+| `every_hour` | Every hour |
+| `every_2_hours` | Every 2 hours (default for engineer) |
+| `every_3_hours` | Every 3 hours |
+| `every_4_hours` | Every 4 hours |
+| `2x_daily` | 9am and 6pm |
+| `3x_daily` | 7am, 3pm, 11pm |
+| `4x_daily` | Midnight, 6am, noon, 6pm |
+| `daily_morning` | 9am |
+| `daily_evening` | 6pm |
+| `disabled` | Don't run this agent |
 
-| Preset | Cron | Description |
-|--------|------|-------------|
-| `every_hour` | `0 * * * *` | Every hour at :00 |
-| `every_2_hours` | `0 0,2,4,...22 * * *` | Every 2 hours |
-| `every_3_hours` | `0 0,3,6,...21 * * *` | Every 3 hours |
-| `every_4_hours` | `0 0,4,8,...20 * * *` | Every 4 hours |
-| `every_6_hours` | `0 0,6,12,18 * * *` | 4x daily |
-| `2x_daily` | `0 9,18 * * *` | Twice daily (9am, 6pm) |
-| `3x_daily` | `0 7,15,23 * * *` | Three times daily |
-| `4x_daily` | `0 0,6,12,18 * * *` | Four times daily |
-| `daily_morning` | `0 9 * * *` | Daily at 9am |
-| `daily_evening` | `0 18 * * *` | Daily at 6pm |
-| `disabled` | - | Don't run this agent |
+### Custom Times (Cron)
 
-Or use raw cron: `"30 9 * * *"` = daily at 09:30
+Use cron syntax for precise control:
 
-### Default Schedule
+```json
+{
+  "settings": {
+    "schedule": {
+      "engineer": "0 9,12,15,18 * * *",
+      "auditor": "30 8 * * 1"
+    }
+  }
+}
+```
 
-| Agent | Default | Description |
-|-------|---------|-------------|
-| Engineer | `every_2_hours` | Every 2 hours at :00 |
-| Tech Lead | 35 min after engineer | Every 2 hours at :35 |
-| Discovery | `4x_daily` | 00:00, 06:00, 12:00, 18:00 |
-| Product Manager | `3x_daily` | 07:00, 15:00, 23:00 |
-| Auditor | `30 6 * * *` | Daily at 06:30 |
+Cron format: `minute hour day month weekday`
+- `0 9 * * *` = daily at 9:00am
+- `30 8 * * 1` = Monday at 8:30am
+- `0 */4 * * *` = every 4 hours
+
+### Defaults
+
+| Agent | Default Schedule |
+|-------|------------------|
+| Engineer | Every 2 hours at :00 |
+| Tech Lead | Every 2 hours at :35 (after engineer) |
+| Discovery | 4x daily (midnight, 6am, noon, 6pm) |
+| Product Manager | 3x daily (7am, 3pm, 11pm) |
+| Auditor | Daily at 6:30am |
 
 ---
 
