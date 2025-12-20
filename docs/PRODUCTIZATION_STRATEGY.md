@@ -1,582 +1,427 @@
-# Barbossa Productization Strategy
+# Barbossa: Open Source Strategy
 
 ## Product Definition
 
 **Product:** Barbossa - Autonomous AI Development Team
-**Domain:** barbossa.dev
-**Target:** Solo developers who want continuous, autonomous code improvements
-**Model:** Self-hosted Docker + License Key + BYOK (Claude Max subscription)
+**Model:** Fully Open Source (MIT or Apache 2.0)
+**Distribution:** GitHub Releases + Docker Hub
+**Monetization:** GitHub Sponsors, Open Collective, donations
+**Website:** barbossa.dev (docs, community, sponsor CTA)
+
+---
+
+## Why Open Source?
+
+| Closed Source | Open Source |
+|---------------|-------------|
+| License validation complexity | Zero friction adoption |
+| Code protection overhead | Community trust |
+| Limited market (paid only) | Unlimited reach |
+| You vs. users | Community with you |
+| Support burden on you | Community helps each other |
+
+**For solo dev tools, open source wins.** The best dev tools are open source: VS Code, Docker, Git, Next.js. Trust > revenue gates.
 
 ---
 
 ## Value Proposition
 
-> "Your autonomous engineering team that never sleeps"
+> "Your autonomous engineering team that never sleeps - free and open source"
 
-Barbossa is a 5-agent AI pipeline that runs 24/7 on your infrastructure:
+Barbossa is a 5-agent AI pipeline that runs 24/7:
 
 | Agent | What It Does | Schedule |
 |-------|--------------|----------|
-| **Product Manager** | Discovers valuable features from market analysis | Daily |
-| **Discovery** | Finds technical debt, TODOs, missing tests | 4x daily |
+| **Product Manager** | Discovers valuable features | Daily |
+| **Discovery** | Finds technical debt, TODOs | 4x daily |
 | **Engineer** | Implements changes, creates PRs | Every 2 hours |
-| **Tech Lead** | Reviews PRs with strict quality gates | Every 2 hours |
-| **Auditor** | Monitors health, suggests optimizations | Daily |
-
-**Result:** Wake up to PRs. Merge the good ones. Your codebase improves while you sleep.
+| **Tech Lead** | Reviews with strict quality gates | Every 2 hours |
+| **Auditor** | Monitors health, suggests fixes | Daily |
 
 ---
 
-## Distribution Model
+## Distribution
 
-### Self-Hosted Docker + License Key
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  1. User signs up at barbossa.dev → gets license key            │
-│  2. User has Claude Max subscription → gets session token       │
-│  3. User pulls Docker image                                     │
-│  4. User creates barbossa.json with license + repos + config    │
-│  5. Container validates license on startup                      │
-│  6. Runs autonomously on USER's infrastructure                  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Why This Model:**
-- Zero infrastructure cost for you (users host everything)
-- Users keep code/credentials local (security)
-- Easy updates via `docker pull`
-- Current architecture works with minimal changes
-- Solo devs are comfortable with Docker
-
----
-
-## Pricing
-
-### Single Tier: Simple and Clear
+### GitHub Releases
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│  FREE TRIAL          │  14 days, full access, 2 repos          │
-├──────────────────────┼─────────────────────────────────────────┤
-│  BARBOSSA PRO        │  $49/month                              │
-│                      │  • Unlimited repositories               │
-│                      │  • All 5 agents                         │
-│                      │  • Auto-merge capability                │
-│                      │  • Email support                        │
-│                      │  • Future updates included              │
-└──────────────────────┴─────────────────────────────────────────┘
-
-+ User pays their own Claude Max subscription ($100/month to Anthropic)
+github.com/barbossa-dev/barbossa
+├── Releases
+│   ├── v1.0.0 (Latest)
+│   │   ├── barbossa-v1.0.0.tar.gz (source)
+│   │   ├── docker-compose.yml
+│   │   └── CHANGELOG.md
+│   └── v0.9.0
+│       └── ...
+├── README.md (quick start)
+├── docs/ (full documentation)
+└── CONTRIBUTING.md
 ```
 
-**Why Single Tier:**
-- Solo devs hate complex pricing
-- Removes friction ("which tier do I need?")
-- Easy to communicate
-- Can add tiers later if needed
+### Docker Hub
 
-**Total Cost to User:** ~$149/month ($49 Barbossa + $100 Claude Max)
+```bash
+# Users run:
+docker pull barbossa/agent:latest
+docker pull barbossa/agent:1.0.0  # Pinned version
+```
 
----
+### Quick Start
 
-## Prerequisites (User Must Have)
+```bash
+# Clone and run
+git clone https://github.com/barbossa-dev/barbossa.git
+cd barbossa
+cp barbossa.example.json barbossa.json
+# Edit barbossa.json with your repos
 
-1. **Claude Max Subscription** ($100/month from Anthropic)
-   - Provides the session token for Claude CLI
-   - User authenticates once: `claude login`
-
-2. **GitHub Account** with Personal Access Token
-   - Scopes: `repo`, `workflow`
-
-3. **Docker** installed and running
-
-4. **Git + SSH keys** for private repo access
+docker compose up -d
+```
 
 ---
 
 ## Configuration: `barbossa.json`
 
-Users create this file in their working directory:
+No license key needed - just configure and run:
 
 ```json
 {
-  "license_key": "barb_xxxxxxxxxxxxxxxx",
-  "owner": "github-username",
+  "owner": "your-github-username",
   "repositories": [
     {
-      "name": "my-saas-app",
-      "url": "git@github.com:username/my-saas-app.git",
+      "name": "my-app",
+      "url": "git@github.com:username/my-app.git",
       "branch": "main",
       "package_manager": "npm",
-      "description": "SaaS application built with Next.js",
+      "description": "My SaaS application",
       "tech_stack": {
         "framework": "Next.js 14",
         "language": "TypeScript",
-        "styling": "Tailwind CSS",
-        "database": "Prisma + PostgreSQL"
+        "styling": "Tailwind CSS"
       },
       "design_system": {
         "aesthetic": "Modern minimal",
-        "rules": [
-          "Use shadcn/ui components",
-          "No inline styles",
-          "Consistent spacing with Tailwind"
-        ]
+        "rules": ["Use shadcn/ui", "No inline styles"]
       },
       "do_not_touch": [
         "src/lib/auth.ts",
-        "prisma/migrations/",
-        ".env*"
-      ],
-      "focus_areas": [
-        "Improve test coverage",
-        "Add loading states",
-        "Fix accessibility issues"
+        "prisma/migrations/"
       ]
     }
   ],
   "settings": {
     "engineer": {
       "schedule": "every_2_hours",
-      "timeout_minutes": 30,
-      "max_files_changed": 15
+      "timeout_minutes": 30
     },
     "tech_lead": {
       "auto_merge": false,
-      "auto_merge_threshold": 8,
-      "require_tests_for_ui": true,
-      "max_lines_without_tests": 50
+      "require_tests_for_ui": true
     },
-    "discovery": {
-      "enabled": true,
-      "max_backlog_issues": 20
-    },
-    "product_manager": {
-      "enabled": true,
-      "max_feature_issues": 10
-    },
-    "auditor": {
-      "enabled": true,
-      "notify_email": "dev@example.com"
-    }
+    "discovery": { "enabled": true },
+    "product_manager": { "enabled": true },
+    "auditor": { "enabled": true }
   }
 }
 ```
 
 ---
 
-## Setup Guide Outline
+## Prerequisites (User Provides)
 
-### Quick Start (README)
+1. **Claude Max Subscription** ($100/month to Anthropic)
+   - Run `claude login` to authenticate
+
+2. **GitHub Personal Access Token**
+   - Scopes: `repo`, `workflow`
+
+3. **Docker** installed
+
+4. **SSH keys** for private repo access
+
+**Total user cost:** ~$100/month (just Claude subscription)
+
+---
+
+## Monetization
+
+### Primary: GitHub Sponsors
 
 ```markdown
-## Quick Start
+# In README.md
 
-### Prerequisites
-- Docker installed
-- Claude Max subscription (run `claude login` first)
-- GitHub Personal Access Token
-- SSH key added to GitHub
+## Support Barbossa
 
-### 1. Get Your License
-Sign up at https://barbossa.dev and copy your license key.
+If Barbossa saves you time, consider sponsoring:
 
-### 2. Create Configuration
-Create `barbossa.json` in your working directory:
-[minimal example config]
+[![Sponsor](https://img.shields.io/github/sponsors/barbossa-dev)](https://github.com/sponsors/barbossa-dev)
 
-### 3. Run Barbossa
-docker run -d \
-  --name barbossa \
-  -v $(pwd)/barbossa.json:/app/barbossa.json \
-  -v ~/.claude:/root/.claude \
-  -v ~/.ssh:/root/.ssh:ro \
-  -v ~/.gitconfig:/root/.gitconfig:ro \
-  -e GITHUB_TOKEN=ghp_xxxx \
-  barbossa/agent:latest
+### Sponsor Tiers
 
-### 4. Check Status
-Open http://localhost:8443 (default: barbossa/Galleon6242)
-
-Your first PR should appear within 2 hours!
+- $5/month - Supporter (name in README)
+- $25/month - Backer (logo in README, priority issues)
+- $100/month - Sponsor (logo on website, direct support channel)
+- $500/month - Gold Sponsor (consulting call, feature prioritization)
 ```
 
-### Full Setup Guide (Docs Site)
+### Secondary: Open Collective
+
+For companies that can't use GitHub Sponsors:
 
 ```
-1. Prerequisites
-   ├── Installing Docker
-   ├── Claude Max Subscription
-   │   ├── Sign up at claude.ai
-   │   ├── Subscribe to Max plan ($100/mo)
-   │   └── Run `claude login` to authenticate
-   ├── GitHub Personal Access Token
-   │   ├── Go to GitHub → Settings → Developer settings
-   │   ├── Generate token with `repo` and `workflow` scopes
-   │   └── Save securely
-   └── SSH Keys for Private Repos
-       └── Ensure ~/.ssh/id_rsa exists and is added to GitHub
+https://opencollective.com/barbossa
+```
 
-2. License Setup
-   ├── Create account at barbossa.dev
-   ├── Start free trial or subscribe
-   └── Copy license key
+### Tertiary: Consulting/Support
 
-3. Configuration
-   ├── barbossa.json schema reference
-   ├── Repository configuration
-   │   ├── Required fields
-   │   ├── Tech stack definition
-   │   ├── Design system rules
-   │   └── Protected files (do_not_touch)
-   └── Agent settings
-       ├── Schedules
-       ├── Auto-merge rules
-       └── Quality thresholds
+- **Setup assistance:** $200 one-time
+- **Custom agent development:** $150/hour
+- **Priority support retainer:** $500/month
 
-4. Running Barbossa
-   ├── Docker run command
-   ├── Docker Compose setup
-   ├── Volume mounts explained
-   └── Environment variables
+---
 
-5. Web Portal
-   ├── Accessing the dashboard
-   ├── Viewing sessions and logs
-   ├── Manual triggers
-   └── Tech Lead decisions
+## Website: barbossa.dev
 
-6. Troubleshooting
-   ├── License validation errors
-   ├── Claude authentication issues
-   ├── GitHub permission errors
-   └── Common agent failures
+Simple docs site, not a SaaS:
+
+```
+/                   Landing (what it is, quick start, sponsor CTA)
+/docs               Full documentation
+/docs/quickstart    5-minute setup
+/docs/agents        How each agent works
+/docs/config        barbossa.json reference
+/community          Discord link, GitHub Discussions
+/sponsors           Sponsor showcase
+```
+
+**Tech stack:**
+- Astro or Docusaurus (static site)
+- Hosted on Vercel/Netlify (free tier)
+- No backend needed
+
+---
+
+## Community Building
+
+### GitHub
+
+- **Discussions:** Q&A, feature requests, show & tell
+- **Issues:** Bug reports, feature tracking
+- **Projects:** Public roadmap board
+
+### Discord
+
+```
+#general        - Chat
+#support        - Help with setup
+#showcase       - Share your Barbossa PRs
+#development    - Contributing discussion
+#sponsors       - Private channel for sponsors
+```
+
+### Content
+
+1. **Launch post:** "I built an autonomous AI dev team - here's the code"
+2. **Weekly changelog:** Tweet/post about new releases
+3. **Case studies:** "How Barbossa shipped 100 PRs for my side project"
+4. **YouTube:** Setup tutorial, architecture walkthrough
+
+---
+
+## License Choice
+
+### Recommended: MIT
+
+```
+MIT License
+
+Copyright (c) 2024 Barbossa
+
+Permission is hereby granted, free of charge, to any person obtaining a copy...
+```
+
+**Why MIT:**
+- Maximum adoption (no restrictions)
+- Companies can use freely
+- Simple, well-understood
+
+### Alternative: Apache 2.0
+
+If you want patent protection clauses. Slightly more complex but still permissive.
+
+---
+
+## Repository Structure
+
+```
+barbossa/
+├── README.md                    # Quick start, badges, sponsor links
+├── LICENSE                      # MIT
+├── CONTRIBUTING.md              # How to contribute
+├── CHANGELOG.md                 # Release notes
+├── docker-compose.yml           # Production setup
+├── Dockerfile                   # Container build
+├── barbossa.example.json        # Example config
+├── config/
+│   └── barbossa.schema.json     # JSON Schema for validation
+├── src/
+│   ├── agents/
+│   │   ├── engineer.py
+│   │   ├── tech_lead.py
+│   │   ├── discovery.py
+│   │   ├── product_manager.py
+│   │   └── auditor.py
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── github.py
+│   │   └── claude.py
+│   └── web/
+│       └── portal.py
+├── prompts/                     # Agent prompts (open for contribution!)
+│   ├── engineer.md
+│   ├── tech_lead.md
+│   └── ...
+├── tests/
+└── docs/
+    ├── quickstart.md
+    ├── configuration.md
+    └── agents.md
 ```
 
 ---
 
-## License Validation System
+## Roadmap (Public)
 
-### Architecture
+### v1.0 - Launch
+- [ ] Clean up codebase for public release
+- [ ] Write comprehensive README
+- [ ] Create documentation site
+- [ ] Set up GitHub Sponsors
+- [ ] Docker Hub automated builds
+- [ ] Launch on Hacker News, Reddit, Twitter
 
-```
-┌─────────────────┐                    ┌─────────────────────┐
-│  Docker Start   │───── HTTPS ───────▶│  barbossa.dev/api   │
-│                 │                    │  /v1/validate       │
-│  Read license   │                    └─────────────────────┘
-│  from config    │                             │
-└─────────────────┘                             │
-        │                                       ▼
-        │◀─────────────────────────────────────────
-        │   {                                   │
-        │     "valid": true,                    │
-        │     "expires": "2025-02-01",          │
-        │     "features": ["all_agents", "auto_merge"]
-        │   }                                   │
-        ▼
-┌─────────────────┐
-│  License valid  │
-│  Start agents   │
-│  Begin cron     │
-└─────────────────┘
-        │
-        │ Hourly heartbeat (usage reporting)
-        ▼
-┌─────────────────┐                    ┌─────────────────────┐
-│  Report:        │───── HTTPS ───────▶│  barbossa.dev/api   │
-│  - PRs created  │                    │  /v1/heartbeat      │
-│  - Repos active │                    └─────────────────────┘
-│  - Merge rate   │
-└─────────────────┘
-```
+### v1.1 - Community Requests
+- [ ] Slack notifications
+- [ ] Custom agent schedules
+- [ ] Multiple branch support
+- [ ] Improved web portal
 
-### License Key Format
+### v1.2 - Integrations
+- [ ] Linear integration
+- [ ] Jira integration
+- [ ] GitLab support
+- [ ] Bitbucket support
 
-```
-barb_[environment]_[random_32_chars]
-
-Examples:
-barb_live_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
-barb_test_x9y8z7w6v5u4t3s2r1q0p9o8n7m6l5k4
-```
-
-### Validation Endpoint
-
-```
-POST https://barbossa.dev/api/v1/validate
-Content-Type: application/json
-
-{
-  "license_key": "barb_live_xxxx",
-  "machine_id": "hashed-machine-identifier",
-  "version": "1.0.0"
-}
-
-Response (200 OK):
-{
-  "valid": true,
-  "tier": "pro",
-  "expires": "2025-02-01T00:00:00Z",
-  "features": {
-    "max_repos": -1,
-    "all_agents": true,
-    "auto_merge": true
-  }
-}
-
-Response (403 Forbidden):
-{
-  "valid": false,
-  "error": "license_expired",
-  "message": "Your license expired on 2025-01-01. Renew at barbossa.dev"
-}
-```
+### v2.0 - Advanced
+- [ ] Custom agent creation
+- [ ] Plugin system
+- [ ] Multi-model support (GPT-4, Gemini)
 
 ---
 
-## barbossa.dev Website Structure
+## Launch Checklist
 
-### Pages
+### Pre-Launch
 
-```
-/                     Landing page (hero, features, pricing, CTA)
-/pricing              Detailed pricing (single tier + Claude costs explained)
-/docs                 Documentation hub
-/docs/quickstart      5-minute setup guide
-/docs/configuration   Full barbossa.json reference
-/docs/agents          How each agent works
-/docs/troubleshooting Common issues
-/login                Sign in
-/signup               Create account + start trial
-/dashboard            License management, usage stats
-/dashboard/license    View/regenerate license key
-/dashboard/billing    Stripe customer portal
-```
+- [ ] Clean codebase (remove personal config, secrets)
+- [ ] Write README with clear value prop
+- [ ] Add LICENSE file (MIT)
+- [ ] Create CONTRIBUTING.md
+- [ ] Write initial documentation
+- [ ] Set up GitHub Sponsors profile
+- [ ] Create barbossa.dev landing page
+- [ ] Record 5-minute setup video
+- [ ] Prepare launch post
 
-### Landing Page Sections
+### Launch Day
 
-```
-1. Hero
-   - "Your autonomous engineering team"
-   - "Wake up to PRs. Ship features while you sleep."
-   - [Start Free Trial] button
+- [ ] Make repo public
+- [ ] Push to Docker Hub
+- [ ] Post to Hacker News ("Show HN: I built an autonomous AI dev team")
+- [ ] Post to r/programming, r/selfhosted
+- [ ] Tweet thread
+- [ ] LinkedIn post
 
-2. How It Works
-   - 3-step visual: Configure → Run → Review PRs
+### Post-Launch
 
-3. The 5 Agents
-   - Visual cards for each agent with what they do
-
-4. Demo Video
-   - 2-minute video showing real PRs being created
-
-5. Pricing
-   - Single tier: $49/month
-   - "+ Claude Max subscription required ($100/month)"
-   - [Start 14-Day Trial]
-
-6. FAQ
-   - "Do I need a Claude subscription?" → Yes, Max plan
-   - "Where does my code run?" → Your infrastructure only
-   - "What if Barbossa creates bad PRs?" → Don't merge them!
-
-7. Footer
-   - Docs, GitHub, Twitter, Contact
-```
-
----
-
-## Tech Stack for barbossa.dev
-
-```
-Frontend:
-├── Next.js 14 (App Router)
-├── Tailwind CSS
-├── shadcn/ui
-└── Vercel hosting
-
-Backend:
-├── Next.js API Routes
-├── PostgreSQL (Supabase)
-└── Edge functions for validation
-
-Payments:
-├── Stripe Subscriptions
-├── Stripe Customer Portal
-└── Webhook handlers
-
-Auth:
-├── Clerk (or NextAuth)
-└── GitHub OAuth optional
-
-Email:
-└── Resend for transactional
-```
-
----
-
-## Implementation Checklist
-
-### Phase 1: MVP (Week 1-2)
-
-**barbossa.dev Website:**
-- [ ] Landing page with value prop
-- [ ] Pricing section
-- [ ] Signup flow with Stripe
-- [ ] License key generation
-- [ ] Simple dashboard (show license key)
-
-**License System:**
-- [ ] `/api/v1/validate` endpoint
-- [ ] `/api/v1/heartbeat` endpoint
-- [ ] License key generation on signup
-- [ ] Store licenses in Supabase
-
-**Docker Image Updates:**
-- [ ] Read `barbossa.json` on startup
-- [ ] Validate license before starting agents
-- [ ] Heartbeat reporting (hourly)
-- [ ] Graceful degradation if license invalid
-- [ ] Publish to GitHub Container Registry
-
-**Documentation:**
-- [ ] Quick start guide
-- [ ] barbossa.json reference
-- [ ] Prerequisites page (Claude Max setup)
-
-### Phase 2: Polish (Week 3-4)
-
-- [ ] Onboarding wizard in dashboard
-- [ ] Email notifications (welcome, trial ending, expired)
-- [ ] Usage analytics in dashboard
-- [ ] Full documentation site
-- [ ] Troubleshooting guide
-
-### Phase 3: Launch (Week 5)
-
-- [ ] Soft launch to 10 beta users
-- [ ] Collect feedback
-- [ ] Fix critical issues
-- [ ] Public launch announcement
-- [ ] Content: "How I shipped 50 PRs while sleeping"
-
----
-
-## Revenue Model
-
-### Unit Economics
-
-```
-Revenue per customer:     $49/month
-Infrastructure cost:      $0 (self-hosted)
-Stripe fees (2.9%):       $1.42/month
-Support cost (estimated): $5/month
-────────────────────────────────────
-Gross margin:             $42.58/month (87%)
-```
-
-### Projections (Conservative)
-
-| Metric | Month 3 | Month 6 | Month 12 |
-|--------|---------|---------|----------|
-| Trials started | 50 | 150 | 400 |
-| Conversion (10%) | 5 | 15 | 40 |
-| Cumulative subs | 5 | 35 | 80 |
-| Churn (5%/mo) | - | -2 | -4 |
-| Active subs | 5 | 33 | 76 |
-| MRR | $245 | $1,617 | $3,724 |
-| ARR | - | - | $44,688 |
-
----
-
-## Risk Mitigation
-
-| Risk | Mitigation |
-|------|------------|
-| Users bypass license | Heartbeat monitoring, grace period then disable |
-| Claude Max changes pricing | BYOK model - their problem, not yours |
-| Bad PR quality perception | Clear docs: "review before merge", quality gates |
-| Support overwhelm | Self-serve docs, community Discord |
-| Docker too technical | Clear prerequisites, video tutorials |
+- [ ] Respond to all issues/discussions within 24h
+- [ ] Write first changelog
+- [ ] Thank early sponsors publicly
+- [ ] Iterate based on feedback
 
 ---
 
 ## Success Metrics
 
-**North Star:** Active paying subscribers
+**Adoption:**
+- GitHub stars
+- Docker pulls
+- Forks
+- Contributors
 
-**Weekly Metrics:**
-- Trial signups
-- Trial → Paid conversion rate
-- Active containers (heartbeats)
-- Churn rate
+**Community:**
+- GitHub Discussions activity
+- Discord members
+- Issue resolution time
 
-**Quality Metrics:**
-- PRs created per customer (engagement)
-- Merge rate (value delivered)
-- Support tickets (friction)
+**Sustainability:**
+- Monthly sponsorship revenue
+- Sponsor retention
+- Consulting requests
 
----
-
-## Product Defensibility
-
-> See [DEFENSIBILITY_AND_UPDATES.md](./DEFENSIBILITY_AND_UPDATES.md) for full technical details.
-
-### Code Protection (Multi-Layer)
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  LAYER 1: Nuitka Compilation                                   │
-│  Python → C → Native binary (no readable source in container)  │
-├─────────────────────────────────────────────────────────────────┤
-│  LAYER 2: Server-Side Prompts                                  │
-│  Agent prompts fetched from barbossa.dev (not in image)        │
-├─────────────────────────────────────────────────────────────────┤
-│  LAYER 3: License-Gated Execution                              │
-│  Every agent run requires valid license + server handshake     │
-├─────────────────────────────────────────────────────────────────┤
-│  LAYER 4: PyArmor Obfuscation (V2)                             │
-│  Additional bytecode encryption and anti-tampering             │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Key principle:** The Docker image contains compiled binaries only. The "secret sauce" (agent prompts, scoring algorithms) lives on barbossa.dev and is fetched at runtime.
-
-### Over-The-Air Updates
-
-**Recommended: Watchtower integration**
-
-Users add Watchtower to their docker-compose.yml:
-
-```yaml
-watchtower:
-  image: containrrr/watchtower
-  volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-  command: --interval 3600  # Check hourly
-```
-
-Watchtower automatically pulls new `barbossa/agent:latest` images and restarts the container. Zero user intervention.
-
-**Update notifications:**
-- Container checks `/api/v1/version` on startup
-- Logs message if update available
-- Optional email for critical security updates
+**Target (Year 1):**
+- 1,000+ GitHub stars
+- 100+ sponsors ($2,000+/month)
+- 10+ contributors
 
 ---
 
-## Next Immediate Actions
+## Revenue Projections (Conservative)
 
-1. **Register barbossa.dev domain**
-2. **Create Stripe account** with subscription product
-3. **Build landing page** (Next.js + Tailwind)
-4. **Implement license validation API**
-5. **Modify Docker image** to read barbossa.json
-6. **Write quick start documentation**
-7. **Recruit 5 beta testers**
+| Month | Stars | Sponsors | MRR |
+|-------|-------|----------|-----|
+| 1 | 200 | 5 | $50 |
+| 3 | 500 | 20 | $200 |
+| 6 | 1,000 | 50 | $500 |
+| 12 | 2,500 | 150 | $1,500 |
+
+**Note:** Open source revenue is slower but compounds. The real value is:
+- Resume/portfolio boost
+- Consulting opportunities
+- Job offers
+- Network building
+- Potential acquisition interest
 
 ---
 
-*Version 2.0 - Focused on Solo Dev Self-Hosted Model*
+## FAQ
+
+**Q: Why give it away for free?**
+A: Because the best dev tools are free. Adoption > gatekeeping. Sponsors will come if the product is good.
+
+**Q: What if someone forks and competes?**
+A: Great! More people benefit. Stay ahead by being the best maintainer and having the strongest community.
+
+**Q: Can I still make money?**
+A: Yes - sponsors, consulting, job opportunities. Many open source maintainers earn good income.
+
+**Q: What if no one sponsors?**
+A: You still have an amazing portfolio piece and the satisfaction of helping developers. Worst case, it's a passion project.
+
+---
+
+## Next Actions
+
+1. **Clean up codebase** for public release
+2. **Write README** with compelling value prop
+3. **Add LICENSE** (MIT)
+4. **Create barbossa.dev** landing page
+5. **Set up GitHub Sponsors**
+6. **Record setup video**
+7. **Prepare launch post**
+8. **Launch on HN/Reddit/Twitter**
+
+---
+
+*Open Source Strategy v1.0*
 *December 2024*

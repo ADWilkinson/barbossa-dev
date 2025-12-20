@@ -2,15 +2,10 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://barbossa.dev/schema/v1.json",
   "title": "Barbossa Configuration",
-  "description": "Configuration file for Barbossa autonomous development agent",
+  "description": "Configuration file for Barbossa autonomous development agent (open source)",
   "type": "object",
-  "required": ["license_key", "owner", "repositories"],
+  "required": ["owner", "repositories"],
   "properties": {
-    "license_key": {
-      "type": "string",
-      "pattern": "^barb_(live|test)_[a-z0-9]{32}$",
-      "description": "Your Barbossa license key from barbossa.dev"
-    },
     "owner": {
       "type": "string",
       "description": "GitHub username or organization that owns the repositories"

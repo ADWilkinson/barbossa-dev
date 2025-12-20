@@ -1,6 +1,5 @@
 {
   "$schema": "./barbossa.schema.json",
-  "license_key": "barb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
   "owner": "your-github-username",
   "repositories": [
     {
