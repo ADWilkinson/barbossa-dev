@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration Reference - Barbossa</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --fg: #c9d1d9;
+            --accent: #58a6ff;
+            --border: #30363d;
+            --code-bg: #161b22;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.6;
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 { color: #fff; margin-top: 2rem; margin-bottom: 1rem; }
+        h1 { font-size: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+        h2 { font-size: 1.5rem; }
+        h3 { font-size: 1.2rem; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.5rem; }
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'SF Mono', Consolas, monospace;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        pre code { padding: 0; background: none; }
+        .nav {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: #8b949e;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: #8b949e;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="/">Home</a>
+        <a href="https://github.com/ADWilkinson/barbossa-engineer">GitHub</a>
+        <a href="/quickstart.html">Quick Start</a>
+        <a href="/configuration.html">Configuration</a>
+        <a href="/agents.html">Agents</a>
+        <a href="/troubleshooting.html">Troubleshooting</a>
+        <a href="/faq.html">FAQ</a>
+    </nav>
+
+    <div class="content">
+        <h1>Configuration Reference</h1>
+
+<p>Complete reference for <code>config/repositories.json</code>.</p>
+
+<p>---</p>
+
+<h2>Quick Start - Minimal Config</h2>
+
+<p>You only need <strong>3 fields</strong> to get started:</p>
+
+<pre><code class="language-json">{
+<p>"owner": "your-github-username",</p>
+<p>"repositories": [</p>
+<p>{</p>
+<p>"name": "my-app",</p>
+<p>"url": "git@github.com:your-github-username/my-app.git"</p>
+<p>}</p>
+<p>]</p>
+<p>}</code></pre></p>
+
+<p>That's it! Barbossa will figure out the rest.</p>
+
+<p>---</p>
+
+<h2>Configuration Tiers</h2>
+
+<h3>Tier 1: Minimal (Required)</h3>
+
+<pre><code class="language-json">{
+<p>"owner": "your-github-username",</p>
+<p>"repositories": [</p>
+<p>{</p>
+<p>"name": "my-app",</p>
+<p>"url": "git@github.com:your-github-username/my-app.git"</p>
+<p>}</p>
+<p>]</p>
+<p>}</code></pre></p>
+
+<h3>Tier 2: Recommended (Better Results)</h3>
+
+<pre><code class="language-json">{
+<p>"owner": "your-github-username",</p>
+<p>"repositories": [</p>
+<p>{</p>
+<p>"name": "my-app",</p>
+<p>"url": "git@github.com:your-github-username/my-app.git",</p>
+<p>"package_manager": "pnpm",</p>
+<p>"description": "My SaaS application for X",</p>
+<p>"do_not_touch": ["src/lib/auth.ts", "prisma/migrations/"],</p>
+<p>"focus_areas": ["Improve test coverage", "Add loading states"]</p>
+<p>}</p>
+<p>]</p>
+<p>}</code></pre></p>
+
+<h3>Tier 3: Full Control</h3>
+
+<p>See <code>config/repositories.advanced.json.example</code> for all options.</p>
+
+<p>---</p>
+
+<h2>Field Reference</h2>
+
+<h3>Required Fields</h3>
+
+| Field | Description |
+|-------|-------------|
+| <code>owner</code> | Your GitHub username or organization |
+| <code>repositories</code> | Array of repository configurations |
+| <code>repositories[].name</code> | Repository name |
+| <code>repositories[].url</code> | Git clone URL (SSH or HTTPS) |
+
+<h3>Recommended Fields</h3>
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| <code>package_manager</code> | <code>npm</code> | Package manager: <code>npm</code>, <code>yarn</code>, <code>pnpm</code>, <code>bun</code> |
+| <code>description</code> | - | Brief project description for context |
+| <code>do_not_touch</code> | <code>[]</code> | Files/directories agents should never modify |
+| <code>focus_areas</code> | <code>[]</code> | What improvements to prioritize |
+
+<h3>Advanced Fields</h3>
+
+| Field | Description |
+|-------|-------------|
+| <code>env_file</code> | Environment file name (default: <code>.env</code>) |
+| <code>tech_stack</code> | Object describing framework, language, styling |
+| <code>architecture</code> | Object with <code>data_flow</code> and <code>key_dirs</code> |
+| <code>design_system</code> | Object with <code>aesthetic</code> and <code>brand_rules</code> |
+| <code>example_good_prs</code> | Examples of desired PR types |
+
+<p>---</p>
+
+<h2>Protected Files (do_not_touch)</h2>
+
+<strong>Critical for safety.</strong> Files listed here will never be modified:
+
+<pre><code class="language-json">{
+<p>"do_not_touch": [</p>
+<p>"src/lib/auth.ts",</p>
+<p>"src/lib/stripe.ts",</p>
+<p>"prisma/migrations/",</p>
+<p>".env*"</p>
+<p>]</p>
+<p>}</code></pre></p>
+
+<p>Use this for:</p>
+<ul>
+<li>Authentication logic</li>
+<li>Payment processing</li>
+<li>Database migrations</li>
+<li>Sensitive configuration</li>
+</ul>
+
+<p>---</p>
+
+<h2>Focus Areas</h2>
+
+<p>Guide what improvements agents should prioritize:</p>
+
+<pre><code class="language-json">{
+<p>"focus_areas": [</p>
+<p>"Improve test coverage for components",</p>
+<p>"Add loading and error states",</p>
+<p>"Fix accessibility issues",</p>
+<p>"Remove console.log statements"</p>
+<p>]</p>
+<p>}</code></pre></p>
+
+<p>---</p>
+
+<h2>Tech Stack</h2>
+
+<p>Help agents understand your project:</p>
+
+<pre><code class="language-json">{
+<p>"tech_stack": {</p>
+<p>"framework": "Next.js 14 (App Router)",</p>
+<p>"language": "TypeScript",</p>
+<p>"styling": "Tailwind CSS",</p>
+<p>"database": "Prisma + PostgreSQL",</p>
+<p>"testing": "Vitest + Playwright"</p>
+<p>}</p>
+<p>}</code></pre></p>
+
+<p>---</p>
+
+<h2>Design System</h2>
+
+<p>Enforce design consistency:</p>
+
+<pre><code class="language-json">{
+<p>"design_system": {</p>
+<p>"aesthetic": "Modern minimal with subtle shadows",</p>
+<p>"brand_rules": [</p>
+<p>"Use shadcn/ui components",</p>
+<p>"No inline styles",</p>
+<p>"Consistent spacing with Tailwind"</p>
+<p>]</p>
+<p>}</p>
+<p>}</code></pre></p>
+
+<p>For strict enforcement:</p>
+
+<pre><code class="language-json">{
+<p>"design_system": {</p>
+<p>"brand_rules": [</p>
+<p>"NEVER use border-radius (square corners only)",</p>
+<p>"ONLY use colors from tokens/colors.css",</p>
+<p>"ALL buttons must use Button component"</p>
+<p>]</p>
+<p>}</p>
+<p>}</code></pre></p>
+
+<p>---</p>
+
+<h2>Architecture</h2>
+
+<p>Help agents navigate your codebase:</p>
+
+<pre><code class="language-json">{
+<p>"architecture": {</p>
+<p>"data_flow": "Client -> Server Actions -> Prisma -> PostgreSQL",</p>
+<p>"key_dirs": [</p>
+<p>"src/app/ - Next.js routes",</p>
+<p>"src/components/ - React components",</p>
+<p>"src/lib/ - Shared utilities"</p>
+<p>]</p>
+<p>}</p>
+<p>}</code></pre></p>
+
+<p>---</p>
+
+<h2>Multiple Repositories</h2>
+
+<p>Configure multiple repos:</p>
+
+<pre><code class="language-json">{
+<p>"owner": "your-username",</p>
+<p>"repositories": [</p>
+<p>{ "name": "frontend", "url": "git@github.com:you/frontend.git" },</p>
+<p>{ "name": "backend", "url": "git@github.com:you/backend.git" },</p>
+<p>{ "name": "mobile", "url": "git@github.com:you/mobile.git" }</p>
+<p>]</p>
+<p>}</code></pre></p>
+
+<p>Barbossa works on each in sequence.</p>
+
+<p>---</p>
+
+<h2>Schedule Settings</h2>
+
+<p>Customize when agents run. Use simple presets or cron expressions.</p>
+
+<h3>Quick Example</h3>
+
+<p>Run engineer more frequently, disable product manager:</p>
+
+<pre><code class="language-json">{
+<p>"settings": {</p>
+<p>"schedule": {</p>
+<p>"engineer": "every_hour",</p>
+<p>"product_manager": "disabled"</p>
+<p>}</p>
+<p>}</p>
+<p>}</code></pre></p>
+
+<h3>Available Presets</h3>
+
+| Preset | When it runs |
+|--------|--------------|
+| <code>every_hour</code> | Every hour |
+| <code>every_2_hours</code> | Every 2 hours (default for engineer) |
+| <code>every_3_hours</code> | Every 3 hours |
+| <code>every_4_hours</code> | Every 4 hours |
+| <code>2x_daily</code> | 9am and 6pm |
+| <code>3x_daily</code> | 7am, 3pm, 11pm |
+| <code>4x_daily</code> | Midnight, 6am, noon, 6pm |
+| <code>daily_morning</code> | 9am |
+| <code>daily_evening</code> | 6pm |
+| <code>disabled</code> | Don't run this agent |
+
+<h3>Custom Times (Cron)</h3>
+
+<p>Use cron syntax for precise control:</p>
+
+<pre><code class="language-json">{
+<p>"settings": {</p>
+<p>"schedule": {</p>
+<p>"engineer": "0 9,12,15,18 <em> </em> *",</p>
+<p>"auditor": "30 8 <em> </em> 1"</p>
+<p>}</p>
+<p>}</p>
+<p>}</code></pre></p>
+
+<p>Cron format: <code>minute hour day month weekday</code></p>
+<ul>
+<li><code>0 9 <em> </em> *</code> = daily at 9:00am</li>
+<li><code>30 8 <em> </em> 1</code> = Monday at 8:30am</li>
+<li><code>0 <em>/4 </em> <em> </em></code> = every 4 hours</li>
+</ul>
+
+<h3>Defaults</h3>
+
+| Agent | Default Schedule |
+|-------|------------------|
+| Engineer | Every 2 hours at :00 |
+| Tech Lead | Every 2 hours at :35 (after engineer) |
+| Discovery | 4x daily (midnight, 6am, noon, 6pm) |
+| Product Manager | 3x daily (7am, 3pm, 11pm) |
+| Auditor | Daily at 6:30am |
+
+<p>---</p>
+
+<h2>Agent Settings</h2>
+
+<p>Control agent behavior:</p>
+
+<pre><code class="language-json">{
+<p>"settings": {</p>
+<p>"engineer": {</p>
+<p>"enabled": true</p>
+<p>},</p>
+
+<p>"tech_lead": {</p>
+<p>"enabled": true,</p>
+<p>"auto_merge": true,</p>
+<p>"min_lines_for_tests": 50,</p>
+<p>"min_lines_for_ui_tests": 30,</p>
+<p>"max_files_per_pr": 15,</p>
+<p>"stale_days": 5</p>
+<p>},</p>
+
+<p>"discovery": {</p>
+<p>"enabled": true,</p>
+<p>"max_backlog_issues": 20</p>
+<p>},</p>
+
+<p>"product_manager": {</p>
+<p>"enabled": true,</p>
+<p>"max_issues_per_run": 3,</p>
+<p>"max_feature_issues": 20</p>
+<p>},</p>
+
+<p>"auditor": {</p>
+<p>"enabled": true,</p>
+<p>"analysis_days": 7</p>
+<p>}</p>
+<p>}</p>
+<p>}</code></pre></p>
+
+<h3>Tech Lead Settings</h3>
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| <code>enabled</code> | <code>true</code> | Enable/disable the tech lead agent |
+| <code>auto_merge</code> | <code>true</code> | Auto-merge approved PRs |
+| <code>min_lines_for_tests</code> | <code>50</code> | Require tests for PRs with more lines |
+| <code>min_lines_for_ui_tests</code> | <code>30</code> | Require tests for UI changes with more lines |
+| <code>max_files_per_pr</code> | <code>15</code> | Reject PRs touching more files (scope creep) |
+| <code>stale_days</code> | <code>5</code> | Auto-close PRs older than this many days |
+
+<h3>Discovery Settings</h3>
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| <code>enabled</code> | <code>true</code> | Enable/disable discovery agent |
+| <code>max_backlog_issues</code> | <code>20</code> | Stop creating issues when backlog is full |
+
+<h3>Product Manager Settings</h3>
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| <code>enabled</code> | <code>true</code> | Enable/disable product manager agent |
+| <code>max_issues_per_run</code> | <code>3</code> | Max feature issues to create per run |
+| <code>max_feature_issues</code> | <code>20</code> | Stop when this many feature issues exist |
+
+<p>Disable agents you don't need by setting <code>enabled: false</code>.</p>
+
+<p>---</p>
+
+<h2>Environment Variables</h2>
+
+<p>Set in <code>.env</code>:</p>
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| <code>GITHUB_TOKEN</code> | Yes | GitHub Personal Access Token |
+| <code>TZ</code> | No | Timezone (default: <code>UTC</code>) |
+
+<p>---</p>
+
+<h2>Example Files</h2>
+
+<ul>
+<li><code>config/repositories.json.example</code> - Minimal config</li>
+<li><code>config/repositories.advanced.json.example</code> - Full config with all options</li>
+</ul>
+
+<p>---</p>
+
+<h2>Tips</h2>
+
+<p>1. <strong>Start minimal</strong> - Add fields only as needed</p>
+<p>2. <strong>Protect critical files</strong> - Always set <code>do_not_touch</code></p>
+<p>3. <strong>Be specific with focus areas</strong> - Vague guidance = vague PRs</p>
+<p>4. <strong>Use SSH URLs for private repos</strong> - HTTPS may have auth issues</p>
+
+    </div>
+
+    <footer>
+        <p>Barbossa is open source under the MIT License</p>
+        <p><a href="https://github.com/ADWilkinson/barbossa-engineer">GitHub</a></p>
+    </footer>
+</body>
+</html>

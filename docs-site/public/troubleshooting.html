@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Troubleshooting - Barbossa</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --fg: #c9d1d9;
+            --accent: #58a6ff;
+            --border: #30363d;
+            --code-bg: #161b22;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.6;
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 { color: #fff; margin-top: 2rem; margin-bottom: 1rem; }
+        h1 { font-size: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+        h2 { font-size: 1.5rem; }
+        h3 { font-size: 1.2rem; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.5rem; }
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'SF Mono', Consolas, monospace;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        pre code { padding: 0; background: none; }
+        .nav {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: #8b949e;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: #8b949e;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="/">Home</a>
+        <a href="https://github.com/ADWilkinson/barbossa-engineer">GitHub</a>
+        <a href="/quickstart.html">Quick Start</a>
+        <a href="/configuration.html">Configuration</a>
+        <a href="/agents.html">Agents</a>
+        <a href="/troubleshooting.html">Troubleshooting</a>
+        <a href="/faq.html">FAQ</a>
+    </nav>
+
+    <div class="content">
+        <h1>Troubleshooting</h1>
+
+<p>Common issues and how to fix them.</p>
+
+<p>---</p>
+
+<h2>Claude CLI Issues</h2>
+
+<h3>"Claude CLI not authenticated"</h3>
+
+<strong>Symptom:</strong> Logs show authentication errors.
+
+<strong>Fix:</strong>
+<pre><code class="language-bash"># Re-authenticate
+<p>claude login</p>
+
+<h1>Verify authentication works</h1>
+<p>claude --version</p>
+
+<h1>Restart Barbossa</h1>
+<p>docker compose restart</code></pre></p>
+
+<h3>"Rate limit exceeded"</h3>
+
+<strong>Symptom:</strong> Claude CLI returns rate limit errors.
+
+<strong>Cause:</strong> Claude Max has usage limits during peak hours.
+
+<strong>Fix:</strong>
+<ul>
+<li>Wait 15-30 minutes and retry</li>
+<li>Barbossa will automatically retry on next cycle</li>
+<li>Consider adjusting schedule to off-peak hours</li>
+</ul>
+
+<h3>"Token refresh failed"</h3>
+
+<strong>Symptom:</strong> Authentication stops working after some time.
+
+<strong>Fix:</strong>
+<pre><code class="language-bash"># Re-authenticate
+<p>claude login</p>
+
+<h1>Ensure ~/.claude is mounted writable (not :ro)</h1>
+<h1>Check docker-compose.yml:</h1>
+<h1>  - ~/.claude:/root/.claude  (correct)</h1>
+<h1>  - ~/.claude:/root/.claude:ro  (wrong - read only)</h1>
+
+<p>docker compose restart</code></pre></p>
+
+<p>---</p>
+
+<h2>GitHub Issues</h2>
+
+<h3>"Permission denied" on push</h3>
+
+<strong>Symptom:</strong> Git push fails with 403 or permission denied.
+
+<strong>Possible causes:</strong>
+
+<p>1. <strong>Token lacks permissions:</strong></p>
+   <pre><code class="language-bash"># Token needs 'repo' scope
+<p># Generate new token at: github.com/settings/tokens</code></pre></p>
+
+<p>2. <strong>Token expired:</strong></p>
+   <pre><code class="language-bash"># Update .env with new token
+<p>echo "GITHUB_TOKEN=ghp_newtoken..." > .env</p>
+<p>docker compose restart</code></pre></p>
+
+<p>3. <strong>SSH key issues:</strong></p>
+   <pre><code class="language-bash"># Test SSH access
+<p>ssh -T git@github.com</p>
+
+<p># Ensure keys are mounted</p>
+<p># Check docker-compose.yml has:</p>
+<p>#   - ~/.ssh:/root/.ssh:ro</code></pre></p>
+
+<h3>"Repository not found"</h3>
+
+<strong>Symptom:</strong> Git clone fails inside container.
+
+<strong>Fix:</strong>
+<pre><code class="language-bash"># Verify repo URL in config/repositories.json
+<h1>For private repos, use SSH URL:</h1>
+<h1>  "url": "git@github.com:username/repo.git"</h1>
+
+<h1>For public repos, HTTPS works:</h1>
+<h1>  "url": "https://github.com/username/repo.git"</h1>
+
+<h1>Test access from container</h1>
+<p>docker exec barbossa git ls-remote git@github.com:username/repo.git</code></pre></p>
+
+<h3>PRs not being created</h3>
+
+<strong>Symptom:</strong> Engineer runs but no PRs appear.
+
+<strong>Check:</strong>
+<pre><code class="language-bash"># View engineer logs
+<p>docker exec barbossa cat /app/logs/barbossa_engineer.log</p>
+
+<h1>Common causes:</h1>
+<h1>1. No issues labeled 'backlog' exist</h1>
+<h1>2. All backlog issues already have PRs</h1>
+<h1>3. Implementation failed (check logs for errors)</code></pre></h1>
+
+<p>---</p>
+
+<h2>Docker Issues</h2>
+
+<h3>Container keeps restarting</h3>
+
+<strong>Symptom:</strong> Container restarts in a loop.
+
+<strong>Debug:</strong>
+<pre><code class="language-bash"># Check logs
+<p>docker compose logs barbossa</p>
+
+<h1>Common causes:</h1>
+<h1>1. Missing config file</h1>
+<h1>2. Invalid JSON in repositories.json</h1>
+<h1>3. Missing environment variables</code></pre></h1>
+
+<h3>"File not found" errors</h3>
+
+<strong>Symptom:</strong> Scripts can't find config files.
+
+<strong>Fix:</strong>
+<pre><code class="language-bash"># Ensure config exists
+<p>ls -la config/repositories.json</p>
+
+<h1>If missing, create from example</h1>
+<p>cp config/repositories.json.example config/repositories.json</p>
+<h1>Edit with your repos</code></pre></h1>
+
+<h3>Volume mount issues</h3>
+
+<strong>Symptom:</strong> Changes to config don't take effect, or logs are empty.
+
+<strong>Fix:</strong>
+<pre><code class="language-bash"># Rebuild container
+<p>docker compose down</p>
+<p>docker compose build --no-cache</p>
+<p>docker compose up -d</p>
+
+<h1>Verify mounts</h1>
+<p>docker exec barbossa ls -la /app/config/</p>
+<p>docker exec barbossa ls -la /root/.claude/</code></pre></p>
+
+<p>---</p>
+
+<h2>Agent-Specific Issues</h2>
+
+<h3>Engineer produces low-quality PRs</h3>
+
+<strong>Possible causes:</strong>
+<p>1. Missing context in CLAUDE.md or README.md</p>
+<p>2. Vague issue descriptions</p>
+<p>3. Missing <code>focus_areas</code> in config</p>
+
+<strong>Fix:</strong>
+<ul>
+<li>Add a comprehensive CLAUDE.md to your repo</li>
+<li>Improve issue descriptions with acceptance criteria</li>
+<li>Add specific guidance in <code>focus_areas</code></li>
+</ul>
+
+<h3>Tech Lead rejects everything</h3>
+
+<strong>Check the review criteria:</strong>
+<ul>
+<li>CI must be passing</li>
+<li>Tests required for >50 lines of changes</li>
+<li>Max 15 files per PR</li>
+</ul>
+
+<strong>If PRs are legitimately good but rejected:</strong>
+<pre><code class="language-bash"># Check tech lead logs
+<p>docker exec barbossa cat /app/logs/barbossa_tech_lead.log</p>
+
+<h1>Adjust thresholds in config if needed</code></pre></h1>
+
+<h3>Discovery creates too many issues</h3>
+
+<strong>Fix:</strong>
+<pre><code class="language-json">{
+<p>"settings": {</p>
+<p>"discovery": {</p>
+<p>"max_backlog_issues": 10</p>
+<p>}</p>
+<p>}</p>
+<p>}</code></pre></p>
+
+<h3>Product Manager suggests irrelevant features</h3>
+
+<strong>Fix:</strong>
+<ul>
+<li>Improve your README.md or CLAUDE.md with product context</li>
+<li>Add clear <code>focus_areas</code> in repository config</li>
+<li>Disable if not needed:</li>
+</ul>
+  <pre><code class="language-json">{
+<p>"settings": {</p>
+<p>"product_manager": {</p>
+<p>"enabled": false</p>
+<p>}</p>
+<p>}</p>
+<p>}</code></pre></p>
+
+<p>---</p>
+
+<h2>Cron / Scheduling Issues</h2>
+
+<h3>Agents not running on schedule</h3>
+
+<strong>Check cron is running:</strong>
+<pre><code class="language-bash">docker exec barbossa ps aux | grep cron
+<p>docker exec barbossa crontab -l</code></pre></p>
+
+<strong>Check timezone:</strong>
+<pre><code class="language-bash"># Set timezone in .env
+<p>TZ=America/New_York</p>
+
+<h1>Or in docker-compose.yml</h1>
+<p>environment:</p>
+<ul>
+<li>TZ=America/New_York</code></pre></li>
+</ul>
+
+<h3>Want to change schedule</h3>
+
+<strong>Edit crontab:</strong>
+<pre><code class="language-bash"># View current schedule
+<p>docker exec barbossa crontab -l</p>
+
+<h1>Edit (requires rebuilding image or exec into container)</h1>
+<h1>Or modify crontab file and rebuild:</h1>
+<p>docker compose build</p>
+<p>docker compose up -d</code></pre></p>
+
+<p>---</p>
+
+<h2>Logs and Debugging</h2>
+
+<h3>View all logs</h3>
+
+<pre><code class="language-bash"># Stream all logs
+<p>docker compose logs -f</p>
+
+<h1>View specific agent log</h1>
+<p>docker exec barbossa cat /app/logs/barbossa_engineer.log</p>
+<p>docker exec barbossa cat /app/logs/barbossa_tech_lead.log</p>
+
+<h1>Tail logs</h1>
+<p>docker exec barbossa tail -f /app/logs/barbossa_engineer.log</code></pre></p>
+
+<h3>Run agent manually with verbose output</h3>
+
+<pre><code class="language-bash"># Engineer
+<p>docker exec barbossa python3 barbossa_engineer.py</p>
+
+<h1>Tech Lead</h1>
+<p>docker exec barbossa python3 barbossa_tech_lead.py</p>
+
+<h1>Discovery</h1>
+<p>docker exec barbossa python3 barbossa_discovery.py</code></pre></p>
+
+<h3>Check container status</h3>
+
+<pre><code class="language-bash">docker compose ps
+<p>docker inspect barbossa</code></pre></p>
+
+<p>---</p>
+
+<h2>Getting Help</h2>
+
+<p>If you're still stuck:</p>
+
+<p>1. <strong>Check existing issues:</strong> <a href="https://github.com/ADWilkinson/barbossa/issues">GitHub Issues</a></p>
+<p>2. <strong>Ask the community:</strong> <a href="https://github.com/ADWilkinson/barbossa/discussions">GitHub Discussions</a></p>
+<p>3. <strong>Include in your report:</strong></p>
+<ul>
+<li>Docker logs (<code>docker compose logs</code>)</li>
+<li>Your config (redact tokens)</li>
+<li>Steps to reproduce</li>
+</ul>
+
+    </div>
+
+    <footer>
+        <p>Barbossa is open source under the MIT License</p>
+        <p><a href="https://github.com/ADWilkinson/barbossa-engineer">GitHub</a></p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frequently Asked Questions - Barbossa</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --fg: #c9d1d9;
+            --accent: #58a6ff;
+            --border: #30363d;
+            --code-bg: #161b22;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.6;
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 { color: #fff; margin-top: 2rem; margin-bottom: 1rem; }
+        h1 { font-size: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+        h2 { font-size: 1.5rem; }
+        h3 { font-size: 1.2rem; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.5rem; }
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'SF Mono', Consolas, monospace;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        pre code { padding: 0; background: none; }
+        .nav {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: #8b949e;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: #8b949e;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="/">Home</a>
+        <a href="https://github.com/ADWilkinson/barbossa-engineer">GitHub</a>
+        <a href="/quickstart.html">Quick Start</a>
+        <a href="/configuration.html">Configuration</a>
+        <a href="/agents.html">Agents</a>
+        <a href="/troubleshooting.html">Troubleshooting</a>
+        <a href="/faq.html">FAQ</a>
+    </nav>
+
+    <div class="content">
+        <h1>Frequently Asked Questions</h1>
+
+<p>---</p>
+
+<h2>General</h2>
+
+<h3>What is Barbossa?</h3>
+
+<p>Barbossa is an autonomous AI development team that continuously improves your codebase. It runs five specialized agents on a schedule:</p>
+
+<ul>
+<li><strong>Product Manager</strong> - Discovers valuable features</li>
+<li><strong>Discovery</strong> - Finds technical debt and improvements</li>
+<li><strong>Engineer</strong> - Implements changes and creates PRs</li>
+<li><strong>Tech Lead</strong> - Reviews PRs with strict quality gates</li>
+<li><strong>Auditor</strong> - Monitors system health</li>
+</ul>
+
+<p>You sleep, Barbossa works, you wake up to PRs.</p>
+
+<h3>Is Barbossa free?</h3>
+
+<p>Yes. Barbossa is free and open source under the MIT license.</p>
+
+<p>However, you need a <strong>Claude Max subscription</strong> ($100/month from Anthropic) to provide the AI. Barbossa uses Claude CLI with your subscription.</p>
+
+<h3>What's the catch?</h3>
+
+<p>No catch. You bring your own Claude subscription, run Barbossa yourself, and keep full control. The code is open source - inspect it, modify it, self-host it.</p>
+
+<p>If you find it valuable, consider <a href="https://github.com/sponsors/ADWilkinson">sponsoring the project</a>.</p>
+
+<p>---</p>
+
+<h2>Requirements</h2>
+
+<h3>What do I need to run Barbossa?</h3>
+
+<p>1. <strong>Docker</strong> - To run the container</p>
+<p>2. <strong>Claude Max subscription</strong> - $100/month from Anthropic</p>
+<p>3. <strong>GitHub account</strong> - With a Personal Access Token</p>
+<p>4. <strong>SSH keys</strong> - For private repository access</p>
+
+<h3>Why Claude Max specifically?</h3>
+
+<p>Barbossa uses Claude CLI, which requires a Claude Max subscription for the extended context and usage limits needed for code generation. The Pro plan doesn't support CLI usage.</p>
+
+<h3>Can I use a different AI model?</h3>
+
+<p>Currently, Barbossa is built around Claude CLI. Supporting other models (GPT-4, Gemini, local models) would require significant changes to the prompting and integration.</p>
+
+<h3>Does it work with GitLab/Bitbucket?</h3>
+
+<p>Not yet. Barbossa currently supports GitHub only. GitLab and Bitbucket support are on the roadmap.</p>
+
+<p>---</p>
+
+<h2>Setup</h2>
+
+<h3>How long does setup take?</h3>
+
+<p>About 5 minutes if you already have Docker, Claude CLI, and GitHub CLI set up. See the <a href="quickstart.md">Quick Start Guide</a>.</p>
+
+<h3>Can I run it on my laptop?</h3>
+
+<p>Yes, but it's designed to run continuously on a server. Your laptop sleeping would interrupt the schedule.</p>
+
+<p>For best results, run on:</p>
+<ul>
+<li>A cloud VM (DigitalOcean, AWS, etc.)</li>
+<li>A home server or Raspberry Pi</li>
+<li>Any always-on machine</li>
+</ul>
+
+<h3>What ports does it need?</h3>
+
+<p>None. Barbossa doesn't expose any ports. It only makes outbound connections to GitHub and Anthropic.</p>
+
+<h3>Can I run multiple instances for different projects?</h3>
+
+<p>Yes. Each instance needs its own <code>config/repositories.json</code>. You can run multiple Docker containers with different configs.</p>
+
+<p>---</p>
+
+<h2>Operation</h2>
+
+<h3>How often does it create PRs?</h3>
+
+<p>The Engineer agent runs every 2 hours. If there's work in the backlog (GitHub Issues labeled <code>backlog</code>), it will create a PR.</p>
+
+<p>Realistically, expect 2-6 PRs per day depending on your backlog size and complexity.</p>
+
+<h3>Will it break my code?</h3>
+
+<p>Barbossa creates PRs, not direct commits. You always review before merging. The Tech Lead agent also reviews with strict criteria:</p>
+
+<ul>
+<li>CI must pass</li>
+<li>Tests required for significant changes</li>
+<li>Limited file changes per PR</li>
+</ul>
+
+<h3>Can I trust it with my private repos?</h3>
+
+<p>Your code stays on your machine and GitHub. Barbossa:</p>
+<ul>
+<li>Runs locally in Docker</li>
+<li>Uses your GitHub token (never leaves your machine)</li>
+<li>Sends code to Claude for analysis (same as using Claude directly)</li>
+</ul>
+
+<p>Review Anthropic's <a href="https://www.anthropic.com/privacy">privacy policy</a> for how Claude handles data.</p>
+
+<h3>What if it creates a bad PR?</h3>
+
+<p>Close it. The Tech Lead agent often catches issues, but you're the final reviewer. Bad PRs happen - just close them and Barbossa moves on.</p>
+
+<h3>Can I pause it?</h3>
+
+<pre><code class="language-bash">docker compose stop    # Pause
+<p>docker compose start   # Resume</code></pre></p>
+
+<p>Or disable specific agents in config:</p>
+<pre><code class="language-json">{
+<p>"settings": {</p>
+<p>"discovery": { "enabled": false },</p>
+<p>"product_manager": { "enabled": false }</p>
+<p>}</p>
+<p>}</code></pre></p>
+
+<p>---</p>
+
+<h2>Quality</h2>
+
+<h3>How good are the PRs?</h3>
+
+<p>Quality depends on:</p>
+<p>1. <strong>Your codebase context</strong> - Good README/CLAUDE.md helps</p>
+<p>2. <strong>Issue clarity</strong> - Clear acceptance criteria = better PRs</p>
+<p>3. <strong>Tech stack</strong> - Works best with common frameworks</p>
+
+<p>Expect some PRs to need tweaks. Think of it as a junior developer that never sleeps - helpful, but needs guidance.</p>
+
+<h3>Does it write tests?</h3>
+
+<p>Yes, when required. The Tech Lead rejects PRs with >50 lines of changes and no tests. The Engineer learns to include tests.</p>
+
+<h3>Can I improve the quality?</h3>
+
+<p>1. Add a comprehensive <code>CLAUDE.md</code> to your repo</p>
+<p>2. Write clear issue descriptions with acceptance criteria</p>
+<p>3. Use <code>focus_areas</code> in config to guide priorities</p>
+<p>4. Add <code>design_system</code> rules for consistent styling</p>
+
+<p>---</p>
+
+<h2>Costs</h2>
+
+<h3>What will this cost me?</h3>
+
+| Item | Cost |
+|------|------|
+| Barbossa | Free |
+| Claude Max | $100/month |
+| Server (optional) | $5-20/month |
+
+<p>Total: ~$100-120/month</p>
+
+<h3>Is Claude Max usage unlimited?</h3>
+
+<p>Claude Max has generous limits but not unlimited. Barbossa is designed to work within these limits with its scheduled approach (every 2 hours, not continuous).</p>
+
+<h3>Will it use all my Claude credits?</h3>
+
+<p>Barbossa makes several Claude calls per cycle (every 2 hours). With 12 cycles per day across 5 agents, usage is moderate. Most users stay well within Max limits.</p>
+
+<p>---</p>
+
+<h2>Security</h2>
+
+<h3>Is my code safe?</h3>
+
+<ul>
+<li>Code stays on your machine and GitHub</li>
+<li>Claude sees code for analysis (standard Claude usage)</li>
+<li>No external servers or telemetry</li>
+<li>Open source - audit the code yourself</li>
+</ul>
+
+<h3>What permissions does the GitHub token need?</h3>
+
+<p>The <code>repo</code> scope - this allows creating branches, commits, PRs, and reading issues.</p>
+
+<h3>Can I restrict what files it touches?</h3>
+
+<p>Yes, use <code>do_not_touch</code> in config:</p>
+<pre><code class="language-json">{
+<p>"do_not_touch": [</p>
+<p>"src/lib/auth.ts",</p>
+<p>"prisma/migrations/",</p>
+<p>".env*"</p>
+<p>]</p>
+<p>}</code></pre></p>
+
+<p>---</p>
+
+<h2>Troubleshooting</h2>
+
+<h3>It's not creating any PRs</h3>
+
+<p>1. Check if issues exist with <code>backlog</code> label</p>
+<p>2. View logs: <code>docker compose logs -f</code></p>
+<p>3. Run manually: <code>docker exec barbossa python3 barbossa_engineer.py</code></p>
+
+<p>See <a href="troubleshooting.md">Troubleshooting Guide</a> for more.</p>
+
+<h3>The Tech Lead rejects everything</h3>
+
+<p>Check the criteria:</p>
+<ul>
+<li>CI must pass</li>
+<li>Tests required for >50 lines</li>
+<li>Max 15 files changed</li>
+</ul>
+
+<p>If your PRs are being wrongly rejected, check the logs and consider adjusting thresholds.</p>
+
+<h3>Claude CLI authentication fails</h3>
+
+<pre><code class="language-bash">claude login
+<p>docker compose restart</code></pre></p>
+
+<p>---</p>
+
+<h2>Contributing</h2>
+
+<h3>How can I contribute?</h3>
+
+<p>See <a href="../CONTRIBUTING.md">CONTRIBUTING.md</a>. We welcome:</p>
+<ul>
+<li>Bug fixes</li>
+<li>Documentation improvements</li>
+<li>New integrations</li>
+<li>Performance optimizations</li>
+</ul>
+
+<h3>Can I add support for [X]?</h3>
+
+<p>Probably! Open an issue to discuss first. Popular requests:</p>
+<ul>
+<li>GitLab support</li>
+<li>Slack notifications</li>
+<li>Linear integration</li>
+<li>Custom agent schedules</li>
+</ul>
+
+<p>---</p>
+
+<h2>More Questions?</h2>
+
+<ul>
+<li><a href="https://github.com/ADWilkinson/barbossa/issues">GitHub Issues</a> - Bug reports</li>
+<li><a href="https://github.com/ADWilkinson/barbossa/discussions">GitHub Discussions</a> - Questions and ideas</li>
+</ul>
+
+    </div>
+
+    <footer>
+        <p>Barbossa is open source under the MIT License</p>
+        <p><a href="https://github.com/ADWilkinson/barbossa-engineer">GitHub</a></p>
+    </footer>
+</body>
+</html>

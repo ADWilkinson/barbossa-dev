@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Installations collection - write-only from clients
+    // Used only for unique user counting (transparent, no analytics)
+    match /installations/{installationId} {
+      allow create, update: if true;
+      allow read, delete: if false;
+    }
+
+    // All other collections are admin-only
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -277,6 +277,31 @@ See [docs/troubleshooting.md](docs/troubleshooting.md) for more.
 
 ---
 
+## Cloud Infrastructure
+
+Barbossa uses Firebase for cloud services:
+
+- **System Prompts** - Agent prompts are fetched from the cloud and cached at startup
+- **Version Checking** - Ensures your installation is compatible with latest features
+- **Unique User Counting** - We track anonymous installation count (transparent, see below)
+
+### Transparency About Data Collection
+
+Barbossa collects minimal, anonymous data to help us understand usage:
+
+- **Installation ID** - A hash of your machine info (no actual machine info transmitted)
+- **Version Number** - Which version you're running
+
+**What we DON'T collect:**
+- Your code or repository names
+- Your GitHub username or tokens
+- Usage patterns or analytics
+- Any personal information
+
+This helps us know how many unique users are using Barbossa. That's it.
+
+---
+
 ## Project Structure
 
 ```
@@ -287,8 +312,11 @@ barbossa/
 ├── barbossa_discovery.py     # Finds tech debt
 ├── barbossa_product.py       # Discovers features
 ├── barbossa_auditor.py       # Monitors health
+├── barbossa_firebase.py      # Cloud integration
 ├── validate.py               # Startup validation
 ├── generate_crontab.py       # Dynamic schedule generator
+├── functions/                # Firebase Cloud Functions
+├── docs-site/                # Hosted documentation
 ├── config/
 │   ├── repositories.json.example          # Minimal config
 │   └── repositories.advanced.json.example # Full config

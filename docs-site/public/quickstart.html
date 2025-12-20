@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Start Guide - Barbossa</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --fg: #c9d1d9;
+            --accent: #58a6ff;
+            --border: #30363d;
+            --code-bg: #161b22;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.6;
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 { color: #fff; margin-top: 2rem; margin-bottom: 1rem; }
+        h1 { font-size: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+        h2 { font-size: 1.5rem; }
+        h3 { font-size: 1.2rem; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.5rem; }
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'SF Mono', Consolas, monospace;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        pre code { padding: 0; background: none; }
+        .nav {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: #8b949e;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: #8b949e;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="/">Home</a>
+        <a href="https://github.com/ADWilkinson/barbossa-engineer">GitHub</a>
+        <a href="/quickstart.html">Quick Start</a>
+        <a href="/configuration.html">Configuration</a>
+        <a href="/agents.html">Agents</a>
+        <a href="/troubleshooting.html">Troubleshooting</a>
+        <a href="/faq.html">FAQ</a>
+    </nav>
+
+    <div class="content">
+        <h1>Quick Start Guide</h1>
+
+<p>Get Barbossa running in 5 minutes.</p>
+
+<p>---</p>
+
+<h2>Prerequisites</h2>
+
+<p>Before you start, you need:</p>
+
+<p>1. <strong>Docker</strong> - <a href="https://docs.docker.com/get-docker/">Install Docker</a></p>
+<p>2. <strong>Claude Max subscription</strong> - $100/month from <a href="https://claude.ai">Anthropic</a></p>
+<p>3. <strong>GitHub account</strong> with a Personal Access Token</p>
+
+<p>---</p>
+
+<h2>Step 1: Clone Barbossa</h2>
+
+<pre><code class="language-bash">git clone https://github.com/ADWilkinson/barbossa.git
+<p>cd barbossa</code></pre></p>
+
+<p>---</p>
+
+<h2>Step 2: Create Config</h2>
+
+<p>The minimal config is just 3 fields:</p>
+
+<pre><code class="language-bash">cat > config/repositories.json << 'EOF'
+<p>{</p>
+<p>"owner": "your-github-username",</p>
+<p>"repositories": [</p>
+<p>{</p>
+<p>"name": "my-app",</p>
+<p>"url": "git@github.com:your-github-username/my-app.git"</p>
+<p>}</p>
+<p>]</p>
+<p>}</p>
+<p>EOF</code></pre></p>
+
+<p>Replace:</p>
+<ul>
+<li><code>your-github-username</code> with your GitHub username</li>
+<li><code>my-app</code> with your repository name</li>
+</ul>
+
+<p>---</p>
+
+<h2>Step 3: Set Up GitHub Token</h2>
+
+<p>Create a Personal Access Token at <a href="https://github.com/settings/tokens">github.com/settings/tokens</a> with <code>repo</code> scope.</p>
+
+<pre><code class="language-bash">echo "GITHUB_TOKEN=ghp_your_token_here" > .env</code></pre>
+
+<p>---</p>
+
+<h2>Step 4: Authenticate Claude CLI</h2>
+
+<p>On your <strong>host machine</strong> (not in Docker):</p>
+
+<pre><code class="language-bash"># Install Claude CLI if you haven't
+<p>npm install -g @anthropic-ai/claude-code</p>
+
+<h1>Log in with your Claude Max account</h1>
+<p>claude login</code></pre></p>
+
+<p>This creates credentials in <code>~/.claude/</code> that Docker will mount.</p>
+
+<p>---</p>
+
+<h2>Step 5: Start Barbossa</h2>
+
+<pre><code class="language-bash">docker compose up -d</code></pre>
+
+<p>Barbossa will:</p>
+<p>1. Validate your configuration</p>
+<p>2. Check authentication</p>
+<p>3. Start the scheduler</p>
+
+<p>---</p>
+
+<h2>Step 6: Verify It's Working</h2>
+
+<pre><code class="language-bash"># Check health status
+<p>docker exec barbossa barbossa health</code></pre></p>
+
+<p>You should see:</p>
+<pre><code class="language-">✓ Config valid: 1 repositories
+<p>✓ GitHub CLI authenticated</p>
+<p>✓ Claude CLI authenticated</code></pre></p>
+
+<p>---</p>
+
+<h2>Step 7: Test It</h2>
+
+<p>Don't wait 2 hours - run the engineer manually:</p>
+
+<pre><code class="language-bash">docker exec barbossa barbossa run engineer</code></pre>
+
+<p>Watch it work:</p>
+<pre><code class="language-bash">docker compose logs -f</code></pre>
+
+<p>Your first PR should appear within a few minutes!</p>
+
+<p>---</p>
+
+<h2>What Happens Next</h2>
+
+<p>Barbossa runs automatically on this schedule:</p>
+
+| Agent | Schedule |
+|-------|----------|
+| Engineer | Every 2 hours at :00 |
+| Tech Lead | Every 2 hours at :35 |
+| Discovery | 4x daily |
+| Product Manager | 3x daily |
+| Auditor | Daily at 06:30 |
+
+<p>You'll see:</p>
+<ul>
+<li>PRs appearing in your repo</li>
+<li>Issues being created (backlog)</li>
+<li>PRs being reviewed and merged/closed</li>
+</ul>
+
+<p>---</p>
+
+<h2>Common Commands</h2>
+
+<pre><code class="language-bash"># Check health
+<p>docker exec barbossa barbossa health</p>
+
+<h1>Run an agent manually</h1>
+<p>docker exec barbossa barbossa run engineer</p>
+<p>docker exec barbossa barbossa run tech-lead</p>
+
+<h1>View status</h1>
+<p>docker exec barbossa barbossa status</p>
+
+<h1>View logs</h1>
+<p>docker exec barbossa barbossa logs</p>
+<p>docker exec barbossa barbossa logs engineer -f</p>
+
+<h1>Docker commands</h1>
+<p>docker compose logs -f      # Stream all logs</p>
+<p>docker compose restart      # Restart after config changes</p>
+<p>docker compose down         # Stop Barbossa</code></pre></p>
+
+<p>---</p>
+
+<h2>Troubleshooting</h2>
+
+<h3>Validation Failed</h3>
+
+<p>If you see validation errors on startup:</p>
+
+<pre><code class="language-bash"># See what's wrong
+<p>docker exec barbossa barbossa health</p>
+
+<h1>Fix issues and restart</h1>
+<p>docker compose restart</code></pre></p>
+
+<h3>Claude Auth Issues</h3>
+
+<pre><code class="language-bash"># Re-authenticate on your host machine
+<p>claude login</p>
+
+<h1>Restart container</h1>
+<p>docker compose restart</code></pre></p>
+
+<h3>No PRs Created</h3>
+
+<p>1. Check if there's work in the backlog:</p>
+   <pre><code class="language-bash">docker exec barbossa gh issue list --label backlog</code></pre>
+
+<p>2. Run engineer manually and watch:</p>
+   <pre><code class="language-bash">docker exec barbossa barbossa run engineer</code></pre>
+
+<p>3. Check logs for errors:</p>
+   <pre><code class="language-bash">docker exec barbossa barbossa logs engineer</code></pre>
+
+<p>---</p>
+
+<h2>Next Steps</h2>
+
+<ul>
+<li><a href="configuration.md">Configuration Reference</a> - Add more options</li>
+<li><a href="agents.md">Agent Documentation</a> - Understand each agent</li>
+<li><a href="troubleshooting.md">Troubleshooting</a> - Fix common issues</li>
+<li><a href="faq.md">FAQ</a> - Common questions</li>
+</ul>
+
+    </div>
+
+    <footer>
+        <p>Barbossa is open source under the MIT License</p>
+        <p><a href="https://github.com/ADWilkinson/barbossa-engineer">GitHub</a></p>
+    </footer>
+</body>
+</html>

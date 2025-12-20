@@ -34,6 +34,7 @@ COPY barbossa_tech_lead.py .
 COPY barbossa_discovery.py .
 COPY barbossa_product.py .
 COPY barbossa_auditor.py .
+COPY barbossa_firebase.py .
 
 # Copy CLI and utilities
 COPY barbossa .

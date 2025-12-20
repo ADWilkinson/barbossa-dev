@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Documentation - Barbossa</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --fg: #c9d1d9;
+            --accent: #58a6ff;
+            --border: #30363d;
+            --code-bg: #161b22;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.6;
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 { color: #fff; margin-top: 2rem; margin-bottom: 1rem; }
+        h1 { font-size: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+        h2 { font-size: 1.5rem; }
+        h3 { font-size: 1.2rem; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.5rem; }
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'SF Mono', Consolas, monospace;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        pre code { padding: 0; background: none; }
+        .nav {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: #8b949e;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: #8b949e;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="/">Home</a>
+        <a href="https://github.com/ADWilkinson/barbossa-engineer">GitHub</a>
+        <a href="/quickstart.html">Quick Start</a>
+        <a href="/configuration.html">Configuration</a>
+        <a href="/agents.html">Agents</a>
+        <a href="/troubleshooting.html">Troubleshooting</a>
+        <a href="/faq.html">FAQ</a>
+    </nav>
+
+    <div class="content">
+        <h1>Agent Documentation</h1>
+
+<p>Barbossa consists of five specialized agents that work together autonomously.</p>
+
+<h2>Overview</h2>
+
+<pre><code class="language-">┌──────────────────────────────────────────────────────────────┐
+<p>│                     BARBOSSA PIPELINE                        │</p>
+<p>├──────────────────────────────────────────────────────────────┤</p>
+<p>│                                                              │</p>
+<p>│  Product Manager ──→ Discovery ──→ GitHub Issues            │</p>
+<p>│        (daily)        (4x daily)      (backlog)             │</p>
+<p>│                                          │                   │</p>
+<p>│                                          ▼                   │</p>
+<p>│                     Engineer ──→ Pull Request                │</p>
+<p>│                    (every 2h)                                │</p>
+<p>│                                          │                   │</p>
+<p>│                                          ▼                   │</p>
+<p>│                     Tech Lead ──→ Merge/Reject               │</p>
+<p>│                    (every 2h)                                │</p>
+<p>│                                          │                   │</p>
+<p>│                                          ▼                   │</p>
+<p>│                      Auditor ──→ Health Report               │</p>
+<p>│                      (daily)                                 │</p>
+<p>│                                                              │</p>
+<p>└──────────────────────────────────────────────────────────────┘</code></pre></p>
+
+<p>---</p>
+
+<h2>Product Manager Agent</h2>
+
+<strong>File:</strong> <code>barbossa_product.py</code>
+<strong>Schedule:</strong> Daily at 07:00
+
+<h3>Purpose</h3>
+
+<p>Discovers valuable features by analyzing your product, competitive landscape, and user needs.</p>
+
+<h3>What It Does</h3>
+
+<p>1. Reads your project's <code>CLAUDE.md</code> or <code>README.md</code> for context</p>
+<p>2. Analyzes the current feature set</p>
+<p>3. Identifies gaps and opportunities</p>
+<p>4. Creates detailed feature specs as GitHub Issues</p>
+
+<h3>Output</h3>
+
+<p>Creates GitHub Issues labeled <code>feature</code> and <code>backlog</code>:</p>
+
+<pre><code class="language-markdown">## Feature: Dark Mode Toggle
+
+<strong>Value Score:</strong> 8/10
+<strong>Effort:</strong> Medium
+
+<h3>Description</h3>
+<p>Add a dark mode toggle to the settings page...</p>
+
+<h3>Acceptance Criteria</h3>
+<ul>
+<li>[ ] Toggle persists across sessions</li>
+<li>[ ] Respects system preference by default</li>
+<li>[ ] Smooth transition animation</code></pre></li>
+</ul>
+
+<h3>Configuration</h3>
+
+<p>Controlled by <code>product_manager</code> settings:</p>
+
+<pre><code class="language-json">{
+<p>"settings": {</p>
+<p>"product_manager": {</p>
+<p>"enabled": true,</p>
+<p>"max_feature_issues": 10</p>
+<p>}</p>
+<p>}</p>
+<p>}</code></pre></p>
+
+<p>---</p>
+
+<h2>Discovery Agent</h2>
+
+<strong>File:</strong> <code>barbossa_discovery.py</code>
+<strong>Schedule:</strong> 4x daily (00:00, 06:00, 12:00, 18:00)
+
+<h3>Purpose</h3>
+
+<p>Finds technical debt, code smells, and improvement opportunities.</p>
+
+<h3>What It Finds</h3>
+
+<ul>
+<li><code>TODO</code>, <code>FIXME</code>, <code>HACK</code> comments</li>
+<li>Missing loading states</li>
+<li>Missing error handling</li>
+<li>Accessibility gaps (missing alt text, aria-labels)</li>
+<li>Console.log statements</li>
+<li>Dead code patterns</li>
+<li>Inconsistent patterns</li>
+</ul>
+
+<h3>Output</h3>
+
+<p>Creates GitHub Issues labeled <code>backlog</code>:</p>
+
+<pre><code class="language-markdown">## Technical Debt: Add loading state to UserList
+
+<strong>Location:</strong> src/components/UserList.tsx:45
+
+<h3>Problem</h3>
+<p>Component renders empty state while data is loading.</p>
+
+<h3>Suggested Fix</h3>
+<p>Add loading skeleton using existing Skeleton component.</p>
+
+<h3>Files to Modify</h3>
+<ul>
+<li>src/components/UserList.tsx</code></pre></li>
+</ul>
+
+<h3>Configuration</h3>
+
+<pre><code class="language-json">{
+<p>"settings": {</p>
+<p>"discovery": {</p>
+<p>"enabled": true,</p>
+<p>"max_backlog_issues": 20</p>
+<p>}</p>
+<p>}</p>
+<p>}</code></pre></p>
+
+<p>---</p>
+
+<h2>Engineer Agent</h2>
+
+<strong>File:</strong> <code>barbossa_engineer.py</code>
+<strong>Schedule:</strong> Every 2 hours at :00
+
+<h3>Purpose</h3>
+
+<p>Implements changes and creates pull requests.</p>
+
+<h3>Workflow</h3>
+
+<p>1. <strong>Check Backlog:</strong> Looks for Issues labeled <code>backlog</code></p>
+<p>2. <strong>Select Work:</strong> Picks the first available issue</p>
+<p>3. <strong>Implement:</strong> Makes code changes</p>
+<p>4. <strong>Create PR:</strong> Opens a pull request linked to the issue</p>
+
+<h3>PR Format</h3>
+
+<pre><code class="language-markdown">## Summary
+<p>Added loading skeleton to UserList component.</p>
+
+<p>Closes #42</p>
+
+<h2>Changes</h2>
+<ul>
+<li>Added Skeleton component import</li>
+<li>Implemented loading state check</li>
+<li>Added loading skeleton UI</li>
+</ul>
+
+<h2>Testing</h2>
+<ul>
+<li>Verified loading state appears</li>
+<li>Confirmed data renders after load</code></pre></li>
+</ul>
+
+<h3>Timeout</h3>
+
+<p>Each run has a 30-minute timeout. If implementation takes longer, it will retry next cycle.</p>
+
+<h3>Configuration</h3>
+
+<pre><code class="language-json">{
+<p>"settings": {</p>
+<p>"engineer": {</p>
+<p>"schedule": "every_2_hours",</p>
+<p>"timeout_minutes": 30,</p>
+<p>"max_files_changed": 15</p>
+<p>}</p>
+<p>}</p>
+<p>}</code></pre></p>
+
+<p>---</p>
+
+<h2>Tech Lead Agent</h2>
+
+<strong>File:</strong> <code>barbossa_tech_lead.py</code>
+<strong>Schedule:</strong> Every 2 hours at :35 (35 min after Engineer)
+
+<h3>Purpose</h3>
+
+<p>Reviews pull requests with strict quality criteria.</p>
+
+<h3>Review Criteria</h3>
+
+| Criteria | Action |
+|----------|--------|
+| CI checks failing | Auto-reject |
+| >50 lines without tests | Auto-reject |
+| >15 files changed | Auto-reject (scope creep) |
+| Test-only PRs | Auto-reject (low value) |
+| UI changes without tests | Request changes |
+
+<h3>Scoring</h3>
+
+<p>Each PR is scored on:</p>
+<ul>
+<li><strong>Value Score (1-10):</strong> Impact on users/codebase</li>
+<li><strong>Quality Score (1-10):</strong> Code quality, patterns, tests</li>
+<li><strong>Bloat Risk:</strong> LOW / MEDIUM / HIGH</li>
+</ul>
+
+<h3>Decisions</h3>
+
+| Decision | When |
+|----------|------|
+| <strong>MERGE</strong> | Value ≥7, Quality ≥7, Bloat LOW, CI passing |
+| <strong>REQUEST_CHANGES</strong> | Fixable issues identified |
+| <strong>CLOSE</strong> | Low value or unfixable issues |
+
+<h3>Configuration</h3>
+
+<pre><code class="language-json">{
+<p>"settings": {</p>
+<p>"tech_lead": {</p>
+<p>"auto_merge": false,</p>
+<p>"auto_merge_threshold": 8,</p>
+<p>"require_tests_for_ui": true,</p>
+<p>"max_lines_without_tests": 50</p>
+<p>}</p>
+<p>}</p>
+<p>}</code></pre></p>
+
+<h3>Auto-Merge</h3>
+
+<p>When <code>auto_merge: true</code>, PRs scoring above the threshold are automatically merged.</p>
+
+<p>---</p>
+
+<h2>Auditor Agent</h2>
+
+<strong>File:</strong> <code>barbossa_auditor.py</code>
+<strong>Schedule:</strong> Daily at 06:30
+
+<h3>Purpose</h3>
+
+<p>Monitors system health and identifies improvement opportunities.</p>
+
+<h3>What It Analyzes</h3>
+
+<ul>
+<li>PR merge rate</li>
+<li>Common rejection reasons</li>
+<li>Agent performance patterns</li>
+<li>OAuth token status</li>
+<li>Test coverage trends</li>
+<li>Session failure rates</li>
+</ul>
+
+<h3>Output</h3>
+
+<p>Generates <code>system_insights.json</code> with recommendations:</p>
+
+<pre><code class="language-json">{
+<p>"insights": [</p>
+<p>{</p>
+<p>"type": "pattern",</p>
+<p>"finding": "UI components frequently rejected for missing tests",</p>
+<p>"recommendation": "Focus on components in src/components/"</p>
+<p>}</p>
+<p>],</p>
+<p>"health_score": 85,</p>
+<p>"merge_rate": 87.5</p>
+<p>}</code></pre></p>
+
+<h3>Self-Healing Actions</h3>
+
+<ul>
+<li>Validates OAuth tokens</li>
+<li>Cleans stale sessions</li>
+<li>Rotates logs (keeps 14 days)</li>
+</ul>
+
+<h3>Configuration</h3>
+
+<pre><code class="language-json">{
+<p>"settings": {</p>
+<p>"auditor": {</p>
+<p>"enabled": true,</p>
+<p>"notify_email": "you@example.com"</p>
+<p>}</p>
+<p>}</p>
+<p>}</code></pre></p>
+
+<p>---</p>
+
+<h2>Agent Coordination</h2>
+
+<h3>Timing</h3>
+
+<p>The schedule ensures agents don't conflict:</p>
+
+<pre><code class="language-">:00  Engineer starts (has 35 min)
+<p>:35  Tech Lead reviews (Engineer's PR exists)</p>
+<p>:00  Next cycle begins</code></pre></p>
+
+<h3>GitHub as Source of Truth</h3>
+
+<p>All agents use GitHub as the single source of truth:</p>
+<ul>
+<li>Issues for backlog</li>
+<li>PRs for work in progress</li>
+<li>Comments for feedback</li>
+</ul>
+
+<p>No local state files are needed between runs.</p>
+
+<h3>Backlog Management</h3>
+
+<ul>
+<li>Discovery and Product Manager create Issues</li>
+<li>Maximum backlog size is configurable</li>
+<li>When backlog is full, discovery pauses</li>
+<li>Engineer works through backlog in order</li>
+</ul>
+
+<p>---</p>
+
+<h2>Manual Triggers</h2>
+
+<p>Run any agent manually:</p>
+
+<pre><code class="language-bash"># Engineer
+<p>docker exec barbossa python3 barbossa_engineer.py</p>
+
+<h1>Tech Lead</h1>
+<p>docker exec barbossa python3 barbossa_tech_lead.py</p>
+
+<h1>Discovery</h1>
+<p>docker exec barbossa python3 barbossa_discovery.py</p>
+
+<h1>Product Manager</h1>
+<p>docker exec barbossa python3 barbossa_product.py</p>
+
+<h1>Auditor</h1>
+<p>docker exec barbossa python3 barbossa_auditor.py --days 7</code></pre></p>
+
+<p>---</p>
+
+<h2>Disabling Agents</h2>
+
+<p>Disable specific agents in configuration:</p>
+
+<pre><code class="language-json">{
+<p>"settings": {</p>
+<p>"discovery": { "enabled": false },</p>
+<p>"product_manager": { "enabled": false }</p>
+<p>}</p>
+<p>}</code></pre></p>
+
+<p>Or comment out lines in <code>crontab</code>.</p>
+
+    </div>
+
+    <footer>
+        <p>Barbossa is open source under the MIT License</p>
+        <p><a href="https://github.com/ADWilkinson/barbossa-engineer">GitHub</a></p>
+    </footer>
+</body>
+</html>

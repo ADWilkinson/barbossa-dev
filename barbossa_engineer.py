@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """
-Barbossa Engineer v5.1 - Autonomous Development Agent
+Barbossa Engineer v5.2 - Autonomous Development Agent
 Creates PRs from the backlog every hour at :00.
 Picks from GitHub Issues first, invents work only if backlog empty.
 
-Part of the v5.1 Pipeline:
+Part of the v5.2 Pipeline:
 - Discovery (3x daily) → creates Issues in backlog
 - Engineer (:00) → implements from backlog, creates PRs  <-- THIS AGENT
 - Tech Lead (:35) → reviews PRs, merges or requests changes
 - Auditor (daily 06:30) → system health analysis
+
+Firebase Integration:
+- System prompts fetched from cloud
+- Version compatibility checking
 """
 
 import json
@@ -22,6 +26,9 @@ from pathlib import Path
 from typing import Dict, List, Optional
 import uuid
 
+# Firebase integration
+from barbossa_firebase import get_firebase
+
 
 class Barbossa:
     """
@@ -29,7 +36,7 @@ class Barbossa:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "5.1.0"
+    VERSION = "5.2.0"
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths
@@ -50,6 +57,10 @@ class Barbossa:
         # Setup logging
         self._setup_logging()
 
+        # Initialize Firebase and check version
+        self.firebase = get_firebase()
+        self._check_version()
+
         # Load config and PR history
         self.config = self._load_config()
         self.repositories = self.config.get('repositories', [])
@@ -64,6 +75,21 @@ class Barbossa:
         for repo in self.repositories:
             self.logger.info(f"  - {repo['name']}: {repo['url']}")
         self.logger.info("=" * 60)
+
+    def _check_version(self):
+        """Check version compatibility with cloud."""
+        try:
+            version_info = self.firebase.check_version()
+            if not version_info.get("compatible", True):
+                self.logger.error("=" * 60)
+                self.logger.error("VERSION NOT SUPPORTED")
+                self.logger.error(version_info.get("message", "Please upgrade."))
+                self.logger.error("=" * 60)
+                sys.exit(1)
+            if not version_info.get("latest", True):
+                self.logger.warning(f"New version available: {version_info.get('latestVersion')}")
+        except Exception as e:
+            self.logger.warning(f"Could not check version: {e}")
 
     def _setup_logging(self):
         """Configure logging"""
@@ -135,12 +161,20 @@ class Barbossa:
         return datetime.now().strftime('%Y%m%d-%H%M%S') + '-' + str(uuid.uuid4())[:8]
 
     def _create_prompt(self, repo: Dict, session_id: str, closed_pr_titles: List[str] = None) -> str:
-        """Create a context-rich Claude prompt for a repository"""
+        """Create a context-rich Claude prompt for a repository.
+
+        First attempts to fetch the prompt template from Firebase cloud.
+        Falls back to local template if cloud is unavailable.
+        """
         timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
 
         # Get package manager (defaults to npm if not specified)
         pkg_manager = repo.get('package_manager', 'npm')
         env_file = repo.get('env_file', '.env')
+
+        # Get settings for test requirements
+        settings = self.config.get('settings', {}).get('tech_lead', {})
+        min_lines_for_tests = settings.get('min_lines_for_tests', 50)
 
         # Build closed PRs section to avoid repetition
         if closed_pr_titles:
@@ -205,6 +239,33 @@ class Barbossa:
         # Get owner for gh commands
         owner = self.owner
 
+        # Try to fetch template from Firebase cloud
+        cloud_template = self.firebase.get_system_prompt("engineer")
+        if cloud_template:
+            self.logger.info("Using cloud-fetched prompt template")
+            # Replace template variables
+            prompt = cloud_template
+            prompt = prompt.replace("{{session_id}}", session_id)
+            prompt = prompt.replace("{{timestamp}}", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            prompt = prompt.replace("{{repo_name}}", repo['name'])
+            prompt = prompt.replace("{{repo_url}}", repo['url'])
+            prompt = prompt.replace("{{owner}}", owner)
+            prompt = prompt.replace("{{description}}", repo.get('description', 'No description provided.'))
+            prompt = prompt.replace("{{tech_section}}", tech_section)
+            prompt = prompt.replace("{{arch_section}}", arch_section)
+            prompt = prompt.replace("{{design_section}}", design_section)
+            prompt = prompt.replace("{{dnt_section}}", dnt_section)
+            prompt = prompt.replace("{{closed_pr_section}}", closed_pr_section)
+            prompt = prompt.replace("{{pkg_manager}}", pkg_manager.upper())
+            prompt = prompt.replace("{{install_cmd}}", install_cmd)
+            prompt = prompt.replace("{{build_cmd}}", build_cmd)
+            prompt = prompt.replace("{{test_cmd}}", test_cmd)
+            prompt = prompt.replace("{{env_file}}", env_file)
+            prompt = prompt.replace("{{min_lines_for_tests}}", str(min_lines_for_tests))
+            return prompt
+
+        # Fallback to local template if cloud unavailable
+        self.logger.warning("Cloud template unavailable, using local fallback")
         return f"""You are Barbossa, an autonomous personal development assistant.
 
 ================================================================================

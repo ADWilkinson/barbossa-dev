@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Barbossa Product Manager v5.1 - Autonomous Feature Discovery Agent
+Barbossa Product Manager v5.2 - Autonomous Feature Discovery Agent
 Runs daily to analyze products and create feature Issues for the backlog.
 
-Part of the v5.1 Pipeline:
+Part of the v5.2 Pipeline:
 - Product Manager (daily 07:00) → creates feature Issues  <-- THIS AGENT
 - Discovery (3x daily) → creates technical debt Issues
 - Engineer (:00) → implements from backlog, creates PRs
@@ -15,6 +15,10 @@ The Product Manager focuses on:
 2. UX improvements - Better flows, interactions, accessibility
 3. Competitive features - What similar products offer
 4. User pain points - Common friction areas
+
+Firebase Integration:
+- System prompts fetched from cloud
+- Version compatibility checking
 """
 
 import json
@@ -25,6 +29,9 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
+
+# Firebase integration
+from barbossa_firebase import get_firebase
 
 
 class BarbossaProduct:
@@ -46,6 +53,10 @@ class BarbossaProduct:
 
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self._setup_logging()
+
+        # Initialize Firebase and check version
+        self.firebase = get_firebase()
+        self._check_version()
 
         self.config = self._load_config()
         self.repositories = self.config.get('repositories', [])
@@ -76,6 +87,21 @@ class BarbossaProduct:
             ]
         )
         self.logger = logging.getLogger('product')
+
+    def _check_version(self):
+        """Check version compatibility with cloud."""
+        try:
+            version_info = self.firebase.check_version()
+            if not version_info.get("compatible", True):
+                self.logger.error("=" * 60)
+                self.logger.error("VERSION NOT SUPPORTED")
+                self.logger.error(version_info.get("message", "Please upgrade."))
+                self.logger.error("=" * 60)
+                sys.exit(1)
+            if not version_info.get("latest", True):
+                self.logger.warning(f"New version available: {version_info.get('latestVersion')}")
+        except Exception as e:
+            self.logger.warning(f"Could not check version: {e}")
 
     def _load_config(self) -> Dict:
         if self.config_file.exists():

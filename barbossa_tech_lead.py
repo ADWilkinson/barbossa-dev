@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """
-Barbossa Tech Lead v5.1 - PR Review & Governance Agent
+Barbossa Tech Lead v5.2 - PR Review & Governance Agent
 A strict, critical reviewer that manages PRs created by the Senior Engineer.
 Runs hourly at :35 (after Engineer completes) for fast feedback loops.
 
-Part of the v5.1 Pipeline:
+Part of the v5.2 Pipeline:
 - Discovery (3x daily) → creates Issues
 - Engineer (:00) → implements from backlog, creates PRs
 - Tech Lead (:35) → reviews PRs, merges or requests changes
 - Auditor (daily) → system health analysis
+
+Firebase Integration:
+- System prompts fetched from cloud
+- Version compatibility checking
 """
 
 import json
@@ -20,6 +24,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 import uuid
+
+# Firebase integration
+from barbossa_firebase import get_firebase
 
 
 class BarbossaTechLead:
@@ -51,6 +58,11 @@ class BarbossaTechLead:
         self.logs_dir.mkdir(parents=True, exist_ok=True)
 
         self._setup_logging()
+
+        # Initialize Firebase and check version
+        self.firebase = get_firebase()
+        self._check_version()
+
         self.config = self._load_config()
         self.repositories = self.config.get('repositories', [])
         self.owner = self.config.get('owner')
@@ -90,6 +102,21 @@ class BarbossaTechLead:
 
         self.logger = logging.getLogger('tech_lead')
         self.logger.info(f"Logging to: {log_file}")
+
+    def _check_version(self):
+        """Check version compatibility with cloud."""
+        try:
+            version_info = self.firebase.check_version()
+            if not version_info.get("compatible", True):
+                self.logger.error("=" * 60)
+                self.logger.error("VERSION NOT SUPPORTED")
+                self.logger.error(version_info.get("message", "Please upgrade."))
+                self.logger.error("=" * 60)
+                sys.exit(1)
+            if not version_info.get("latest", True):
+                self.logger.warning(f"New version available: {version_info.get('latestVersion')}")
+        except Exception as e:
+            self.logger.warning(f"Could not check version: {e}")
 
     def _load_config(self) -> Dict:
         """Load repository configuration"""
