@@ -1,0 +1,230 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://barbossa.dev/schema/v1.json",
+  "title": "Barbossa Configuration",
+  "description": "Configuration file for Barbossa autonomous development agent",
+  "type": "object",
+  "required": ["license_key", "owner", "repositories"],
+  "properties": {
+    "license_key": {
+      "type": "string",
+      "pattern": "^barb_(live|test)_[a-z0-9]{32}$",
+      "description": "Your Barbossa license key from barbossa.dev"
+    },
+    "owner": {
+      "type": "string",
+      "description": "GitHub username or organization that owns the repositories"
+    },
+    "repositories": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/repository"
+      },
+      "description": "List of repositories for Barbossa to work on"
+    },
+    "settings": {
+      "$ref": "#/definitions/settings"
+    }
+  },
+  "definitions": {
+    "repository": {
+      "type": "object",
+      "required": ["name", "url"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Repository name (used for logging and identification)"
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^(git@github\\.com:|https://github\\.com/).+\\.git$",
+          "description": "Git clone URL (SSH or HTTPS)"
+        },
+        "branch": {
+          "type": "string",
+          "default": "main",
+          "description": "Default branch to work on"
+        },
+        "package_manager": {
+          "type": "string",
+          "enum": ["npm", "yarn", "pnpm", "bun"],
+          "default": "npm",
+          "description": "Package manager for JavaScript/TypeScript projects"
+        },
+        "description": {
+          "type": "string",
+          "description": "Brief description of what this project does (helps agents understand context)"
+        },
+        "tech_stack": {
+          "type": "object",
+          "properties": {
+            "framework": {
+              "type": "string",
+              "description": "Primary framework (e.g., Next.js 14, React 18, Vue 3)"
+            },
+            "language": {
+              "type": "string",
+              "description": "Primary language (e.g., TypeScript, JavaScript, Python)"
+            },
+            "styling": {
+              "type": "string",
+              "description": "Styling approach (e.g., Tailwind CSS, CSS Modules, styled-components)"
+            },
+            "database": {
+              "type": "string",
+              "description": "Database and ORM (e.g., Prisma + PostgreSQL, Drizzle + SQLite)"
+            },
+            "testing": {
+              "type": "string",
+              "description": "Testing framework (e.g., Vitest, Jest, Playwright)"
+            }
+          },
+          "description": "Technology stack information to guide agent decisions"
+        },
+        "design_system": {
+          "type": "object",
+          "properties": {
+            "aesthetic": {
+              "type": "string",
+              "description": "Visual style description (e.g., Modern minimal, Terminal/monospace)"
+            },
+            "component_library": {
+              "type": "string",
+              "description": "UI component library (e.g., shadcn/ui, MUI, Chakra)"
+            },
+            "rules": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Specific design rules agents must follow"
+            }
+          },
+          "description": "Design system constraints for consistent styling"
+        },
+        "do_not_touch": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Files or directories agents should never modify",
+          "examples": [
+            ["src/lib/auth.ts", "prisma/migrations/", ".env*", "package-lock.json"]
+          ]
+        },
+        "focus_areas": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Areas where you want agents to prioritize improvements",
+          "examples": [
+            ["Improve test coverage", "Add loading states", "Fix accessibility issues"]
+          ]
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "properties": {
+        "engineer": {
+          "type": "object",
+          "properties": {
+            "schedule": {
+              "type": "string",
+              "enum": ["every_1_hour", "every_2_hours", "every_4_hours", "every_6_hours"],
+              "default": "every_2_hours",
+              "description": "How often the engineer agent runs"
+            },
+            "timeout_minutes": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 60,
+              "default": 30,
+              "description": "Maximum time for engineer to complete a task"
+            },
+            "max_files_changed": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 15,
+              "description": "Maximum files that can be changed in a single PR"
+            }
+          }
+        },
+        "tech_lead": {
+          "type": "object",
+          "properties": {
+            "auto_merge": {
+              "type": "boolean",
+              "default": false,
+              "description": "Automatically merge PRs that meet quality threshold"
+            },
+            "auto_merge_threshold": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "default": 8,
+              "description": "Minimum quality score (1-10) for auto-merge"
+            },
+            "require_tests_for_ui": {
+              "type": "boolean",
+              "default": true,
+              "description": "Require tests for UI component changes"
+            },
+            "max_lines_without_tests": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 50,
+              "description": "Maximum lines changed without requiring tests"
+            }
+          }
+        },
+        "discovery": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable technical debt discovery agent"
+            },
+            "max_backlog_issues": {
+              "type": "integer",
+              "minimum": 5,
+              "maximum": 50,
+              "default": 20,
+              "description": "Maximum backlog issues before discovery pauses"
+            }
+          }
+        },
+        "product_manager": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable feature discovery agent"
+            },
+            "max_feature_issues": {
+              "type": "integer",
+              "minimum": 3,
+              "maximum": 20,
+              "default": 10,
+              "description": "Maximum feature issues before discovery pauses"
+            }
+          }
+        },
+        "auditor": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable system health auditor"
+            },
+            "notify_email": {
+              "type": "string",
+              "format": "email",
+              "description": "Email for audit notifications and alerts"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "$schema": "./barbossa.schema.json",
+  "license_key": "barb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "owner": "your-github-username",
+  "repositories": [
+    {
+      "name": "my-saas-app",
+      "url": "git@github.com:your-github-username/my-saas-app.git",
+      "branch": "main",
+      "package_manager": "npm",
+      "description": "SaaS application for project management",
+      "tech_stack": {
+        "framework": "Next.js 14",
+        "language": "TypeScript",
+        "styling": "Tailwind CSS",
+        "database": "Prisma + PostgreSQL",
+        "testing": "Vitest + Playwright"
+      },
+      "design_system": {
+        "aesthetic": "Modern minimal with subtle shadows",
+        "component_library": "shadcn/ui",
+        "rules": [
+          "Use shadcn/ui components where possible",
+          "No inline styles - use Tailwind classes",
+          "Consistent spacing: p-4 for cards, gap-2 for tight, gap-4 for normal",
+          "Use semantic HTML elements"
+        ]
+      },
+      "do_not_touch": [
+        "src/lib/auth.ts",
+        "src/lib/stripe.ts",
+        "prisma/migrations/",
+        ".env*",
+        "package-lock.json"
+      ],
+      "focus_areas": [
+        "Improve test coverage for components",
+        "Add loading and error states",
+        "Fix accessibility issues",
+        "Remove console.log statements"
+      ]
+    }
+  ],
+  "settings": {
+    "engineer": {
+      "schedule": "every_2_hours",
+      "timeout_minutes": 30,
+      "max_files_changed": 15
+    },
+    "tech_lead": {
+      "auto_merge": false,
+      "auto_merge_threshold": 8,
+      "require_tests_for_ui": true,
+      "max_lines_without_tests": 50
+    },
+    "discovery": {
+      "enabled": true,
+      "max_backlog_issues": 20
+    },
+    "product_manager": {
+      "enabled": true,
+      "max_feature_issues": 10
+    },
+    "auditor": {
+      "enabled": true,
+      "notify_email": "you@example.com"
+    }
+  }
+}
