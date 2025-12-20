@@ -24,7 +24,7 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # ============================================================================
 # Every 2 hours at :00
 # Has 35 minutes to complete before Tech Lead runs
-0 0,2,4,6,8,10,12,14,16,18,20,22 * * * su - barbossa -c "cd /app && python3 barbossa_simple.py" >> /app/logs/cron.log 2>&1
+0 0,2,4,6,8,10,12,14,16,18,20,22 * * * su - barbossa -c "cd /app && python3 barbossa_engineer.py" >> /app/logs/cron.log 2>&1
 
 # ============================================================================
 # REVIEW LAYER - Reviews Engineer's work (every 2 hours)

@@ -2,7 +2,7 @@
 set -e
 
 echo "========================================"
-echo "Barbossa v3.0 - Docker Container"
+echo "Barbossa - Autonomous AI Development Team"
 echo "========================================"
 echo "Time: $(date)"
 echo ""
@@ -35,7 +35,6 @@ fi
 # Copy Claude config to barbossa user (including hidden files like .credentials.json)
 if [ -d /root/.claude ]; then
     echo "Claude config: copying to barbossa user (including credentials)"
-    # Use shopt to include hidden files
     shopt -s dotglob
     cp -r /root/.claude/* /home/barbossa/.claude/ 2>/dev/null || true
     shopt -u dotglob
@@ -59,13 +58,15 @@ echo "Starting cron daemon..."
 cron
 
 # Log cron status
+echo ""
 echo "Cron jobs:"
 crontab -l
 
 echo ""
-echo "Starting web portal on port 8080..."
+echo "========================================"
+echo "Barbossa is running. Agents execute on schedule."
+echo "View logs: docker logs -f barbossa"
 echo "========================================"
 
-# Start web portal (foreground)
-cd /app
-exec python3 web_portal/app_simple.py
+# Keep container running (tail logs)
+exec tail -f /app/logs/*.log 2>/dev/null || exec tail -f /dev/null

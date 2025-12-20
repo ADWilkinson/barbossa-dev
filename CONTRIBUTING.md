@@ -24,7 +24,7 @@ cp .env.example .env
 # Edit .env with your settings
 
 # Run locally (without Docker)
-python3 barbossa_simple.py --help
+python3 barbossa_engineer.py --help
 ```
 
 ## Making Changes

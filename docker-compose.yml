@@ -3,20 +3,12 @@ services:
     build: .
     container_name: barbossa
     restart: unless-stopped
-    ports:
-      - "8443:8080"
     volumes:
       # Persist logs and output
       - ./logs:/app/logs
       - ./changelogs:/app/changelogs
       - ./projects:/app/projects
-      # Persist state files (sessions, decisions, feedback, audits)
-      - ./sessions.json:/app/sessions.json
-      - ./tech_lead_decisions.json:/app/tech_lead_decisions.json
-      - ./pending_feedback.json:/app/pending_feedback.json
-      - ./system_insights.json:/app/system_insights.json
-      - ./audit_history.json:/app/audit_history.json
-      # Git config for commits (needs write access for git operations)
+      # Git config for commits
       - ~/.gitconfig:/root/.gitconfig
       # GitHub CLI auth
       - ~/.config/gh:/root/.config/gh:ro
@@ -26,10 +18,4 @@ services:
       - ~/.claude:/root/.claude
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
-      - TZ=Europe/London
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/status"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+      - TZ=${TZ:-UTC}

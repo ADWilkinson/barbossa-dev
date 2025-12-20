@@ -1,200 +1,117 @@
-# Barbossa v5.1 - Autonomous Development Pipeline
+# Barbossa - Autonomous AI Development Team
 
 A five-agent autonomous development system that discovers features, finds technical debt, implements changes, reviews code, and audits system health.
 
-## Architecture
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+## How It Works
 
 ```
-Product Manager (daily)  AI-powered feature discovery
-         |
-         v
-Discovery (3x daily)     Technical debt analysis (TODOs, tests, a11y)
-         |
-         v
-   GitHub Issues         Backlog: features + improvements
-         |
-         v
-Engineer (hourly :00)    Picks from backlog, implements, creates PRs
-         |
-         v
-   Pull Requests         Code ready for review
-         |
-         v
-Tech Lead (hourly :35)   Reviews PRs, merges or requests changes
-         |
-         v
-Auditor (daily 06:30)    Analyzes system health, identifies patterns
+Product Manager (daily)     → Discovers valuable features
+         ↓
+Discovery (4x daily)        → Finds technical debt, TODOs, missing tests
+         ↓
+   GitHub Issues            → Backlog of work
+         ↓
+Engineer (every 2 hours)    → Implements issues, creates PRs
+         ↓
+Tech Lead (every 2 hours)   → Reviews PRs, merges or requests changes
+         ↓
+Auditor (daily)             → Monitors health, suggests improvements
 ```
 
 ## Agents
 
-| Agent | Schedule | Purpose |
-|-------|----------|---------|
-| **Product Manager** | Daily at 07:00 | AI analyzes products, suggests features |
-| **Discovery** | 06:00, 14:00, 22:00 | Finds TODOs, missing tests, a11y gaps |
-| **Engineer** | Every hour at :00 | Implements from backlog, creates PRs |
-| **Tech Lead** | Every hour at :35 | Reviews PRs with strict criteria |
-| **Auditor** | Daily at 06:30 | System health and improvement insights |
+| Agent | Schedule | What It Does |
+|-------|----------|--------------|
+| **Product Manager** | Daily | AI analyzes products, suggests features |
+| **Discovery** | 4x daily | Finds TODOs, missing tests, a11y gaps |
+| **Engineer** | Every 2 hours | Implements from backlog, creates PRs |
+| **Tech Lead** | Every 2 hours | Reviews PRs with strict criteria |
+| **Auditor** | Daily | System health and improvement insights |
 
-## Pipeline Timing
+## Prerequisites
 
-The schedule respects dependency chains:
-
-```
-:00  Engineer starts (has 35 min to complete)
-:35  Tech Lead reviews (PR now exists)
-:00  Next cycle - Engineer responds to feedback OR picks new issue
-```
+- Docker
+- Claude Max subscription (`claude login` to authenticate)
+- GitHub Personal Access Token
+- SSH keys for private repo access
 
 ## Quick Start
 
 ```bash
-# Clone and configure
+# Clone
 git clone https://github.com/your-username/barbossa.git
-cd barbossa-engineer
+cd barbossa
+
+# Configure your repositories
+cp config/repositories.json.example config/repositories.json
+# Edit config/repositories.json with your repos
+
+# Set up environment
 cp .env.example .env
-# Edit .env with your ANTHROPIC_API_KEY
+# Edit .env with your GITHUB_TOKEN
 
-# Configure repositories
-# Edit config/repositories.json
-
-# Start the system
+# Start
 docker compose up -d
 
 # View logs
 docker compose logs -f
-
-# Access web portal
-open http://localhost:8443
-# Auth: Use credentials from BARBOSSA_USER/BARBOSSA_PASS env vars
 ```
 
 ## Configuration
-
-### Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `GITHUB_TOKEN` | GitHub personal access token |
-| `BARBOSSA_USER` | Web portal username (default: admin) |
-| `BARBOSSA_PASS` | Web portal password (required) |
-
-### Repository Configuration
 
 Edit `config/repositories.json`:
 
 ```json
 {
-  "owner": "YourGitHubUsername",
+  "owner": "your-github-username",
   "repositories": [
     {
-      "name": "your-repo",
-      "url": "git@github.com:YourUsername/your-repo.git",
-      "package_manager": "npm|yarn|pnpm",
-      "description": "What this project does",
+      "name": "my-app",
+      "url": "git@github.com:your-username/my-app.git",
+      "package_manager": "npm",
+      "description": "My SaaS application",
       "tech_stack": {
-        "framework": "React/Next.js/etc",
+        "framework": "Next.js 14",
         "language": "TypeScript"
       },
       "do_not_touch": [
-        "paths/to/avoid"
+        "src/lib/auth.ts",
+        "prisma/migrations/"
       ]
     }
   ]
 }
 ```
 
-## Web Portal
-
-Access at `http://localhost:8443` (or via Cloudflare Tunnel)
-
-Features:
-- Dashboard with session history
-- Tech Lead decisions panel
-- Real-time status
-- Manual trigger buttons
-- Log viewer
-
-### API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/status` | GET | System status |
-| `/api/sessions` | GET | All sessions |
-| `/api/prs` | GET | Open PRs per repo |
-| `/api/tech-lead/decisions` | GET | Review decisions |
-| `/api/trigger/<repo>` | POST | Trigger Engineer |
-| `/api/tech-lead/trigger` | POST | Trigger Tech Lead |
-
-## Agent Details
-
-### Product Manager Agent
-
-AI-powered feature discovery:
-- Reads CLAUDE.md and understands each product deeply
-- Analyzes competitive landscape and industry trends
-- Identifies high-value feature opportunities
-- Creates detailed feature specs with acceptance criteria
-- Scores features by value (1-10) and effort (small/medium/large)
-
-Creates GitHub Issues labeled `feature` and `backlog` for Engineers.
-
-### Discovery Agent
-
-Analyzes codebases to find technical debt:
-- TODOs, FIXMEs, HACK comments
-- Missing loading states
-- Missing error handling
-- Accessibility gaps (alt text, aria-labels)
-- Console.log statements
-
-Creates GitHub Issues labeled `backlog` for Engineers to pick from.
-
-### Engineer Agent
-
-1. Checks for Issues labeled `backlog` first
-2. If backlog exists: implements the first issue
-3. If backlog empty: discovers own work
-4. Creates PR linked to issue (`Closes #XX`)
-
-### Tech Lead Agent
-
-Reviews PRs with strict criteria:
-- Value score (1-10)
-- Quality score (1-10)
-- Bloat risk assessment
-- Auto-rejects: failing CI, >15 files, test-only PRs
-
-Actions: MERGE, REQUEST_CHANGES, or CLOSE
-
-### Auditor Agent
-
-Daily analysis:
-- PR merge rate
-- Common rejection reasons
-- Agent performance patterns
-- Generates insights for other agents
-
 ## File Structure
 
 ```
-barbossa-engineer/
-├── barbossa_product.py      # Product Manager agent (feature discovery)
-├── barbossa_discovery.py    # Discovery agent (technical debt)
-├── barbossa_simple.py       # Engineer agent
-├── barbossa_tech_lead.py    # Tech Lead agent
-├── barbossa_auditor.py      # Auditor agent
-├── web_portal/
-│   └── app_simple.py        # Flask web portal
+barbossa/
+├── barbossa_engineer.py     # Engineer agent (implements PRs)
+├── barbossa_tech_lead.py    # Tech Lead agent (reviews PRs)
+├── barbossa_discovery.py    # Discovery agent (finds tech debt)
+├── barbossa_product.py      # Product Manager (feature discovery)
+├── barbossa_auditor.py      # Auditor (health monitoring)
 ├── config/
-│   └── repositories.json    # Repo configurations
-├── logs/                    # All session logs
-├── sessions.json            # Session tracking
-├── tech_lead_decisions.json # Review history
-├── docker-compose.yml       # Docker orchestration
-├── Dockerfile               # Container image
-├── entrypoint.sh            # Container startup
-└── crontab                  # Cron schedule
+│   └── repositories.json    # Your repo configurations
+├── docker-compose.yml
+├── Dockerfile
+└── crontab                  # Agent schedules
+```
+
+## Manual Triggers
+
+```bash
+# Run engineer manually
+docker exec barbossa python3 barbossa_engineer.py
+
+# Run tech lead manually
+docker exec barbossa python3 barbossa_tech_lead.py
+
+# Run discovery manually
+docker exec barbossa python3 barbossa_discovery.py
 ```
 
 ## Troubleshooting
@@ -203,25 +120,20 @@ barbossa-engineer/
 # Check container status
 docker ps | grep barbossa
 
-# View live logs
+# View logs
 docker compose logs -f
 
-# Check cron is running
+# Check cron jobs
 docker exec barbossa crontab -l
-
-# View recent session logs
-ls -lt logs/ | head
-
-# Test web portal
-curl -u $BARBOSSA_USER:$BARBOSSA_PASS http://localhost:8443/api/status
 
 # Restart
 docker compose restart
-
-# Full rebuild
-docker compose down && docker compose build --no-cache && docker compose up -d
 ```
 
 ## License
 
-MIT
+MIT - see [LICENSE](LICENSE)
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md)

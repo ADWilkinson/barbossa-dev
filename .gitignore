@@ -53,11 +53,8 @@ config/credentials.json
 *.bak
 *.backup
 
-# Web portal
-web_portal/node_modules/
-web_portal/.next/
-web_portal/build/
-web_portal/dist/
+# Node modules (if any)
+node_modules/
 
 # Projects folder - managed by bot, not committed
 projects/

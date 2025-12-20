@@ -15,7 +15,7 @@ echo "Directory: $BARBOSSA_DIR"
 echo "=========================================="
 
 # Run Barbossa Engineer
-python3 barbossa_simple.py "$@"
+python3 barbossa_engineer.py "$@"
 
 echo ""
 echo "=========================================="
