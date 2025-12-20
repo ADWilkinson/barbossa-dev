@@ -3,10 +3,10 @@
 ## Product Definition
 
 **Product:** Barbossa - Autonomous AI Development Team
-**Model:** Fully Open Source (MIT or Apache 2.0)
-**Distribution:** GitHub Releases + Docker Hub
-**Monetization:** GitHub Sponsors, Open Collective, donations
-**Website:** barbossa.dev (docs, community, sponsor CTA)
+**Model:** Fully Open Source (MIT)
+**Distribution:** GitHub Releases + GitHub Container Registry
+**Sustainability:** GitHub Sponsors available (not required)
+**Website:** barbossa.dev (docs, community)
 
 ---
 
@@ -143,40 +143,17 @@ No license key needed - just configure and run:
 
 ---
 
-## Monetization
+## Sustainability
 
-### Primary: GitHub Sponsors
+GitHub Sponsors will be enabled on the repository for those who want to support development. No tiers, no pressure - just a simple way for people to say thanks if the project helps them.
+
+The README will include a small sponsor badge, nothing more:
 
 ```markdown
-# In README.md
-
-## Support Barbossa
-
-If Barbossa saves you time, consider sponsoring:
-
-[![Sponsor](https://img.shields.io/github/sponsors/barbossa-dev)](https://github.com/sponsors/barbossa-dev)
-
-### Sponsor Tiers
-
-- $5/month - Supporter (name in README)
-- $25/month - Backer (logo in README, priority issues)
-- $100/month - Sponsor (logo on website, direct support channel)
-- $500/month - Gold Sponsor (consulting call, feature prioritization)
+[![Sponsor](https://img.shields.io/github/sponsors/ADWilkinson?style=flat-square)](https://github.com/sponsors/ADWilkinson)
 ```
 
-### Secondary: Open Collective
-
-For companies that can't use GitHub Sponsors:
-
-```
-https://opencollective.com/barbossa
-```
-
-### Tertiary: Consulting/Support
-
-- **Setup assistance:** $200 one-time
-- **Custom agent development:** $150/hour
-- **Priority support retainer:** $500/month
+**Philosophy:** Build something useful. If people find value, some will support it. If not, it's still a great portfolio piece and learning experience.
 
 ---
 
@@ -185,13 +162,12 @@ https://opencollective.com/barbossa
 Simple docs site, not a SaaS:
 
 ```
-/                   Landing (what it is, quick start, sponsor CTA)
+/                   Landing (what it is, quick start)
 /docs               Full documentation
 /docs/quickstart    5-minute setup
 /docs/agents        How each agent works
-/docs/config        barbossa.json reference
+/docs/config        Configuration reference
 /community          Discord link, GitHub Discussions
-/sponsors           Sponsor showcase
 ```
 
 **Tech stack:**
@@ -216,7 +192,6 @@ Simple docs site, not a SaaS:
 #support        - Help with setup
 #showcase       - Share your Barbossa PRs
 #development    - Contributing discussion
-#sponsors       - Private channel for sponsors
 ```
 
 ### Content
@@ -323,13 +298,12 @@ barbossa/
 
 ### Pre-Launch
 
-- [ ] Clean codebase (remove personal config, secrets)
-- [ ] Write README with clear value prop
+- [ ] Clean codebase (remove personal config, secrets, hardcoded values)
+- [ ] Write README with clear value prop and quick start
 - [ ] Add LICENSE file (MIT)
 - [ ] Create CONTRIBUTING.md
 - [ ] Write initial documentation
-- [ ] Set up GitHub Sponsors profile
-- [ ] Create barbossa.dev landing page
+- [ ] Create barbossa.dev docs site
 - [ ] Record 5-minute setup video
 - [ ] Prepare launch post
 
@@ -346,8 +320,8 @@ barbossa/
 
 - [ ] Respond to all issues/discussions within 24h
 - [ ] Write first changelog
-- [ ] Thank early sponsors publicly
 - [ ] Iterate based on feedback
+- [ ] Build community
 
 ---
 
@@ -363,65 +337,44 @@ barbossa/
 - GitHub Discussions activity
 - Discord members
 - Issue resolution time
-
-**Sustainability:**
-- Monthly sponsorship revenue
-- Sponsor retention
-- Consulting requests
+- PRs from community
 
 **Target (Year 1):**
 - 1,000+ GitHub stars
-- 100+ sponsors ($2,000+/month)
 - 10+ contributors
+- Active community discussions
 
----
-
-## Revenue Projections (Conservative)
-
-| Month | Stars | Sponsors | MRR |
-|-------|-------|----------|-----|
-| 1 | 200 | 5 | $50 |
-| 3 | 500 | 20 | $200 |
-| 6 | 1,000 | 50 | $500 |
-| 12 | 2,500 | 150 | $1,500 |
-
-**Note:** Open source revenue is slower but compounds. The real value is:
-- Resume/portfolio boost
-- Consulting opportunities
-- Job offers
+**The real value:**
+- Portfolio piece demonstrating autonomous AI systems
+- Learning and sharing knowledge
+- Helping other developers
 - Network building
-- Potential acquisition interest
 
 ---
 
 ## FAQ
 
-**Q: Why give it away for free?**
-A: Because the best dev tools are free. Adoption > gatekeeping. Sponsors will come if the product is good.
+**Q: Why open source?**
+A: The best dev tools are open source. Trust and community > gatekeeping.
 
 **Q: What if someone forks and competes?**
-A: Great! More people benefit. Stay ahead by being the best maintainer and having the strongest community.
+A: Great! More developers benefit. The goal is to help people, not protect territory.
 
-**Q: Can I still make money?**
-A: Yes - sponsors, consulting, job opportunities. Many open source maintainers earn good income.
-
-**Q: What if no one sponsors?**
-A: You still have an amazing portfolio piece and the satisfaction of helping developers. Worst case, it's a passion project.
+**Q: What do I need to run it?**
+A: Docker, a Claude Max subscription ($100/mo to Anthropic), and a GitHub account.
 
 ---
 
 ## Next Actions
 
 1. **Clean up codebase** for public release
-2. **Write README** with compelling value prop
+2. **Write README** with clear quick start
 3. **Add LICENSE** (MIT)
-4. **Create barbossa.dev** landing page
-5. **Set up GitHub Sponsors**
-6. **Record setup video**
-7. **Prepare launch post**
-8. **Launch on HN/Reddit/Twitter**
+4. **Create barbossa.dev** docs site
+5. **Record setup video**
+6. **Launch on HN/Reddit/Twitter**
 
 ---
 
 *Open Source Strategy v1.0*
-*December 2024*
+*December 2025*
