@@ -2,153 +2,213 @@
 
 Get Barbossa running in 5 minutes.
 
+---
+
 ## Prerequisites
 
-Before you begin, make sure you have:
+Before you start, you need:
 
-1. **Docker** installed and running
-2. **Claude Max subscription** ($100/month from Anthropic)
+1. **Docker** - [Install Docker](https://docs.docker.com/get-docker/)
+2. **Claude Max subscription** - $100/month from [Anthropic](https://claude.ai)
 3. **GitHub account** with a Personal Access Token
-4. **SSH keys** added to GitHub (for private repos)
 
-## Step 1: Clone the Repository
+---
+
+## Step 1: Clone Barbossa
 
 ```bash
 git clone https://github.com/ADWilkinson/barbossa.git
 cd barbossa
 ```
 
-## Step 2: Authenticate Claude CLI
+---
 
-Barbossa uses Claude CLI with your Max subscription:
+## Step 2: Create Config
 
-```bash
-# Install Claude CLI (if not already installed)
-npm install -g @anthropic-ai/claude-code
-
-# Login to Claude
-claude login
-```
-
-Follow the prompts to authenticate with your Anthropic account.
-
-## Step 3: Create GitHub Token
-
-1. Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
-2. Click "Generate new token (classic)"
-3. Give it a name like "Barbossa"
-4. Select scopes:
-   - `repo` (full control of private repositories)
-   - `workflow` (update GitHub Action workflows)
-5. Generate and copy the token
-
-## Step 4: Configure Environment
+The minimal config is just 3 fields:
 
 ```bash
-# Copy the example environment file
-cp .env.example .env
-
-# Edit .env and add your GitHub token
-# GITHUB_TOKEN=ghp_your_token_here
-```
-
-## Step 5: Configure Repositories
-
-```bash
-# Copy the example config
-cp config/repositories.json.example config/repositories.json
-```
-
-Edit `config/repositories.json`:
-
-```json
+cat > config/repositories.json << 'EOF'
 {
   "owner": "your-github-username",
   "repositories": [
     {
-      "name": "your-repo-name",
-      "url": "git@github.com:your-username/your-repo.git",
-      "package_manager": "npm",
-      "description": "Brief description of your project",
-      "tech_stack": {
-        "framework": "Next.js 14",
-        "language": "TypeScript"
-      },
-      "do_not_touch": [
-        "src/lib/auth.ts"
-      ]
+      "name": "my-app",
+      "url": "git@github.com:your-github-username/my-app.git"
     }
   ]
 }
+EOF
 ```
 
-## Step 6: Start Barbossa
+Replace:
+- `your-github-username` with your GitHub username
+- `my-app` with your repository name
+
+---
+
+## Step 3: Set Up GitHub Token
+
+Create a Personal Access Token at [github.com/settings/tokens](https://github.com/settings/tokens) with `repo` scope.
 
 ```bash
-# Build and start the container
+echo "GITHUB_TOKEN=ghp_your_token_here" > .env
+```
+
+---
+
+## Step 4: Authenticate Claude CLI
+
+On your **host machine** (not in Docker):
+
+```bash
+# Install Claude CLI if you haven't
+npm install -g @anthropic-ai/claude-code
+
+# Log in with your Claude Max account
+claude login
+```
+
+This creates credentials in `~/.claude/` that Docker will mount.
+
+---
+
+## Step 5: Start Barbossa
+
+```bash
 docker compose up -d
-
-# Watch the logs
-docker compose logs -f
 ```
 
-## Step 7: Verify It's Working
+Barbossa will:
+1. Validate your configuration
+2. Check authentication
+3. Start the scheduler
+
+---
+
+## Step 6: Verify It's Working
 
 ```bash
-# Check the container is running
-docker ps | grep barbossa
+# Check health status
+docker exec barbossa barbossa health
+```
 
-# Check cron jobs are scheduled
-docker exec barbossa crontab -l
+You should see:
+```
+✓ Config valid: 1 repositories
+✓ GitHub CLI authenticated
+✓ Claude CLI authenticated
+```
 
-# View logs
+---
+
+## Step 7: Test It
+
+Don't wait 2 hours - run the engineer manually:
+
+```bash
+docker exec barbossa barbossa run engineer
+```
+
+Watch it work:
+```bash
 docker compose logs -f
 ```
+
+Your first PR should appear within a few minutes!
+
+---
 
 ## What Happens Next
 
-1. **Within 2 hours**: The Engineer agent will run, analyze your codebase, and create a PR
-2. **35 minutes later**: The Tech Lead agent reviews the PR
-3. **Daily**: Product Manager and Discovery agents find new work
+Barbossa runs automatically on this schedule:
 
-## First PR
+| Agent | Schedule |
+|-------|----------|
+| Engineer | Every 2 hours at :00 |
+| Tech Lead | Every 2 hours at :35 |
+| Discovery | 4x daily |
+| Product Manager | 3x daily |
+| Auditor | Daily at 06:30 |
 
-Your first PR should appear within 2 hours. It will:
-- Be linked to a GitHub Issue (if one exists in backlog)
-- Include a clear description of changes
-- Follow your project's patterns
+You'll see:
+- PRs appearing in your repo
+- Issues being created (backlog)
+- PRs being reviewed and merged/closed
+
+---
+
+## Common Commands
+
+```bash
+# Check health
+docker exec barbossa barbossa health
+
+# Run an agent manually
+docker exec barbossa barbossa run engineer
+docker exec barbossa barbossa run tech-lead
+
+# View status
+docker exec barbossa barbossa status
+
+# View logs
+docker exec barbossa barbossa logs
+docker exec barbossa barbossa logs engineer -f
+
+# Docker commands
+docker compose logs -f      # Stream all logs
+docker compose restart      # Restart after config changes
+docker compose down         # Stop Barbossa
+```
+
+---
 
 ## Troubleshooting
 
-### Container won't start
+### Validation Failed
+
+If you see validation errors on startup:
 
 ```bash
-# Check for errors
-docker compose logs
+# See what's wrong
+docker exec barbossa barbossa health
 
-# Rebuild
-docker compose down
-docker compose build --no-cache
-docker compose up -d
+# Fix issues and restart
+docker compose restart
 ```
 
-### Claude authentication issues
+### Claude Auth Issues
 
 ```bash
-# Re-authenticate Claude
-docker exec -it barbossa claude login
+# Re-authenticate on your host machine
+claude login
+
+# Restart container
+docker compose restart
 ```
 
-### No PRs appearing
+### No PRs Created
 
-1. Check the logs: `docker compose logs -f`
-2. Verify GitHub token has correct permissions
-3. Ensure SSH keys are mounted correctly
+1. Check if there's work in the backlog:
+   ```bash
+   docker exec barbossa gh issue list --label backlog
+   ```
 
-See [Troubleshooting](troubleshooting.md) for more help.
+2. Run engineer manually and watch:
+   ```bash
+   docker exec barbossa barbossa run engineer
+   ```
+
+3. Check logs for errors:
+   ```bash
+   docker exec barbossa barbossa logs engineer
+   ```
+
+---
 
 ## Next Steps
 
-- [Configuration Reference](configuration.md) - Customize agent behavior
+- [Configuration Reference](configuration.md) - Add more options
 - [Agent Documentation](agents.md) - Understand each agent
+- [Troubleshooting](troubleshooting.md) - Fix common issues
 - [FAQ](faq.md) - Common questions

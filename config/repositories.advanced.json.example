@@ -1,0 +1,88 @@
+{
+  "owner": "your-github-username",
+
+  "repositories": [
+    {
+      "name": "my-app",
+      "url": "git@github.com:your-github-username/my-app.git",
+
+      "package_manager": "npm",
+      "env_file": ".env.local",
+
+      "description": "My SaaS application for X",
+
+      "tech_stack": {
+        "framework": "Next.js 14 (App Router)",
+        "language": "TypeScript",
+        "styling": "Tailwind CSS",
+        "testing": "Vitest, Playwright"
+      },
+
+      "architecture": {
+        "data_flow": "Client -> Server Actions -> Prisma -> PostgreSQL",
+        "key_dirs": [
+          "src/app/ - Next.js routes",
+          "src/components/ - React components",
+          "src/lib/ - Shared utilities"
+        ]
+      },
+
+      "design_system": {
+        "aesthetic": "Modern minimal with subtle animations",
+        "brand_rules": [
+          "Use shadcn/ui components",
+          "No inline styles",
+          "Prefer Tailwind utilities"
+        ]
+      },
+
+      "do_not_touch": [
+        "src/lib/auth.ts",
+        "prisma/migrations/",
+        ".env*"
+      ],
+
+      "focus_areas": [
+        "Improve test coverage",
+        "Add loading states to data fetches",
+        "Fix accessibility issues"
+      ],
+
+      "example_good_prs": [
+        "Add error boundary to dashboard",
+        "Implement skeleton loading for user list",
+        "Add keyboard navigation to dropdown"
+      ]
+    }
+  ],
+
+  "settings": {
+    "max_open_prs": 5,
+
+    "engineer": {
+      "enabled": true
+    },
+
+    "tech_lead": {
+      "enabled": true,
+      "auto_merge": false,
+      "min_lines_for_tests": 50,
+      "max_files_per_pr": 15
+    },
+
+    "discovery": {
+      "enabled": true,
+      "max_backlog_issues": 20
+    },
+
+    "product_manager": {
+      "enabled": true,
+      "max_feature_issues": 20
+    },
+
+    "auditor": {
+      "enabled": true,
+      "analysis_days": 7
+    }
+  }
+}

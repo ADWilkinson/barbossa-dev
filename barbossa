@@ -1,0 +1,564 @@
+#!/usr/bin/env python3
+"""
+Barbossa CLI - Simple interface for managing your autonomous dev team.
+
+Usage:
+    barbossa init          - Interactive setup wizard
+    barbossa health        - Check system health
+    barbossa run [agent]   - Run an agent manually
+    barbossa status        - Show current status
+    barbossa logs [agent]  - View agent logs
+"""
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+from datetime import datetime
+
+
+# Colors for terminal output
+class Colors:
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BLUE = '\033[94m'
+    BOLD = '\033[1m'
+    END = '\033[0m'
+
+
+def ok(msg): print(f"{Colors.GREEN}✓{Colors.END} {msg}")
+def warn(msg): print(f"{Colors.YELLOW}⚠{Colors.END} {msg}")
+def err(msg): print(f"{Colors.RED}✗{Colors.END} {msg}")
+def info(msg): print(f"{Colors.BLUE}→{Colors.END} {msg}")
+def header(msg): print(f"\n{Colors.BOLD}{msg}{Colors.END}")
+
+
+def get_app_dir():
+    """Get the Barbossa application directory."""
+    env_dir = os.environ.get('BARBOSSA_DIR')
+    if env_dir:
+        return Path(env_dir)
+
+    # Check if running in Docker
+    if Path('/app').exists() and Path('/app/barbossa_engineer.py').exists():
+        return Path('/app')
+
+    # Running locally
+    return Path(__file__).parent
+
+
+def run_cmd(cmd, capture=True, timeout=30):
+    """Run a shell command."""
+    try:
+        result = subprocess.run(
+            cmd, shell=True, capture_output=capture,
+            text=True, timeout=timeout
+        )
+        return result.returncode == 0, result.stdout.strip() if capture else "", result.stderr.strip() if capture else ""
+    except subprocess.TimeoutExpired:
+        return False, "", "Command timed out"
+    except Exception as e:
+        return False, "", str(e)
+
+
+# =============================================================================
+# HEALTH CHECK
+# =============================================================================
+
+def check_config(app_dir):
+    """Check if config file exists and is valid."""
+    config_file = app_dir / 'config' / 'repositories.json'
+
+    if not config_file.exists():
+        return False, "Config file not found", f"Run: cp config/repositories.json.example config/repositories.json"
+
+    try:
+        with open(config_file) as f:
+            config = json.load(f)
+    except json.JSONDecodeError as e:
+        return False, f"Invalid JSON in config: {e}", "Fix the JSON syntax error"
+
+    # Check required fields
+    if not config.get('owner'):
+        return False, "Missing 'owner' in config", "Add your GitHub username as 'owner'"
+
+    repos = config.get('repositories', [])
+    if not repos:
+        return False, "No repositories configured", "Add at least one repository to 'repositories'"
+
+    for i, repo in enumerate(repos):
+        if not repo.get('name'):
+            return False, f"Repository {i+1} missing 'name'", "Add 'name' to each repository"
+        if not repo.get('url'):
+            return False, f"Repository '{repo.get('name', i+1)}' missing 'url'", "Add 'url' to each repository"
+
+    return True, f"Config valid ({len(repos)} repositories)", None
+
+
+def check_github_cli():
+    """Check GitHub CLI authentication."""
+    success, stdout, stderr = run_cmd("gh auth status")
+    if success:
+        return True, "GitHub CLI authenticated", None
+    return False, "GitHub CLI not authenticated", "Run: gh auth login"
+
+
+def check_claude_cli():
+    """Check Claude CLI authentication."""
+    # Check if claude is installed
+    success, stdout, stderr = run_cmd("claude --version")
+    if not success:
+        return False, "Claude CLI not installed", "Run: npm install -g @anthropic-ai/claude-code"
+
+    # Check credentials file
+    creds_paths = [
+        Path.home() / '.claude' / '.credentials.json',
+        Path('/root/.claude/.credentials.json'),
+        Path('/home/barbossa/.claude/.credentials.json'),
+    ]
+
+    for creds_file in creds_paths:
+        if creds_file.exists():
+            try:
+                with open(creds_file) as f:
+                    creds = json.load(f)
+
+                oauth = creds.get('claudeAiOauth', {})
+                expires_at = oauth.get('expiresAt', 0)
+
+                if expires_at:
+                    expires_ts = expires_at / 1000 if expires_at > 1e12 else expires_at
+                    expires_dt = datetime.fromtimestamp(expires_ts)
+                    now = datetime.now()
+
+                    hours_left = (expires_dt - now).total_seconds() / 3600
+
+                    if hours_left < 0:
+                        return False, "Claude token expired", "Run: claude login"
+                    elif hours_left < 24:
+                        return True, f"Claude authenticated (expires in {hours_left:.0f}h)", "Consider running: claude login"
+                    else:
+                        return True, f"Claude authenticated (valid for {hours_left:.0f}h)", None
+            except:
+                pass
+
+    return False, "Claude CLI not authenticated", "Run: claude login"
+
+
+def check_ssh_keys():
+    """Check SSH keys for GitHub access."""
+    ssh_dir = Path.home() / '.ssh'
+
+    if not ssh_dir.exists():
+        return False, "No SSH directory found", "Set up SSH keys for GitHub"
+
+    key_files = list(ssh_dir.glob('id_*'))
+    key_files = [f for f in key_files if not f.suffix == '.pub']
+
+    if not key_files:
+        return False, "No SSH keys found", "Generate SSH keys: ssh-keygen -t ed25519"
+
+    # Test GitHub SSH access
+    success, stdout, stderr = run_cmd("ssh -T git@github.com 2>&1", timeout=10)
+    if "successfully authenticated" in stderr.lower() or "successfully authenticated" in stdout.lower():
+        return True, "SSH keys configured for GitHub", None
+    elif "permission denied" in stderr.lower():
+        return False, "SSH key not added to GitHub", "Add your SSH key to GitHub"
+
+    return True, f"SSH keys found ({len(key_files)} keys)", None
+
+
+def check_git_config():
+    """Check git configuration."""
+    success, name, _ = run_cmd("git config --global user.name")
+    if not success or not name:
+        return False, "Git user.name not set", "Run: git config --global user.name 'Your Name'"
+
+    success, email, _ = run_cmd("git config --global user.email")
+    if not success or not email:
+        return False, "Git user.email not set", "Run: git config --global user.email 'you@example.com'"
+
+    return True, f"Git configured as {name} <{email}>", None
+
+
+def check_docker():
+    """Check if running in Docker or Docker is available."""
+    if Path('/.dockerenv').exists():
+        return True, "Running inside Docker", None
+
+    success, stdout, _ = run_cmd("docker --version")
+    if success:
+        return True, "Docker available", None
+
+    return False, "Docker not installed", "Install Docker: https://docs.docker.com/get-docker/"
+
+
+def cmd_health(args):
+    """Run health checks."""
+    app_dir = get_app_dir()
+
+    header("Barbossa Health Check")
+    print()
+
+    checks = [
+        ("Config", lambda: check_config(app_dir)),
+        ("GitHub CLI", check_github_cli),
+        ("Claude CLI", check_claude_cli),
+        ("SSH Keys", check_ssh_keys),
+        ("Git Config", check_git_config),
+        ("Docker", check_docker),
+    ]
+
+    all_ok = True
+    fixes_needed = []
+
+    for name, check_fn in checks:
+        try:
+            success, message, fix = check_fn()
+            if success:
+                ok(f"{name}: {message}")
+            else:
+                err(f"{name}: {message}")
+                if fix:
+                    fixes_needed.append(f"  {name}: {fix}")
+                all_ok = False
+        except Exception as e:
+            err(f"{name}: Error - {e}")
+            all_ok = False
+
+    print()
+
+    if all_ok:
+        ok("All checks passed! Barbossa is ready to run.")
+    else:
+        warn("Some checks failed. Fixes needed:")
+        for fix in fixes_needed:
+            print(fix)
+
+    return 0 if all_ok else 1
+
+
+# =============================================================================
+# INIT WIZARD
+# =============================================================================
+
+def cmd_init(args):
+    """Interactive setup wizard."""
+    app_dir = get_app_dir()
+    config_file = app_dir / 'config' / 'repositories.json'
+
+    header("Barbossa Setup Wizard")
+    print()
+    print("This wizard will help you configure Barbossa.")
+    print("Press Ctrl+C at any time to cancel.")
+    print()
+
+    try:
+        # Step 1: GitHub username
+        header("Step 1: GitHub Username")
+        owner = input("Enter your GitHub username: ").strip()
+        if not owner:
+            err("GitHub username is required")
+            return 1
+        ok(f"Owner: {owner}")
+
+        # Step 2: Repository
+        header("Step 2: Repository")
+        print("Enter details for your repository (you can add more later)")
+        print()
+
+        repo_name = input("Repository name (e.g., my-app): ").strip()
+        if not repo_name:
+            err("Repository name is required")
+            return 1
+
+        # Suggest URL based on owner/name
+        default_url = f"git@github.com:{owner}/{repo_name}.git"
+        repo_url = input(f"Repository URL [{default_url}]: ").strip() or default_url
+
+        ok(f"Repository: {repo_name}")
+        ok(f"URL: {repo_url}")
+
+        # Step 3: Optional - package manager
+        header("Step 3: Package Manager (optional)")
+        print("What package manager does your project use?")
+        print("  1. npm (default)")
+        print("  2. pnpm")
+        print("  3. yarn")
+        print("  4. bun")
+
+        pm_choice = input("Enter choice [1]: ").strip() or "1"
+        pm_map = {"1": "npm", "2": "pnpm", "3": "yarn", "4": "bun"}
+        package_manager = pm_map.get(pm_choice, "npm")
+        ok(f"Package manager: {package_manager}")
+
+        # Step 4: Files to protect
+        header("Step 4: Protected Files (optional)")
+        print("Enter files/directories Barbossa should never modify.")
+        print("Press Enter when done. Leave empty to skip.")
+
+        do_not_touch = []
+        while True:
+            path = input("  Protected path: ").strip()
+            if not path:
+                break
+            do_not_touch.append(path)
+
+        if do_not_touch:
+            ok(f"Protected: {len(do_not_touch)} paths")
+
+        # Build config
+        config = {
+            "owner": owner,
+            "repositories": [
+                {
+                    "name": repo_name,
+                    "url": repo_url,
+                    "package_manager": package_manager,
+                }
+            ]
+        }
+
+        if do_not_touch:
+            config["repositories"][0]["do_not_touch"] = do_not_touch
+
+        # Ensure config directory exists
+        config_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write config
+        with open(config_file, 'w') as f:
+            json.dump(config, f, indent=2)
+
+        header("Setup Complete!")
+        print()
+        ok(f"Config saved to: {config_file}")
+        print()
+        info("Next steps:")
+        print("  1. Run health check:  barbossa health")
+        print("  2. Start Barbossa:    docker compose up -d")
+        print("  3. Watch logs:        docker compose logs -f")
+        print()
+        print("Your first PR should appear within 2 hours!")
+
+        return 0
+
+    except KeyboardInterrupt:
+        print("\n")
+        warn("Setup cancelled")
+        return 1
+
+
+# =============================================================================
+# RUN AGENT
+# =============================================================================
+
+def cmd_run(args):
+    """Run an agent manually."""
+    app_dir = get_app_dir()
+
+    agents = {
+        'engineer': 'barbossa_engineer.py',
+        'tech-lead': 'barbossa_tech_lead.py',
+        'discovery': 'barbossa_discovery.py',
+        'product': 'barbossa_product.py',
+        'auditor': 'barbossa_auditor.py',
+    }
+
+    if not args.agent:
+        header("Available Agents")
+        print()
+        for name in agents:
+            print(f"  barbossa run {name}")
+        print()
+        return 0
+
+    agent = args.agent.lower()
+    if agent not in agents:
+        err(f"Unknown agent: {agent}")
+        print(f"Available: {', '.join(agents.keys())}")
+        return 1
+
+    script = agents[agent]
+    script_path = app_dir / script
+
+    if not script_path.exists():
+        err(f"Agent script not found: {script_path}")
+        return 1
+
+    header(f"Running {agent} agent")
+    print()
+
+    # Run the agent
+    os.execvp('python3', ['python3', str(script_path)])
+
+
+# =============================================================================
+# STATUS
+# =============================================================================
+
+def cmd_status(args):
+    """Show current status."""
+    app_dir = get_app_dir()
+
+    header("Barbossa Status")
+    print()
+
+    # Check config
+    config_file = app_dir / 'config' / 'repositories.json'
+    if config_file.exists():
+        try:
+            with open(config_file) as f:
+                config = json.load(f)
+            repos = config.get('repositories', [])
+            ok(f"Configured: {len(repos)} repositories")
+            for repo in repos:
+                print(f"    - {repo.get('name', 'unnamed')}")
+        except:
+            err("Could not read config")
+    else:
+        warn("No config file found")
+
+    print()
+
+    # Check for recent sessions
+    sessions_file = app_dir / 'sessions.json'
+    if sessions_file.exists():
+        try:
+            with open(sessions_file) as f:
+                sessions = json.load(f)
+
+            if sessions:
+                info("Recent Sessions:")
+                for session in sessions[:5]:
+                    status = session.get('status', 'unknown')
+                    icon = {'completed': '✓', 'failed': '✗', 'running': '...', 'timeout': '⏱'}.get(status, '?')
+                    repo = session.get('repository', 'unknown')
+                    started = session.get('started', '')[:16]
+                    print(f"    [{icon}] {repo} - {started}")
+                    if session.get('pr_url'):
+                        print(f"        PR: {session['pr_url']}")
+        except:
+            pass
+
+    print()
+
+    # Check cron status (if in Docker)
+    success, stdout, _ = run_cmd("crontab -l 2>/dev/null")
+    if success and stdout:
+        info("Cron schedule active")
+
+    return 0
+
+
+# =============================================================================
+# LOGS
+# =============================================================================
+
+def cmd_logs(args):
+    """View agent logs."""
+    app_dir = get_app_dir()
+    logs_dir = app_dir / 'logs'
+
+    if not logs_dir.exists():
+        err("No logs directory found")
+        return 1
+
+    agent_patterns = {
+        'engineer': 'barbossa_*.log',
+        'tech-lead': 'tech_lead_*.log',
+        'discovery': 'discovery_*.log',
+        'product': 'product_*.log',
+        'auditor': 'auditor_*.log',
+    }
+
+    if args.agent:
+        pattern = agent_patterns.get(args.agent.lower())
+        if not pattern:
+            err(f"Unknown agent: {args.agent}")
+            return 1
+    else:
+        pattern = '*.log'
+
+    # Find most recent log
+    logs = sorted(logs_dir.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
+
+    if not logs:
+        warn(f"No logs found matching: {pattern}")
+        return 1
+
+    latest_log = logs[0]
+    info(f"Showing: {latest_log.name}")
+    print()
+
+    # Tail the log
+    if args.follow:
+        os.execvp('tail', ['tail', '-f', str(latest_log)])
+    else:
+        lines = args.lines or 50
+        os.execvp('tail', ['tail', f'-{lines}', str(latest_log)])
+
+
+# =============================================================================
+# MAIN
+# =============================================================================
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Barbossa - Your autonomous AI development team',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Commands:
+  init          Interactive setup wizard
+  health        Check system health
+  run [agent]   Run an agent manually
+  status        Show current status
+  logs [agent]  View agent logs
+
+Examples:
+  barbossa init                 # Set up Barbossa
+  barbossa health               # Check everything works
+  barbossa run engineer         # Run engineer now
+  barbossa logs tech-lead -f    # Follow tech lead logs
+        """
+    )
+
+    subparsers = parser.add_subparsers(dest='command')
+
+    # init
+    init_parser = subparsers.add_parser('init', help='Interactive setup wizard')
+    init_parser.set_defaults(func=cmd_init)
+
+    # health
+    health_parser = subparsers.add_parser('health', help='Check system health')
+    health_parser.set_defaults(func=cmd_health)
+
+    # run
+    run_parser = subparsers.add_parser('run', help='Run an agent manually')
+    run_parser.add_argument('agent', nargs='?', help='Agent to run: engineer, tech-lead, discovery, product, auditor')
+    run_parser.set_defaults(func=cmd_run)
+
+    # status
+    status_parser = subparsers.add_parser('status', help='Show current status')
+    status_parser.set_defaults(func=cmd_status)
+
+    # logs
+    logs_parser = subparsers.add_parser('logs', help='View agent logs')
+    logs_parser.add_argument('agent', nargs='?', help='Agent logs to view')
+    logs_parser.add_argument('-f', '--follow', action='store_true', help='Follow log output')
+    logs_parser.add_argument('-n', '--lines', type=int, help='Number of lines to show')
+    logs_parser.set_defaults(func=cmd_logs)
+
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        return 0
+
+    return args.func(args)
+
+
+if __name__ == '__main__':
+    sys.exit(main())

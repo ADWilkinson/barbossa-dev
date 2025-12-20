@@ -2,48 +2,8 @@
   "owner": "your-github-username",
   "repositories": [
     {
-      "name": "my-saas-app",
-      "url": "git@github.com:your-github-username/my-saas-app.git",
-      "package_manager": "npm",
-      "env_file": ".env.local",
-      "description": "Example SaaS application - replace with your project description",
-      "tech_stack": {
-        "framework": "Next.js 14 (App Router)",
-        "language": "TypeScript",
-        "styling": "Tailwind CSS",
-        "testing": "Vitest, Playwright"
-      },
-      "architecture": {
-        "data_flow": "Describe your app's data flow here",
-        "key_dirs": [
-          "src/components/ - UI components",
-          "src/lib/ - Shared utilities",
-          "src/app/ - Next.js routes"
-        ]
-      },
-      "design_system": {
-        "aesthetic": "Modern minimal",
-        "brand_rules": [
-          "Use consistent spacing",
-          "Follow your brand colors"
-        ]
-      },
-      "improvement_opportunities": [
-        "Improve test coverage",
-        "Add loading states",
-        "Fix accessibility issues"
-      ],
-      "do_not_touch": [
-        "src/lib/auth.ts - Core auth logic",
-        "prisma/migrations/ - Database migrations"
-      ],
-      "example_good_prs": [
-        "Add unit tests for a component",
-        "Improve mobile responsiveness",
-        "Add error handling to API routes"
-      ]
+      "name": "my-app",
+      "url": "git@github.com:your-github-username/my-app.git"
     }
-  ],
-  "schedule": "every_2_hours",
-  "version": "3.0.0"
+  ]
 }

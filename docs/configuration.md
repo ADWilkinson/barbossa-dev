@@ -2,119 +2,103 @@
 
 Complete reference for `config/repositories.json`.
 
-## Overview
+---
 
-Barbossa reads its configuration from `config/repositories.json`. This file defines:
-- Which repositories to work on
-- How each repository is structured
-- What areas to focus on or avoid
-- Agent behavior settings
+## Quick Start - Minimal Config
 
-## Basic Structure
+You only need **3 fields** to get started:
 
 ```json
 {
-  "owner": "github-username",
-  "repositories": [...],
-  "schedule": "every_2_hours",
-  "version": "3.0.0"
+  "owner": "your-github-username",
+  "repositories": [
+    {
+      "name": "my-app",
+      "url": "git@github.com:your-github-username/my-app.git"
+    }
+  ]
 }
 ```
 
-## Top-Level Fields
+That's it! Barbossa will figure out the rest.
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `owner` | Yes | Your GitHub username or organization |
-| `repositories` | Yes | Array of repository configurations |
-| `schedule` | No | Default schedule (default: `every_2_hours`) |
-| `version` | No | Config version for compatibility |
+---
 
-## Repository Configuration
+## Configuration Tiers
 
-Each repository in the `repositories` array can have:
+### Tier 1: Minimal (Required)
+
+```json
+{
+  "owner": "your-github-username",
+  "repositories": [
+    {
+      "name": "my-app",
+      "url": "git@github.com:your-github-username/my-app.git"
+    }
+  ]
+}
+```
+
+### Tier 2: Recommended (Better Results)
+
+```json
+{
+  "owner": "your-github-username",
+  "repositories": [
+    {
+      "name": "my-app",
+      "url": "git@github.com:your-github-username/my-app.git",
+      "package_manager": "pnpm",
+      "description": "My SaaS application for X",
+      "do_not_touch": ["src/lib/auth.ts", "prisma/migrations/"],
+      "focus_areas": ["Improve test coverage", "Add loading states"]
+    }
+  ]
+}
+```
+
+### Tier 3: Full Control
+
+See `config/repositories.advanced.json.example` for all options.
+
+---
+
+## Field Reference
 
 ### Required Fields
 
-```json
-{
-  "name": "my-app",
-  "url": "git@github.com:username/my-app.git"
-}
-```
+| Field | Description |
+|-------|-------------|
+| `owner` | Your GitHub username or organization |
+| `repositories` | Array of repository configurations |
+| `repositories[].name` | Repository name |
+| `repositories[].url` | Git clone URL (SSH or HTTPS) |
+
+### Recommended Fields
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `package_manager` | `npm` | Package manager: `npm`, `yarn`, `pnpm`, `bun` |
+| `description` | - | Brief project description for context |
+| `do_not_touch` | `[]` | Files/directories agents should never modify |
+| `focus_areas` | `[]` | What improvements to prioritize |
+
+### Advanced Fields
 
 | Field | Description |
 |-------|-------------|
-| `name` | Repository name (used for identification) |
-| `url` | Git clone URL (SSH or HTTPS) |
+| `env_file` | Environment file name (default: `.env`) |
+| `tech_stack` | Object describing framework, language, styling |
+| `architecture` | Object with `data_flow` and `key_dirs` |
+| `design_system` | Object with `aesthetic` and `brand_rules` |
+| `example_good_prs` | Examples of desired PR types |
 
-### Package Manager
+---
 
-```json
-{
-  "package_manager": "npm",
-  "env_file": ".env.local"
-}
-```
+## Protected Files (do_not_touch)
 
-| Field | Options | Description |
-|-------|---------|-------------|
-| `package_manager` | `npm`, `yarn`, `pnpm`, `bun` | Package manager to use |
-| `env_file` | String | Environment file name (default: `.env`) |
-
-### Project Description
-
-```json
-{
-  "description": "SaaS application for project management",
-  "tech_stack": {
-    "framework": "Next.js 14 (App Router)",
-    "language": "TypeScript",
-    "styling": "Tailwind CSS",
-    "database": "Prisma + PostgreSQL",
-    "testing": "Vitest + Playwright"
-  }
-}
-```
-
-The `description` and `tech_stack` help agents understand your project context.
-
-### Architecture
-
-```json
-{
-  "architecture": {
-    "data_flow": "API routes → Services → Database",
-    "key_dirs": [
-      "src/components/ - UI components",
-      "src/lib/ - Shared utilities",
-      "src/app/ - Next.js routes"
-    ]
-  }
-}
-```
-
-Helps agents navigate your codebase effectively.
-
-### Design System
-
-```json
-{
-  "design_system": {
-    "aesthetic": "Modern minimal with subtle shadows",
-    "component_library": "shadcn/ui",
-    "rules": [
-      "Use shadcn/ui components where possible",
-      "No inline styles - use Tailwind classes",
-      "Consistent spacing: p-4 for cards, gap-4 for layouts"
-    ]
-  }
-}
-```
-
-Ensures agents follow your design patterns.
-
-### Protected Areas
+**Critical for safety.** Files listed here will never be modified:
 
 ```json
 {
@@ -127,13 +111,17 @@ Ensures agents follow your design patterns.
 }
 ```
 
-Files or directories agents should never modify. Critical for:
+Use this for:
 - Authentication logic
 - Payment processing
 - Database migrations
 - Sensitive configuration
 
-### Focus Areas
+---
+
+## Focus Areas
+
+Guide what improvements agents should prioritize:
 
 ```json
 {
@@ -146,83 +134,137 @@ Files or directories agents should never modify. Critical for:
 }
 ```
 
-Guides what improvements agents should prioritize.
+---
 
-### Example PRs
+## Tech Stack
+
+Help agents understand your project:
 
 ```json
 {
-  "example_good_prs": [
-    "Add unit tests for a component",
-    "Improve mobile responsiveness",
-    "Add error handling to API routes"
-  ]
+  "tech_stack": {
+    "framework": "Next.js 14 (App Router)",
+    "language": "TypeScript",
+    "styling": "Tailwind CSS",
+    "database": "Prisma + PostgreSQL",
+    "testing": "Vitest + Playwright"
+  }
 }
 ```
 
-Shows agents what kind of PRs you want.
+---
 
-## Complete Example
+## Design System
+
+Enforce design consistency:
+
+```json
+{
+  "design_system": {
+    "aesthetic": "Modern minimal with subtle shadows",
+    "brand_rules": [
+      "Use shadcn/ui components",
+      "No inline styles",
+      "Consistent spacing with Tailwind"
+    ]
+  }
+}
+```
+
+For strict enforcement:
+
+```json
+{
+  "design_system": {
+    "brand_rules": [
+      "NEVER use border-radius (square corners only)",
+      "ONLY use colors from tokens/colors.css",
+      "ALL buttons must use Button component"
+    ]
+  }
+}
+```
+
+---
+
+## Architecture
+
+Help agents navigate your codebase:
+
+```json
+{
+  "architecture": {
+    "data_flow": "Client -> Server Actions -> Prisma -> PostgreSQL",
+    "key_dirs": [
+      "src/app/ - Next.js routes",
+      "src/components/ - React components",
+      "src/lib/ - Shared utilities"
+    ]
+  }
+}
+```
+
+---
+
+## Multiple Repositories
+
+Configure multiple repos:
 
 ```json
 {
   "owner": "your-username",
   "repositories": [
-    {
-      "name": "my-saas-app",
-      "url": "git@github.com:your-username/my-saas-app.git",
-      "package_manager": "npm",
-      "env_file": ".env.local",
-      "description": "SaaS application for project management with team collaboration features",
-      "tech_stack": {
-        "framework": "Next.js 14 (App Router)",
-        "language": "TypeScript",
-        "styling": "Tailwind CSS",
-        "database": "Prisma + PostgreSQL",
-        "testing": "Vitest + Playwright"
-      },
-      "architecture": {
-        "data_flow": "Client → API Routes → Services → Database",
-        "key_dirs": [
-          "src/components/ - React components",
-          "src/lib/ - Shared utilities and services",
-          "src/app/ - Next.js App Router pages",
-          "src/app/api/ - API routes"
-        ]
-      },
-      "design_system": {
-        "aesthetic": "Modern minimal with subtle shadows",
-        "component_library": "shadcn/ui",
-        "rules": [
-          "Use shadcn/ui components",
-          "No inline styles",
-          "Consistent spacing with Tailwind"
-        ]
-      },
-      "do_not_touch": [
-        "src/lib/auth.ts",
-        "src/lib/stripe.ts",
-        "prisma/migrations/",
-        ".env*",
-        "package-lock.json"
-      ],
-      "focus_areas": [
-        "Improve test coverage",
-        "Add loading states to async operations",
-        "Fix accessibility issues",
-        "Remove console.log statements"
-      ],
-      "example_good_prs": [
-        "Add unit tests for UserProfile component",
-        "Add loading skeleton to dashboard",
-        "Improve mobile responsiveness of sidebar"
-      ]
-    }
-  ],
-  "schedule": "every_2_hours",
-  "version": "3.0.0"
+    { "name": "frontend", "url": "git@github.com:you/frontend.git" },
+    { "name": "backend", "url": "git@github.com:you/backend.git" },
+    { "name": "mobile", "url": "git@github.com:you/mobile.git" }
+  ]
 }
 ```
+
+Barbossa works on each in sequence.
+
+---
+
+## Agent Settings
+
+Control agent behavior:
+
+```json
+{
+  "settings": {
+    "max_open_prs": 5,
+
+    "engineer": {
+      "enabled": true
+    },
+
+    "tech_lead": {
+      "enabled": true,
+      "auto_merge": false,
+      "min_lines_for_tests": 50,
+      "max_files_per_pr": 15
+    },
+
+    "discovery": {
+      "enabled": true,
+      "max_backlog_issues": 20
+    },
+
+    "product_manager": {
+      "enabled": false
+    },
+
+    "auditor": {
+      "enabled": true,
+      "analysis_days": 7
+    }
+  }
+}
+```
+
+Disable agents you don't need.
+
+---
 
 ## Environment Variables
 
@@ -233,59 +275,18 @@ Set in `.env`:
 | `GITHUB_TOKEN` | Yes | GitHub Personal Access Token |
 | `TZ` | No | Timezone (default: `UTC`) |
 
-## JSON Schema
+---
 
-A JSON Schema is available at `config/repositories.schema.json` for validation and IDE autocomplete.
+## Example Files
+
+- `config/repositories.json.example` - Minimal config
+- `config/repositories.advanced.json.example` - Full config with all options
+
+---
 
 ## Tips
 
-### Multiple Repositories
-
-You can configure multiple repositories:
-
-```json
-{
-  "owner": "your-username",
-  "repositories": [
-    { "name": "frontend", "url": "..." },
-    { "name": "backend", "url": "..." },
-    { "name": "mobile", "url": "..." }
-  ]
-}
-```
-
-Barbossa will work on each in sequence.
-
-### Monorepo Support
-
-For monorepos, configure the root and specify key directories:
-
-```json
-{
-  "name": "monorepo",
-  "url": "git@github.com:org/monorepo.git",
-  "architecture": {
-    "key_dirs": [
-      "packages/web/ - Web application",
-      "packages/api/ - API server",
-      "packages/shared/ - Shared utilities"
-    ]
-  }
-}
-```
-
-### Strict Design Enforcement
-
-For strict design systems, be explicit:
-
-```json
-{
-  "design_system": {
-    "rules": [
-      "NEVER use border-radius (square corners only)",
-      "ONLY use colors from tokens/colors.css",
-      "ALL buttons must use Button component from ui/"
-    ]
-  }
-}
-```
+1. **Start minimal** - Add fields only as needed
+2. **Protect critical files** - Always set `do_not_touch`
+3. **Be specific with focus areas** - Vague guidance = vague PRs
+4. **Use SSH URLs for private repos** - HTTPS may have auth issues

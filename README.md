@@ -27,15 +27,165 @@ You review the PRs, merge the good ones, and your codebase improves continuously
 
 ---
 
+## Quick Start (5 minutes)
+
+### Prerequisites
+
+- Docker
+- Claude Max subscription
+- GitHub account
+
+### 1. Clone and Configure
+
+```bash
+git clone https://github.com/ADWilkinson/barbossa.git
+cd barbossa
+
+# Create minimal config (just 3 fields!)
+cat > config/repositories.json << 'EOF'
+{
+  "owner": "your-github-username",
+  "repositories": [
+    {
+      "name": "my-app",
+      "url": "git@github.com:your-github-username/my-app.git"
+    }
+  ]
+}
+EOF
+```
+
+### 2. Set Up Authentication
+
+```bash
+# GitHub token
+echo "GITHUB_TOKEN=ghp_your_token_here" > .env
+
+# Claude CLI (on your host machine)
+claude login
+```
+
+### 3. Start Barbossa
+
+```bash
+docker compose up -d
+```
+
+### 4. Verify It's Working
+
+```bash
+# Check health
+docker exec barbossa barbossa health
+
+# Run engineer manually (don't wait 2 hours)
+docker exec barbossa barbossa run engineer
+
+# Watch logs
+docker compose logs -f
+```
+
+Your first PR should appear within minutes!
+
+---
+
 ## The Five Agents
 
 | Agent | Schedule | Purpose |
 |-------|----------|---------|
-| **Product Manager** | Daily | Analyzes your product, suggests valuable features |
+| **Product Manager** | 3x daily | Analyzes your product, suggests valuable features |
 | **Discovery** | 4x daily | Finds TODOs, missing tests, accessibility gaps |
 | **Engineer** | Every 2 hours | Implements issues, creates PRs |
 | **Tech Lead** | Every 2 hours | Reviews PRs with strict criteria, merges or rejects |
 | **Auditor** | Daily | Monitors health, identifies patterns, suggests improvements |
+
+---
+
+## Configuration
+
+### Minimal (just get it running)
+
+```json
+{
+  "owner": "your-github-username",
+  "repositories": [
+    {
+      "name": "my-app",
+      "url": "git@github.com:your-github-username/my-app.git"
+    }
+  ]
+}
+```
+
+### With Options
+
+```json
+{
+  "owner": "your-github-username",
+  "repositories": [
+    {
+      "name": "my-app",
+      "url": "git@github.com:your-github-username/my-app.git",
+      "package_manager": "pnpm",
+      "do_not_touch": ["src/lib/auth.ts", "prisma/migrations/"],
+      "focus_areas": ["Improve test coverage", "Add loading states"]
+    }
+  ]
+}
+```
+
+See [config/repositories.advanced.json.example](config/repositories.advanced.json.example) for all options.
+
+---
+
+## CLI Commands
+
+Barbossa includes a CLI for easy management:
+
+```bash
+# Inside Docker
+docker exec barbossa barbossa health     # Check system status
+docker exec barbossa barbossa run engineer   # Run engineer now
+docker exec barbossa barbossa status     # View recent activity
+docker exec barbossa barbossa logs       # View logs
+
+# Or locally (if installed)
+barbossa init      # Interactive setup wizard
+barbossa health    # Check everything works
+```
+
+---
+
+## Docker Commands
+
+```bash
+# Start
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Restart
+docker compose restart
+
+# Stop
+docker compose down
+
+# Rebuild after changes
+docker compose build && docker compose up -d
+```
+
+---
+
+## Requirements
+
+| Requirement | Details |
+|-------------|---------|
+| **Claude Max** | $100/month to Anthropic - provides the AI |
+| **GitHub Token** | Personal access token with `repo` scope |
+| **Docker** | To run the container |
+| **SSH Keys** | For private repo access (optional for public repos) |
+
+Barbossa uses Claude CLI with your Max subscription. You pay Anthropic directly - Barbossa is free and open source.
 
 ---
 
@@ -59,81 +209,41 @@ You review the PRs, merge the good ones, and your codebase improves continuously
 
 ---
 
-## Quick Start
+## Troubleshooting
 
-### Prerequisites
+### Validation Failed on Startup
 
-- Docker
-- Claude Max subscription (`claude login`)
-- GitHub Personal Access Token
-- SSH keys for your repos
-
-### Setup
+If Barbossa shows validation errors:
 
 ```bash
-# Clone
-git clone https://github.com/ADWilkinson/barbossa.git
-cd barbossa
+# Check what's wrong
+docker exec barbossa barbossa health
 
-# Configure your repositories
-cp config/repositories.json.example config/repositories.json
-# Edit config/repositories.json with your repos
+# Fix the issues, then restart
+docker compose restart
+```
 
-# Set environment
-cp .env.example .env
-# Add your GITHUB_TOKEN to .env
+### No PRs Being Created
 
-# Authenticate Claude CLI
+```bash
+# Check if there are issues in backlog
+docker exec barbossa gh issue list --label backlog
+
+# Run engineer manually and watch output
+docker exec barbossa barbossa run engineer
+```
+
+### Claude Authentication Issues
+
+```bash
+# Re-authenticate on your host machine
 claude login
 
-# Start Barbossa
-docker compose up -d
-
-# Watch logs
-docker compose logs -f
+# Restart container to pick up new credentials
+docker compose restart
 ```
 
-Your first PR should appear within 2 hours.
-
----
-
-## Configuration
-
-Edit `config/repositories.json`:
-
-```json
-{
-  "owner": "your-github-username",
-  "repositories": [
-    {
-      "name": "my-app",
-      "url": "git@github.com:your-username/my-app.git",
-      "package_manager": "npm",
-      "description": "My SaaS application",
-      "tech_stack": {
-        "framework": "Next.js 14",
-        "language": "TypeScript",
-        "styling": "Tailwind CSS"
-      },
-      "design_system": {
-        "aesthetic": "Modern minimal",
-        "rules": ["Use shadcn/ui", "No inline styles"]
-      },
-      "do_not_touch": [
-        "src/lib/auth.ts",
-        "prisma/migrations/"
-      ],
-      "focus_areas": [
-        "Improve test coverage",
-        "Add loading states",
-        "Fix accessibility issues"
-      ]
-    }
-  ]
-}
-```
-
-See [Configuration Reference](docs/configuration.md) for all options.
+See [docs/troubleshooting.md](docs/troubleshooting.md) for more.
 
 ---
 
@@ -147,61 +257,22 @@ See [Configuration Reference](docs/configuration.md) for all options.
 
 ---
 
-## Commands
-
-```bash
-# Start
-docker compose up -d
-
-# View logs
-docker compose logs -f
-
-# Run engineer manually
-docker exec barbossa python3 barbossa_engineer.py
-
-# Run tech lead manually
-docker exec barbossa python3 barbossa_tech_lead.py
-
-# Check cron schedule
-docker exec barbossa crontab -l
-
-# Restart
-docker compose restart
-
-# Stop
-docker compose down
-```
-
----
-
-## Requirements
-
-| Requirement | Details |
-|-------------|---------|
-| **Claude Max** | $100/month to Anthropic - provides the AI |
-| **GitHub Token** | Personal access token with `repo` scope |
-| **Docker** | To run the container |
-| **SSH Keys** | For private repo access |
-
-Barbossa uses Claude CLI with your Max subscription. You pay Anthropic directly - Barbossa is free and open source.
-
----
-
 ## Project Structure
 
 ```
 barbossa/
+├── barbossa                  # CLI tool
 ├── barbossa_engineer.py      # Implements PRs
 ├── barbossa_tech_lead.py     # Reviews PRs
 ├── barbossa_discovery.py     # Finds tech debt
 ├── barbossa_product.py       # Discovers features
 ├── barbossa_auditor.py       # Monitors health
+├── validate.py               # Startup validation
 ├── config/
-│   ├── repositories.json.example
-│   └── repositories.schema.json
+│   ├── repositories.json.example          # Minimal config
+│   └── repositories.advanced.json.example # Full config
 ├── docker-compose.yml
 ├── Dockerfile
-├── crontab
 └── entrypoint.sh
 ```
 
@@ -210,13 +281,6 @@ barbossa/
 ## Contributing
 
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-Areas where help is appreciated:
-- Bug fixes
-- Documentation improvements
-- New integrations (Slack, Linear, GitLab)
-- Performance optimizations
-- Test coverage
 
 ---
 

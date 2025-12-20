@@ -34,8 +34,15 @@ COPY barbossa_tech_lead.py .
 COPY barbossa_discovery.py .
 COPY barbossa_product.py .
 COPY barbossa_auditor.py .
+
+# Copy CLI and utilities
+COPY barbossa .
+COPY validate.py .
 COPY run.sh .
 COPY config/ config/
+
+# Make CLI executable and add to PATH
+RUN chmod +x barbossa && ln -s /app/barbossa /usr/local/bin/barbossa
 
 # Create directories with proper ownership
 RUN mkdir -p logs changelogs projects \
