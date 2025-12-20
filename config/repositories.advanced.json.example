@@ -57,13 +57,21 @@
   ],
 
   "settings": {
+    "schedule": {
+      "engineer": "every_2_hours",
+      "tech_lead": "35 0,2,4,6,8,10,12,14,16,18,20,22 * * *",
+      "discovery": "4x_daily",
+      "product_manager": "3x_daily",
+      "auditor": "30 6 * * *"
+    },
+
     "engineer": {
       "enabled": true
     },
 
     "tech_lead": {
       "enabled": true,
-      "auto_merge": false,
+      "auto_merge": true,
       "min_lines_for_tests": 50,
       "min_lines_for_ui_tests": 30,
       "max_files_per_pr": 15,

@@ -67,8 +67,13 @@ fi
 echo ""
 
 # ========================================
-# START CRON
+# GENERATE CRONTAB FROM CONFIG
 # ========================================
+
+echo "Generating schedule from config..."
+python3 /app/generate_crontab.py > /tmp/barbossa-crontab
+crontab /tmp/barbossa-crontab
+rm /tmp/barbossa-crontab
 
 # Export environment for cron jobs
 printenv | grep -E '^(ANTHROPIC|GITHUB|PATH|HOME|TZ)' >> /etc/environment 2>/dev/null || true
@@ -79,7 +84,7 @@ cron
 
 echo ""
 echo "Active schedule:"
-crontab -l 2>/dev/null | grep -v "^#" | grep -v "^$" | head -5
+crontab -l 2>/dev/null | grep -v "^#" | grep -v "^$" | grep -v "^SHELL" | grep -v "^PATH" | head -6
 echo ""
 
 echo "========================================"

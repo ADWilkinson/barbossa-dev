@@ -36,7 +36,7 @@ class BarbossaTechLead:
     DEFAULT_MIN_LINES_FOR_TESTS = 50
     DEFAULT_MIN_LINES_FOR_UI_TESTS = 30
     DEFAULT_MAX_FILES_PER_PR = 15
-    DEFAULT_AUTO_MERGE = False
+    DEFAULT_AUTO_MERGE = True
     DEFAULT_STALE_DAYS = 5
 
     def __init__(self, work_dir: Optional[Path] = None):

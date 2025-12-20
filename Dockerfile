@@ -38,6 +38,7 @@ COPY barbossa_auditor.py .
 # Copy CLI and utilities
 COPY barbossa .
 COPY validate.py .
+COPY generate_crontab.py .
 COPY run.sh .
 COPY config/ config/
 
@@ -48,12 +49,9 @@ RUN chmod +x barbossa && ln -s /app/barbossa /usr/local/bin/barbossa
 RUN mkdir -p logs changelogs projects \
     && chown -R barbossa:barbossa /app
 
-# Copy entrypoint and cron
+# Copy entrypoint (crontab is generated at runtime from config)
 COPY entrypoint.sh /entrypoint.sh
-COPY crontab /etc/cron.d/barbossa-cron
-RUN chmod +x /entrypoint.sh run.sh \
-    && chmod 0644 /etc/cron.d/barbossa-cron \
-    && crontab /etc/cron.d/barbossa-cron
+RUN chmod +x /entrypoint.sh run.sh
 
 # Create home directory for barbossa user with proper structure
 RUN mkdir -p /home/barbossa/.config/gh \
