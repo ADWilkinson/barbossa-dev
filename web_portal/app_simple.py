@@ -18,8 +18,14 @@ from pathlib import Path
 app = Flask(__name__)
 
 # Basic Auth Configuration (for admin functions only)
-AUTH_USERNAME = os.environ.get('BARBOSSA_USER', 'barbossa')
-AUTH_PASSWORD = os.environ.get('BARBOSSA_PASS', 'Galleon6242')
+# Set BARBOSSA_USER and BARBOSSA_PASS environment variables
+AUTH_USERNAME = os.environ.get('BARBOSSA_USER', 'admin')
+AUTH_PASSWORD = os.environ.get('BARBOSSA_PASS')
+
+if not AUTH_PASSWORD:
+    print("WARNING: BARBOSSA_PASS not set. Please set this environment variable for security.")
+    print("Example: export BARBOSSA_PASS='your-secure-password'")
+    AUTH_PASSWORD = 'changeme'  # Fallback for development only
 
 def check_auth(username, password):
     return username == AUTH_USERNAME and password == AUTH_PASSWORD
@@ -1497,7 +1503,7 @@ def dashboard():
     running_sessions = get_running_sessions()
     stats = count_stats(sessions)
 
-    owner = config.get('owner', 'ADWilkinson')
+    owner = config.get('owner', 'your-github-username')
 
     repositories = config.get('repositories', [])
     total_open_prs = 0
@@ -1630,7 +1636,7 @@ def api_trigger(repo_name):
 def api_prs():
     """API endpoint for all open PRs (public)"""
     config = load_config()
-    owner = config.get('owner', 'ADWilkinson')
+    owner = config.get('owner', 'your-github-username')
     all_prs = {}
 
     for repo in config.get('repositories', []):
@@ -1721,7 +1727,7 @@ def api_pending_feedback():
 def api_metrics():
     """API endpoint for system metrics and PR analytics"""
     config = load_config()
-    owner = config.get('owner', 'ADWilkinson')
+    owner = config.get('owner', 'your-github-username')
     decisions = load_tech_lead_decisions()
     sessions = load_sessions()
 

@@ -47,7 +47,9 @@ class BarbossaDiscovery:
 
         self.config = self._load_config()
         self.repositories = self.config.get('repositories', [])
-        self.owner = self.config.get('owner', 'ADWilkinson')
+        self.owner = self.config.get('owner')
+        if not self.owner:
+            raise ValueError("'owner' is required in config/repositories.json")
 
         self.logger.info("=" * 60)
         self.logger.info(f"BARBOSSA DISCOVERY v{self.VERSION}")

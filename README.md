@@ -50,7 +50,7 @@ The schedule respects dependency chains:
 
 ```bash
 # Clone and configure
-git clone https://github.com/ADWilkinson/barbossa-engineer.git
+git clone https://github.com/your-username/barbossa.git
 cd barbossa-engineer
 cp .env.example .env
 # Edit .env with your ANTHROPIC_API_KEY
@@ -66,7 +66,7 @@ docker compose logs -f
 
 # Access web portal
 open http://localhost:8443
-# Auth: barbossa / Galleon6242
+# Auth: Use credentials from BARBOSSA_USER/BARBOSSA_PASS env vars
 ```
 
 ## Configuration
@@ -75,8 +75,9 @@ open http://localhost:8443
 
 | Variable | Description |
 |----------|-------------|
-| `ANTHROPIC_API_KEY` | Your Anthropic API key |
-| `GITHUB_TOKEN` | GitHub personal access token (via gh auth) |
+| `GITHUB_TOKEN` | GitHub personal access token |
+| `BARBOSSA_USER` | Web portal username (default: admin) |
+| `BARBOSSA_PASS` | Web portal password (required) |
 
 ### Repository Configuration
 
@@ -212,7 +213,7 @@ docker exec barbossa crontab -l
 ls -lt logs/ | head
 
 # Test web portal
-curl -u barbossa:Galleon6242 http://localhost:8443/api/status
+curl -u $BARBOSSA_USER:$BARBOSSA_PASS http://localhost:8443/api/status
 
 # Restart
 docker compose restart

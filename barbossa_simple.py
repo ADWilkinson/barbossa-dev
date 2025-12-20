@@ -53,6 +53,9 @@ class Barbossa:
         # Load config and PR history
         self.config = self._load_config()
         self.repositories = self.config.get('repositories', [])
+        self.owner = self.config.get('owner')
+        if not self.owner:
+            raise ValueError("'owner' is required in config/repositories.json")
         self.pr_history = self._load_pr_history()
 
         self.logger.info("=" * 60)
@@ -107,7 +110,7 @@ class Barbossa:
 
     def _get_recent_closed_prs(self, repo: Dict) -> List[str]:
         """Get titles of recently closed PRs to avoid repeating failed attempts"""
-        owner = self.config.get('owner', 'ADWilkinson')
+        owner = self.owner
         repo_name = repo['name']
 
         try:
@@ -200,7 +203,7 @@ class Barbossa:
             dnt_section = "  (no restrictions)"
 
         # Get owner for gh commands
-        owner = self.config.get('owner', 'ADWilkinson')
+        owner = self.owner
 
         return f"""You are Barbossa, an autonomous personal development assistant.
 
@@ -615,7 +618,7 @@ See: {output_file}
 
     def _get_open_prs(self, repo: Dict) -> List[Dict]:
         """Get open PRs for a repository with full context"""
-        owner = self.config.get('owner', 'ADWilkinson')
+        owner = self.owner
         repo_name = repo['name']
 
         try:
@@ -638,7 +641,7 @@ See: {output_file}
 
     def _get_pr_comments(self, repo_name: str, pr_number: int) -> List[Dict]:
         """Get all comments on a PR - this is the conversation history"""
-        owner = self.config.get('owner', 'ADWilkinson')
+        owner = self.owner
         try:
             result = subprocess.run(
                 f"gh pr view {pr_number} --repo {owner}/{repo_name} --json comments",
@@ -668,7 +671,7 @@ See: {output_file}
         prs = self._get_open_prs(repo)
         needs_attention = []
         repo_name = repo['name']
-        owner = self.config.get('owner', 'ADWilkinson')
+        owner = self.owner
 
         for pr in prs:
             pr_number = pr.get('number')
@@ -758,7 +761,7 @@ See: {output_file}
 
     def _create_review_prompt(self, repo: Dict, pr: Dict, session_id: str) -> str:
         """Create a prompt for reviewing and fixing an existing PR - includes full comment context"""
-        owner = self.config.get('owner', 'ADWilkinson')
+        owner = self.owner
         repo_name = repo['name']
         pr_number = pr['number']
         pr_branch = pr['headRefName']

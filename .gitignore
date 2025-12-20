@@ -10,8 +10,19 @@ ENV/
 .env
 
 # Logs
-logs/*.log
+logs/
 *.log
+
+# Runtime data files (contain personal PR history)
+sessions.json
+tech_lead_decisions.json
+audit_history.json
+system_insights.json
+pending_feedback.json
+pr_history.json
+
+# Local config (user-specific)
+barbossa.json
 
 # Security
 security/audit.log
