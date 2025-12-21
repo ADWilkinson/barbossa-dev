@@ -7,43 +7,16 @@ echo "  Barbossa - Autonomous AI Dev Team"
 echo "========================================"
 echo ""
 
-# Git config is mounted from host - copy to barbossa user
-if [ -f /root/.gitconfig ]; then
-    cp /root/.gitconfig /home/barbossa/.gitconfig 2>/dev/null || true
-    chown barbossa:barbossa /home/barbossa/.gitconfig 2>/dev/null || true
-fi
-
-# Copy SSH keys to barbossa user
-if [ -d /root/.ssh ]; then
-    cp -r /root/.ssh/* /home/barbossa/.ssh/ 2>/dev/null || true
-    chown -R barbossa:barbossa /home/barbossa/.ssh 2>/dev/null || true
-    chmod 700 /home/barbossa/.ssh 2>/dev/null || true
-    chmod 600 /home/barbossa/.ssh/* 2>/dev/null || true
-fi
-
-# Symlink GitHub CLI auth to barbossa user (so host changes are reflected live)
-if [ -d /root/.config/gh ]; then
-    rm -rf /home/barbossa/.config/gh 2>/dev/null || true
-    ln -sf /root/.config/gh /home/barbossa/.config/gh
-fi
-
-# Symlink Claude config to barbossa user (so host changes are reflected live)
-if [ -d /root/.claude ]; then
-    rm -rf /home/barbossa/.claude 2>/dev/null || true
-    ln -sf /root/.claude /home/barbossa/.claude
-fi
-
-# Ensure app directory is writable by barbossa
-chown -R barbossa:barbossa /app 2>/dev/null || true
+# Ensure app directory exists and is writable
+chown -R root:root /app 2>/dev/null || true
 
 # Authenticate GitHub CLI if token provided
 if [ -n "$GITHUB_TOKEN" ]; then
-    su - barbossa -c "echo '$GITHUB_TOKEN' | gh auth login --with-token 2>/dev/null" || true
+    echo "$GITHUB_TOKEN" | gh auth login --with-token 2>/dev/null || true
 fi
 
 # Configure git to use gh CLI for HTTPS authentication
-# This allows cloning private repos without SSH keys
-su - barbossa -c "gh auth setup-git 2>/dev/null" || true
+gh auth setup-git 2>/dev/null || true
 
 # ========================================
 # VALIDATE CONFIGURATION

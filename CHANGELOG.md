@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.8.1] - 2024-12-21
+
+### Fixed
+- **Permission errors**: Removed unnecessary `barbossa` user inside container. All processes now run as root, eliminating permission denied errors for `gh` and `claude` CLI tools.
+
+### Changed
+- Simplified container architecture - no more user switching or symlink chains
+- Smaller Docker image (removed sudo package)
+
 ## [5.8.0] - 2024-12-20
 
 ### Changed

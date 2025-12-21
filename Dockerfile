@@ -7,7 +7,6 @@ RUN apt-get update && apt-get install -y \
     cron \
     nodejs \
     npm \
-    sudo \
     && rm -rf /var/lib/apt/lists/*
 
 # Install GitHub CLI
@@ -20,10 +19,6 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
 
 # Install Claude CLI and package managers globally
 RUN npm install -g @anthropic-ai/claude-code pnpm yarn
-
-# Create non-root user for Claude CLI
-RUN useradd -m -s /bin/bash -u 1000 barbossa \
-    && echo "barbossa ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Set working directory
 WORKDIR /app
@@ -50,22 +45,14 @@ COPY config/ config/
 # Make CLI executable and add to PATH
 RUN chmod +x barbossa && ln -s /app/barbossa /usr/local/bin/barbossa
 
-# Create directories with proper ownership
-RUN mkdir -p logs changelogs projects \
-    && chown -R barbossa:barbossa /app
+# Create directories
+RUN mkdir -p logs changelogs projects
 
 # Copy entrypoint (crontab is generated at runtime from config)
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh run.sh
 
-# Create home directory for barbossa user with proper structure
-RUN mkdir -p /home/barbossa/.config/gh \
-    && mkdir -p /home/barbossa/.claude \
-    && mkdir -p /home/barbossa/.ssh \
-    && chown -R barbossa:barbossa /home/barbossa
-
 # Environment variables
 ENV PYTHONUNBUFFERED=1
-ENV HOME=/home/barbossa
 
 ENTRYPOINT ["/entrypoint.sh"]
