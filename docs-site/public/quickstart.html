@@ -231,19 +231,18 @@
 gh auth login
 claude login
 
-# 2. Clone and configure
-git clone https://github.com/ADWilkinson/barbossa-dev.git
-cd barbossa-dev
-cp config/repositories.json.example config/repositories.json
+# 2. Run install script
+curl -fsSL https://raw.githubusercontent.com/ADWilkinson/barbossa-dev/main/install.sh | bash
 
-# 3. Edit config with your repository
-nano config/repositories.json
+# 3. Start
+cd barbossa && docker compose up -d
 
-# 4. Start
-docker compose up -d
-
-# 5. Verify
+# 4. Verify
 docker exec barbossa barbossa health</code></pre>
+
+<p>The script prompts for your GitHub username and repository, then creates everything for you.</p>
+
+<p>To add more repositories later, edit <code>config/repositories.json</code>. See <a href="configuration.html">Configuration</a> for all options.</p>
 
 <strong>Tip:</strong> Use Claude to help configure! Give it <a href="https://github.com/ADWilkinson/barbossa-dev/blob/main/llms.txt">llms.txt</a> for context.
 
