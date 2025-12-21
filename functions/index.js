@@ -605,7 +605,7 @@ exports.getSystemPrompt = functions.https.onRequest((req, res) => {
 // VERSION CHECKING
 // ============================================================================
 
-const MINIMUM_VERSION = "5.2.0";
+const MINIMUM_VERSION = "1.0.0";
 const LATEST_VERSION = "1.0.0";
 
 /**
