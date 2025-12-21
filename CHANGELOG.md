@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [5.8.1] - 2024-12-21
+## [1.0.3] - 2024-12-21
 
 ### Fixed
 - **Permission errors**: Removed unnecessary `barbossa` user inside container. All processes now run as root, eliminating permission denied errors for `gh` and `claude` CLI tools.
@@ -16,38 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified container architecture - no more user switching or symlink chains
 - Smaller Docker image (removed sudo package)
 
-## [5.8.0] - 2024-12-20
+## [1.0.2] - 2024-12-21
 
 ### Changed
-- **Local prompts**: System prompts now loaded from local `prompts/` directory instead of Firebase Cloud Functions
+- Local prompts: System prompts now loaded from local `prompts/` directory instead of Firebase
 - Simplified `barbossa_firebase.py` to analytics-only (optional)
-- Removed network dependency for prompt fetching - agents work fully offline
-- Added `barbossa_prompts.py` for local prompt loading with caching
+- Agents work fully offline
 
-### Removed
-- Firebase Cloud Functions for prompt delivery
-- Version compatibility checking via Firebase
-- Network requirement at agent startup
-
-### Security
-- Eliminated prompt injection attack surface from cloud prompt delivery
-- Prompts are now version-controlled with the codebase
-- No external network calls required for core functionality
-
-### Added
-- `prompts/` directory with individual prompt files:
-  - `engineer.txt` - Engineer agent system prompt
-  - `tech_lead.txt` - Tech Lead agent system prompt
-  - `discovery.txt` - Discovery agent system prompt
-  - `product_manager.txt` - Product Manager agent system prompt
-  - `auditor.txt` - Auditor agent system prompt
-
-## [5.7.0] - Previous
+## [1.0.1] - 2024-12-21
 
 ### Changed
-- Improved README with badges, visual architecture diagram, and clearer setup instructions
-- Enhanced llms.txt with comprehensive configuration documentation
-- Added CHANGELOG.md and SECURITY.md
+- Improved README and setup instructions
 
 ## [1.0.0] - 2024-12-16
 
