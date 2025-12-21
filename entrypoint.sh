@@ -21,18 +21,16 @@ if [ -d /root/.ssh ]; then
     chmod 600 /home/barbossa/.ssh/* 2>/dev/null || true
 fi
 
-# Copy GitHub CLI auth to barbossa user
+# Symlink GitHub CLI auth to barbossa user (so host changes are reflected live)
 if [ -d /root/.config/gh ]; then
-    cp -r /root/.config/gh/* /home/barbossa/.config/gh/ 2>/dev/null || true
-    chown -R barbossa:barbossa /home/barbossa/.config/gh 2>/dev/null || true
+    rm -rf /home/barbossa/.config/gh 2>/dev/null || true
+    ln -sf /root/.config/gh /home/barbossa/.config/gh
 fi
 
-# Copy Claude config to barbossa user
+# Symlink Claude config to barbossa user (so host changes are reflected live)
 if [ -d /root/.claude ]; then
-    shopt -s dotglob
-    cp -r /root/.claude/* /home/barbossa/.claude/ 2>/dev/null || true
-    shopt -u dotglob
-    chown -R barbossa:barbossa /home/barbossa/.claude 2>/dev/null || true
+    rm -rf /home/barbossa/.claude 2>/dev/null || true
+    ln -sf /root/.claude /home/barbossa/.claude
 fi
 
 # Ensure app directory is writable by barbossa

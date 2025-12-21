@@ -41,7 +41,7 @@ from barbossa_firebase import (
 class BarbossaDiscovery:
     """Autonomous discovery agent that creates GitHub Issues for the pipeline."""
 
-    VERSION = "1.0.0"
+    VERSION = "1.0.2"
     DEFAULT_BACKLOG_THRESHOLD = 20
 
     def __init__(self, work_dir: Optional[Path] = None):

@@ -40,7 +40,7 @@ class Barbossa:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "1.0.0"
+    VERSION = "1.0.2"
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths

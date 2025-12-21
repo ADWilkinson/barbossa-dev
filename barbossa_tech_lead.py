@@ -40,7 +40,7 @@ class BarbossaTechLead:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "1.0.0"
+    VERSION = "1.0.2"
     ROLE = "tech_lead"
 
     # Default review criteria (can be overridden in config)
