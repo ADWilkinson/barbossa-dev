@@ -197,16 +197,19 @@ def validate_ssh():
     ssh_dirs = [
         Path.home() / '.ssh',
         Path('/home/barbossa/.ssh'),
-        Path('/root/.ssh'),
     ]
 
     for ssh_dir in ssh_dirs:
-        if ssh_dir.exists():
-            keys = list(ssh_dir.glob('id_*'))
-            keys = [k for k in keys if not k.suffix == '.pub']
-            if keys:
-                ok(f"SSH keys found ({len(keys)} keys)")
-                return True
+        try:
+            if ssh_dir.exists():
+                keys = list(ssh_dir.glob('id_*'))
+                keys = [k for k in keys if not k.suffix == '.pub']
+                if keys:
+                    ok(f"SSH keys found ({len(keys)} keys)")
+                    return True
+        except PermissionError:
+            # Skip directories we can't read
+            continue
 
     warn("SSH URLs configured but no SSH keys found")
     print("  Either mount ~/.ssh or switch to HTTPS URLs:")
