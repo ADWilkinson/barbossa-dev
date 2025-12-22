@@ -11,10 +11,10 @@ services:
       - ./changelogs:/app/changelogs
       - ./projects:/app/projects
       # Git config for commits
-      - ~/.gitconfig:/root/.gitconfig:ro
+      - ~/.gitconfig:/home/barbossa/.gitconfig:ro
       # GitHub CLI auth (required)
-      - ~/.config/gh:/root/.config/gh:ro
+      - ~/.config/gh:/home/barbossa/.config/gh:ro
       # Claude config (writable for token refresh)
-      - ~/.claude:/root/.claude
+      - ~/.claude:/home/barbossa/.claude
     environment:
       - TZ=${TZ:-UTC}

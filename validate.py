@@ -113,9 +113,9 @@ def validate_claude():
     """Validate Claude CLI authentication."""
     # Check credentials file
     creds_paths = [
+        Path.home() / '.claude' / '.credentials.json',
         Path('/home/barbossa/.claude/.credentials.json'),
         Path('/root/.claude/.credentials.json'),
-        Path.home() / '.claude' / '.credentials.json',
     ]
 
     for creds_file in creds_paths:
@@ -195,6 +195,7 @@ def validate_ssh():
 
     # SSH URLs configured - check for keys
     ssh_dirs = [
+        Path.home() / '.ssh',
         Path('/home/barbossa/.ssh'),
         Path('/root/.ssh'),
     ]

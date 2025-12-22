@@ -7,9 +7,6 @@ echo "  Barbossa - Autonomous AI Dev Team"
 echo "========================================"
 echo ""
 
-# Ensure app directory exists and is writable
-chown -R root:root /app 2>/dev/null || true
-
 # Authenticate GitHub CLI if token provided
 if [ -n "$GITHUB_TOKEN" ]; then
     echo "$GITHUB_TOKEN" | gh auth login --with-token 2>/dev/null || true

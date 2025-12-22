@@ -659,7 +659,7 @@ _Senior Engineer: Please address the above feedback and push updates._"""
 
         self.logger.info(f"Invoking Claude for review (with {len(comments)} comments for context)...")
 
-        cmd = f"cat {prompt_file} | claude -p --model opus > {output_file} 2>&1"
+        cmd = f"cat {prompt_file} | claude --dangerously-skip-permissions -p --model opus > {output_file} 2>&1"
 
         try:
             result = subprocess.run(
