@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Barbossa Auditor v5.8 - Self-Improving System Audit Agent
+Barbossa Auditor v1.0.8 - Self-Improving System Audit Agent
 Runs daily at 06:30 to analyze logs, PR outcomes, and system health.
 Identifies patterns, issues, and opportunities for improvement.
+Enhanced with code bloat detection and architecture consistency checks.
 
 Part of the Barbossa Pipeline:
 - Product Manager (3x daily) → creates feature specs
@@ -42,7 +43,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "1.0.2"
+    VERSION = "1.0.8"
     ROLE = "auditor"
 
     def __init__(self, work_dir: Optional[Path] = None):
@@ -609,6 +610,177 @@ class BarbossaAuditor:
 
         return result
 
+    def _detect_code_bloat_patterns(self, repo_name: str, days: int = 7) -> Dict:
+        """Detect code bloat, duplication, and unnecessary complexity"""
+        result = {
+            'duplicate_utility_functions': 0,
+            'large_files': [],
+            'complex_files': [],
+            'bloat_score': 0,
+            'status': 'healthy'
+        }
+
+        try:
+            repo_path = Path.home() / 'projects' / repo_name
+            if not repo_path.exists():
+                for monorepo in ['zkp2p', 'davy-jones-intern']:
+                    alt_path = Path.home() / 'projects' / monorepo / repo_name
+                    if alt_path.exists():
+                        repo_path = alt_path
+                        break
+
+            if not repo_path.exists():
+                return result
+
+            # Find large files that might indicate bloat
+            src_patterns = ['src/**/*.ts', 'src/**/*.tsx', 'src/**/*.js', 'src/**/*.jsx']
+            large_file_threshold = 500  # lines
+
+            for pattern in src_patterns:
+                for file_path in repo_path.glob(pattern):
+                    if 'node_modules' in str(file_path) or '.test.' in str(file_path):
+                        continue
+
+                    try:
+                        lines = file_path.read_text().split('\n')
+                        line_count = len([l for l in lines if l.strip() and not l.strip().startswith('//')])
+
+                        if line_count > large_file_threshold:
+                            result['large_files'].append({
+                                'file': str(file_path.relative_to(repo_path)),
+                                'lines': line_count
+                            })
+                            result['bloat_score'] += 1
+
+                        # Check for high complexity (deeply nested code)
+                        max_indent = 0
+                        for line in lines:
+                            if line.strip():
+                                indent = len(line) - len(line.lstrip())
+                                max_indent = max(max_indent, indent // 2)
+
+                        if max_indent > 6:  # More than 6 levels of nesting
+                            result['complex_files'].append({
+                                'file': str(file_path.relative_to(repo_path)),
+                                'max_nesting': max_indent
+                            })
+                            result['bloat_score'] += 2
+
+                    except Exception as e:
+                        pass
+
+            # Check for duplicate utility patterns (simple heuristic)
+            utility_patterns = ['utils', 'helpers', 'lib', 'common']
+            utility_dirs = []
+            for pattern in utility_patterns:
+                utility_dirs.extend(list(repo_path.rglob(pattern)))
+
+            if len(utility_dirs) > 3:
+                result['duplicate_utility_functions'] = len(utility_dirs) - 3
+                result['bloat_score'] += len(utility_dirs) - 3
+
+            # Determine status
+            if result['bloat_score'] >= 10:
+                result['status'] = 'concerning'
+            elif result['bloat_score'] >= 5:
+                result['status'] = 'needs_attention'
+            else:
+                result['status'] = 'healthy'
+
+        except Exception as e:
+            self.logger.error(f"Error detecting code bloat for {repo_name}: {e}")
+            result['status'] = 'error'
+
+        return result
+
+    def _analyze_architecture_consistency(self, repo_name: str, days: int = 7) -> Dict:
+        """Analyze architecture consistency across the codebase"""
+        result = {
+            'has_consistent_structure': True,
+            'pattern_violations': [],
+            'missing_patterns': [],
+            'status': 'healthy'
+        }
+
+        try:
+            repo_path = Path.home() / 'projects' / repo_name
+            if not repo_path.exists():
+                for monorepo in ['zkp2p', 'davy-jones-intern']:
+                    alt_path = Path.home() / 'projects' / monorepo / repo_name
+                    if alt_path.exists():
+                        repo_path = alt_path
+                        break
+
+            if not repo_path.exists():
+                return result
+
+            # Check for common architectural patterns
+            expected_patterns = {
+                'src': 'Source directory',
+                'src/components': 'React components (for React apps)',
+                'src/pages': 'Page components (for Next.js/React Router)',
+                'src/services': 'Business logic/API services',
+                'src/utils': 'Utility functions',
+                'tests': 'Test directory',
+            }
+
+            # Detect if this is a React/Next.js app
+            is_react_app = (repo_path / 'package.json').exists()
+            if is_react_app:
+                try:
+                    pkg_json = json.loads((repo_path / 'package.json').read_text())
+                    deps = {**pkg_json.get('dependencies', {}), **pkg_json.get('devDependencies', {})}
+                    is_react_app = 'react' in deps or 'next' in deps
+                except:
+                    is_react_app = False
+
+            # Check for pattern consistency
+            if is_react_app:
+                # Check for mixed patterns (bad)
+                has_pages = (repo_path / 'src' / 'pages').exists() or (repo_path / 'pages').exists()
+                has_app_router = (repo_path / 'app').exists()  # Next.js app router
+
+                if has_pages and has_app_router:
+                    result['pattern_violations'].append('Mixed Next.js routing patterns (both pages/ and app/ exist)')
+
+                # Check for components organization
+                components_dir = repo_path / 'src' / 'components'
+                if components_dir.exists():
+                    # Count component files
+                    component_files = list(components_dir.rglob('*.tsx')) + list(components_dir.rglob('*.jsx'))
+                    if len(component_files) > 30:
+                        # Check if components are organized in subdirectories
+                        flat_components = [f for f in component_files if f.parent == components_dir]
+                        if len(flat_components) > 15:
+                            result['pattern_violations'].append(f'{len(flat_components)} components in flat structure - should organize into subdirectories')
+
+            # Check for missing common directories
+            src_dir = repo_path / 'src'
+            if src_dir.exists():
+                if not (src_dir / 'utils').exists() and not (repo_path / 'lib').exists():
+                    result['missing_patterns'].append('No utils/ or lib/ directory for shared utilities')
+
+                if is_react_app and not (src_dir / 'components').exists() and not (repo_path / 'components').exists():
+                    result['missing_patterns'].append('No components/ directory for React app')
+
+            # Determine status
+            violation_count = len(result['pattern_violations'])
+            missing_count = len(result['missing_patterns'])
+
+            if violation_count >= 3 or missing_count >= 3:
+                result['status'] = 'concerning'
+                result['has_consistent_structure'] = False
+            elif violation_count >= 1 or missing_count >= 2:
+                result['status'] = 'needs_attention'
+            else:
+                result['status'] = 'healthy'
+
+        except Exception as e:
+            self.logger.error(f"Error analyzing architecture for {repo_name}: {e}")
+            result['status'] = 'error'
+
+        return result
+
     def _assess_ui_changes(self, repo_name: str, days: int = 7) -> Dict:
         """Assess UI changes for frivolousness and proper testing"""
         result = {
@@ -913,6 +1085,73 @@ class BarbossaAuditor:
                         'severity': 'medium',
                         'repo': repo_name,
                         'message': f"{repo_name}: Some contract/API changes lack corresponding frontend integration"
+                    })
+
+                # Code bloat patterns (NEW)
+                bloat = qa.get('code_bloat', {})
+                if bloat.get('status') == 'concerning':
+                    patterns.append({
+                        'type': 'high_code_bloat',
+                        'severity': 'high',
+                        'repo': repo_name,
+                        'value': bloat.get('bloat_score', 0),
+                        'message': f"{repo_name}: High code bloat detected (score: {bloat.get('bloat_score', 0)}) - large files, deep nesting, duplicate utils"
+                    })
+                elif bloat.get('status') == 'needs_attention':
+                    patterns.append({
+                        'type': 'moderate_code_bloat',
+                        'severity': 'medium',
+                        'repo': repo_name,
+                        'value': bloat.get('bloat_score', 0),
+                        'message': f"{repo_name}: Moderate code bloat - review large files and complex functions"
+                    })
+
+                # Large file patterns
+                if len(bloat.get('large_files', [])) > 5:
+                    patterns.append({
+                        'type': 'too_many_large_files',
+                        'severity': 'medium',
+                        'repo': repo_name,
+                        'value': len(bloat.get('large_files', [])),
+                        'message': f"{repo_name}: {len(bloat.get('large_files', []))} files >500 lines - consider refactoring into smaller modules"
+                    })
+
+                # Complex file patterns
+                if len(bloat.get('complex_files', [])) > 3:
+                    patterns.append({
+                        'type': 'high_complexity_files',
+                        'severity': 'high',
+                        'repo': repo_name,
+                        'value': len(bloat.get('complex_files', [])),
+                        'message': f"{repo_name}: {len(bloat.get('complex_files', []))} files with deep nesting (>6 levels) - refactor to reduce complexity"
+                    })
+
+                # Architecture patterns (NEW)
+                architecture = qa.get('architecture', {})
+                if architecture.get('status') == 'concerning':
+                    patterns.append({
+                        'type': 'poor_architecture_consistency',
+                        'severity': 'high',
+                        'repo': repo_name,
+                        'message': f"{repo_name}: Architecture has significant inconsistencies - violates established patterns"
+                    })
+                elif architecture.get('status') == 'needs_attention':
+                    patterns.append({
+                        'type': 'architecture_inconsistencies',
+                        'severity': 'medium',
+                        'repo': repo_name,
+                        'message': f"{repo_name}: Some architectural inconsistencies - review project structure"
+                    })
+
+                # Pattern violations
+                violations = architecture.get('pattern_violations', [])
+                if len(violations) >= 2:
+                    patterns.append({
+                        'type': 'architectural_violations',
+                        'severity': 'medium',
+                        'repo': repo_name,
+                        'value': len(violations),
+                        'message': f"{repo_name}: {len(violations)} architectural pattern violations detected"
                     })
 
         # ===== SYSTEM PATTERNS (EXISTING) =====
@@ -1289,6 +1528,41 @@ class BarbossaAuditor:
                     f"QUALITY: {pattern.get('repo', 'repo')} integration could be better - "
                     "ensure backend changes are properly integrated with frontend"
                 )
+            elif ptype == 'high_code_bloat':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} has high code bloat - "
+                    "Tech Lead should reject PRs that add large files or duplicate existing functionality. Prioritize refactoring."
+                )
+            elif ptype == 'moderate_code_bloat':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} has moderate code bloat - "
+                    "review large files and consider breaking them into smaller, focused modules"
+                )
+            elif ptype == 'too_many_large_files':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} has too many large files - "
+                    "files >500 lines should be refactored into smaller, single-responsibility modules"
+                )
+            elif ptype == 'high_complexity_files':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} has highly complex files - "
+                    "deep nesting (>6 levels) makes code hard to understand. Extract functions and simplify control flow."
+                )
+            elif ptype == 'poor_architecture_consistency':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} architecture is inconsistent - "
+                    "establish and document architectural patterns, then enforce them in PR reviews"
+                )
+            elif ptype == 'architecture_inconsistencies':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} has architectural inconsistencies - "
+                    "review project structure and align new code with established patterns"
+                )
+            elif ptype == 'architectural_violations':
+                recommendations.append(
+                    f"QUALITY: {pattern.get('repo', 'repo')} has architectural violations - "
+                    "Tech Lead should enforce architectural patterns and reject PRs that violate them"
+                )
 
             # ===== SYSTEM RECOMMENDATIONS (EXISTING) =====
             elif ptype == 'low_merge_rate':
@@ -1452,6 +1726,34 @@ class BarbossaAuditor:
             else:
                 self.logger.info(f"    ⚠️  No E2E framework configured")
 
+            # Code bloat detection (NEW)
+            self.logger.info("  Detecting code bloat patterns...")
+            bloat = self._detect_code_bloat_patterns(repo_name, days)
+            if bloat['status'] == 'healthy':
+                self.logger.info(f"    ✓ Code bloat: {bloat['status']} (score: {bloat['bloat_score']})")
+            else:
+                self.logger.info(f"    ⚠️  Code bloat: {bloat['status']} (score: {bloat['bloat_score']})")
+                if bloat['large_files']:
+                    self.logger.info(f"      {len(bloat['large_files'])} large files (>500 lines)")
+                if bloat['complex_files']:
+                    self.logger.info(f"      {len(bloat['complex_files'])} highly nested files")
+                if bloat['duplicate_utility_functions'] > 0:
+                    self.logger.info(f"      {bloat['duplicate_utility_functions']} potential duplicate utility dirs")
+
+            # Architecture consistency (NEW)
+            self.logger.info("  Analyzing architecture consistency...")
+            architecture = self._analyze_architecture_consistency(repo_name, days)
+            if architecture['status'] == 'healthy':
+                self.logger.info(f"    ✓ Architecture: {architecture['status']}")
+            else:
+                self.logger.info(f"    ⚠️  Architecture: {architecture['status']}")
+                if architecture['pattern_violations']:
+                    for violation in architecture['pattern_violations'][:3]:
+                        self.logger.info(f"      ✗ {violation}")
+                if architecture['missing_patterns']:
+                    for missing in architecture['missing_patterns'][:3]:
+                        self.logger.info(f"      ⚠ {missing}")
+
             # UI changes assessment
             self.logger.info("  Assessing UI changes...")
             ui = self._assess_ui_changes(repo_name, days)
@@ -1480,6 +1782,8 @@ class BarbossaAuditor:
                 'coverage': coverage,
                 'integration_tests': integration,
                 'e2e_tests': e2e,
+                'code_bloat': bloat,
+                'architecture': architecture,
                 'ui_assessment': ui,
                 'cross_layer': cross_layer
             }
@@ -1562,6 +1866,12 @@ class BarbossaAuditor:
                     'has_integration_tests': qa.get('integration_tests', {}).get('has_integration_tests', False),
                     'has_e2e_tests': qa.get('e2e_tests', {}).get('has_e2e_tests', False),
                     'e2e_framework': qa.get('e2e_tests', {}).get('e2e_framework', None),
+                    'bloat_score': qa.get('code_bloat', {}).get('bloat_score', 0),
+                    'bloat_status': qa.get('code_bloat', {}).get('status', 'unknown'),
+                    'large_files_count': len(qa.get('code_bloat', {}).get('large_files', [])),
+                    'complex_files_count': len(qa.get('code_bloat', {}).get('complex_files', [])),
+                    'architecture_status': qa.get('architecture', {}).get('status', 'unknown'),
+                    'architecture_violations': len(qa.get('architecture', {}).get('pattern_violations', [])),
                     'ui_health': qa.get('ui_assessment', {}).get('status', 'unknown'),
                     'cross_layer_health': qa.get('cross_layer', {}).get('status', 'unknown'),
                     'untested_ui_prs': qa.get('ui_assessment', {}).get('untested_ui_pr_count', 0),

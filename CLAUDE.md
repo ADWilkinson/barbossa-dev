@@ -56,7 +56,39 @@ barbossa-engineer/
 - ✅ Git Config: Andy Wilkinson <andywilkinson1993@gmail.com>
 - ⚠️ SSH Keys: Not configured (using HTTPS URLs)
 
-## Recent Fixes (v1.0.7)
+## Recent Enhancements (v1.0.8)
+
+### Enhanced Tech Lead & Auditor - Deep Quality Analysis
+**Enhancement:** Significantly upgraded both Tech Lead and Auditor agents to perform comprehensive quality checks beyond basic code review.
+
+**Tech Lead Improvements:**
+- **8 Quality Dimensions:** Code quality, feature bloat, existing feature integration, UI/UX, tests, security, performance, complexity
+- **Bloat Detection:** Identifies duplicate functionality, over-engineering, unnecessary features
+- **Integration Checks:** Ensures changes work harmoniously with existing features
+- **UI/UX Review:** Checks accessibility, responsive design, consistent styling, loading/error states
+- **Architecture Enforcement:** Validates adherence to existing patterns
+- **Security Scanning:** Detects XSS, SQL injection, exposed secrets, auth issues
+- **Performance Analysis:** Identifies inefficient queries, memory leaks, blocking operations
+- **Complexity Metrics:** Flags deep nesting, large functions, unclear code
+
+**Auditor Improvements:**
+- **Code Bloat Detection:** Scans for large files (>500 lines), deep nesting (>6 levels), duplicate utilities
+- **Architecture Consistency:** Validates project structure, detects mixed patterns, enforces conventions
+- **Complexity Analysis:** Identifies overly complex files requiring refactoring
+- **Enhanced Reporting:** Provides bloat scores and architecture violation counts
+- **Actionable Recommendations:** Tech Lead receives specific guidance on enforcing quality standards
+
+**Impact:**
+- Tech Lead now rejects PRs with poor UI/UX, bloated code, or architecture violations
+- Auditor provides early warning on code quality degradation
+- System enforces higher quality standards automatically
+- Prevents accumulation of technical debt
+
+**Files Modified:**
+- `prompts/tech_lead.txt`: Comprehensive 8-dimension review criteria
+- `barbossa_auditor.py`: Added `_detect_code_bloat_patterns()` and `_analyze_architecture_consistency()` methods
+
+## Previous Fixes (v1.0.7)
 
 ### Critical Bug Fix - Docker Compose Mounts
 **Issue:** Container runs as non-root `barbossa` user (UID 1000) for security, but docker-compose.yml was mounting config directories to `/root/` which the non-root user couldn't access.
@@ -193,7 +225,14 @@ On container startup, `validate.py` checks:
 
 ## Development History
 
-### v1.0.7 (pending) - 2025-12-23
+### v1.0.8 (pending) - 2025-12-23
+- Enhanced Tech Lead with comprehensive 8-dimension quality review
+- Added code bloat detection to Auditor
+- Added architecture consistency analysis to Auditor
+- Tech Lead now checks: bloat, feature integration, UI/UX, security, performance, complexity
+- Auditor detects large files, deep nesting, architectural violations
+
+### v1.0.7 - 2025-12-23
 - Fixed docker-compose mounts for non-root user
 - This fixes authentication failures that blocked agents
 
@@ -216,10 +255,10 @@ On container startup, `validate.py` checks:
 
 ## Next Steps
 
-1. **Release v1.0.7** - Tag and release with docker-compose fix
-2. **Monitor Next Runs** - Verify agents create PRs successfully
-3. **SSH Keys (Optional)** - Mount ~/.ssh if switching to SSH URLs
-4. **Documentation** - Update main README with mount path info
+1. **Release v1.0.8** - Tag and release with enhanced quality checks
+2. **Monitor Tech Lead Reviews** - Verify deeper quality analysis in PR reviews
+3. **Monitor Auditor Reports** - Check for bloat and architecture warnings
+4. **SSH Keys (Optional)** - Mount ~/.ssh if switching to SSH URLs
 
 ## Troubleshooting
 
