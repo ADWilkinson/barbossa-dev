@@ -141,12 +141,24 @@ class BarbossaProduct:
     def _get_existing_issue_titles(self, repo_name: str) -> List[str]:
         """Get titles of existing open issues to avoid duplicates."""
         result = self._run_cmd(
-            f"gh issue list --repo {self.owner}/{repo_name} --state open --limit 100 --json title"
+            f"gh issue list --repo {self.owner}/{repo_name} --state open --limit 100 --json title,body"
         )
         if result:
             try:
                 issues = json.loads(result)
                 return [i['title'].lower() for i in issues]
+            except:
+                pass
+        return []
+
+    def _get_existing_issue_details(self, repo_name: str) -> List[Dict]:
+        """Get full details of existing open issues for better deduplication."""
+        result = self._run_cmd(
+            f"gh issue list --repo {self.owner}/{repo_name} --state open --limit 100 --json number,title,body,labels"
+        )
+        if result:
+            try:
+                return json.loads(result)
             except:
                 pass
         return []
@@ -403,6 +415,49 @@ KEY FILES:
 
         return None
 
+    def _extract_keywords(self, text: str) -> set:
+        """Extract meaningful keywords from text for similarity comparison."""
+        # Remove common prefixes and noise words
+        text = text.lower()
+        for prefix in ['feat:', 'feature:', 'feat(', 'add ', 'implement ', 'create ']:
+            text = text.replace(prefix, '')
+
+        # Common words to ignore
+        stop_words = {'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those', 'new'}
+
+        # Split into words and filter
+        words = text.split()
+        keywords = {w.strip('.,!?()[]{}:;-') for w in words if len(w) > 3 and w not in stop_words}
+        return keywords
+
+    def _is_semantically_similar(self, new_title: str, existing_issues: List[Dict]) -> bool:
+        """Check if a new feature is semantically similar to existing issues."""
+        new_keywords = self._extract_keywords(new_title)
+
+        for issue in existing_issues:
+            # Only check feature/product issues
+            labels = [l.get('name', '') for l in issue.get('labels', [])]
+            if 'feature' not in labels and 'product' not in labels:
+                continue
+
+            existing_title = issue.get('title', '')
+            existing_keywords = self._extract_keywords(existing_title)
+
+            # Calculate keyword overlap
+            if not new_keywords or not existing_keywords:
+                continue
+
+            overlap = new_keywords & existing_keywords
+            overlap_ratio = len(overlap) / min(len(new_keywords), len(existing_keywords))
+
+            # If more than 50% keyword overlap, consider it similar
+            if overlap_ratio > 0.5:
+                self.logger.info(f"Similar issue found: '{existing_title}' (overlap: {overlap_ratio:.2%})")
+                self.logger.info(f"  Overlapping keywords: {', '.join(sorted(overlap))}")
+                return True
+
+        return False
+
     def _generate_issue_body(self, feature: Dict, repo_name: str) -> str:
         """Generate the Issue body from feature analysis."""
         acceptance = '\n'.join([f"- [ ] {c}" for c in feature.get('acceptance_criteria', [])])
@@ -455,6 +510,7 @@ KEY FILES:
 
         # Get existing issues and PRs to avoid duplicates
         existing_titles = self._get_existing_issue_titles(repo_name)
+        existing_issues = self._get_existing_issue_details(repo_name)
         recent_prs = self._get_recent_prs(repo_name)
         all_existing = existing_titles + recent_prs
 
@@ -477,15 +533,20 @@ KEY FILES:
 
         self.logger.info(f"Feature title: {title}")
 
-        # Check for duplicate
+        # Check for exact/substring duplicates
         title_lower = title.lower()
-        is_duplicate = any(
+        is_exact_duplicate = any(
             existing in title_lower or title_lower in existing
             for existing in all_existing
         )
 
-        if is_duplicate:
-            self.logger.info(f"Skipping potential duplicate: {title}")
+        if is_exact_duplicate:
+            self.logger.info(f"Skipping exact duplicate: {title}")
+            return 0
+
+        # Check for semantic similarity with existing issues
+        if self._is_semantically_similar(title, existing_issues):
+            self.logger.info(f"Skipping semantically similar feature: {title}")
             return 0
 
         # Check value score
