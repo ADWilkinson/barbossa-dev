@@ -37,7 +37,12 @@ That's it. Barbossa auto-detects everything else.
   ],
   "settings": {
     "telemetry": true,
-    "tech_lead": { "auto_merge": true },
+    "tech_lead": {
+      "auto_merge": true,
+      "min_lines_for_tests_required": 50,
+      "max_files_per_pr": 15,
+      "stale_pr_threshold": 5
+    },
     "discovery": { "enabled": true },
     "product_manager": { "enabled": true }
   }
@@ -50,6 +55,9 @@ That's it. Barbossa auto-detects everything else.
 | `do_not_touch` | Files/directories agents should never modify |
 | `telemetry` | `true` (default) or `false` to disable anonymous usage tracking |
 | `auto_merge` | Enabled by default. Set to `false` for manual merge control |
+| `min_lines_for_tests_required` | Minimum lines changed to require tests (default: 50) |
+| `max_files_per_pr` | Maximum files allowed in a PR (default: 15) |
+| `stale_pr_threshold` | Days before PR considered stale (default: 5) |
 | `enabled` | Enable/disable individual agents |
 
 ---

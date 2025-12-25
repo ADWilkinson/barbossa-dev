@@ -40,9 +40,11 @@ Picks tasks from the GitHub Issues backlog and implements them.
 - Links PR to issue with `Closes #XX`
 
 ### Tech Lead
-Reviews pull requests and decides whether to merge or request changes.
+Reviews pull requests with comprehensive quality analysis and decides whether to merge or request changes.
 - Checks CI status (must pass)
-- Reviews code quality
+- 8-dimension quality review: code quality, feature bloat, UI/UX, tests, security, performance, complexity, integration
+- Detects bloated code, duplicate functionality, accessibility issues
+- 3-strikes rule: Auto-closes PRs after 3 failed review cycles to prevent wasted effort
 - Merges good PRs automatically (default behavior)
 - Requests changes on weak PRs
 - Set `auto_merge: false` in config to require manual merges
@@ -62,6 +64,9 @@ Analyzes the codebase and proposes high-value features.
 Monitors system health and identifies patterns.
 - Analyzes agent logs
 - Tracks PR outcomes
+- Detects code bloat patterns (large files, deep nesting, duplicates)
+- Validates architecture consistency
+- Provides actionable recommendations for quality improvements
 
 ---
 

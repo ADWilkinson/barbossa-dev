@@ -238,8 +238,10 @@ docker compose restart</code></pre>
 
 <ul>
 <li>CI must pass</li>
-<li>Tests needed for significant changes</li>
-<li>PRs should be focused</li>
+<li>Tests needed for significant changes (50+ lines)</li>
+<li>PRs should be focused (max 15 files)</li>
+<li>Code must meet 8-dimension quality standards</li>
+<li>Note: PRs auto-close after 3 failed review cycles (3-strikes rule)</li>
 </ul>
 
 <p>Check logs: <code>docker exec barbossa barbossa logs tech-lead</code></p>

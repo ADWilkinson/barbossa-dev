@@ -244,13 +244,18 @@
   ],
   "settings": {
     "telemetry": true,
-    "tech_lead": { "auto_merge": true },
+    "tech_lead": {
+      "auto_merge": true,
+      "min_lines_for_tests_required": 50,
+      "max_files_per_pr": 15,
+      "stale_pr_threshold": 5
+    },
     "discovery": { "enabled": true },
     "product_manager": { "enabled": true }
   }
 }</code></pre>
 
-<table><tr><th>Field</th><th>Description</th></tr><tr><td><code>package_manager</code></td><td><code>npm</code>, <code>yarn</code>, <code>pnpm</code>, or <code>bun</code> (auto-detected if omitted)</td></tr><tr><td><code>do_not_touch</code></td><td>Files/directories agents should never modify</td></tr><tr><td><code>telemetry</code></td><td><code>true</code> (default) or <code>false</code> to disable anonymous usage tracking</td></tr><tr><td><code>auto_merge</code></td><td>Enabled by default. Set to <code>false</code> for manual merge control</td></tr><tr><td><code>enabled</code></td><td>Enable/disable individual agents</td></tr></table>
+<table><tr><th>Field</th><th>Description</th></tr><tr><td><code>package_manager</code></td><td><code>npm</code>, <code>yarn</code>, <code>pnpm</code>, or <code>bun</code> (auto-detected if omitted)</td></tr><tr><td><code>do_not_touch</code></td><td>Files/directories agents should never modify</td></tr><tr><td><code>telemetry</code></td><td><code>true</code> (default) or <code>false</code> to disable anonymous usage tracking</td></tr><tr><td><code>auto_merge</code></td><td>Enabled by default. Set to <code>false</code> for manual merge control</td></tr><tr><td><code>min_lines_for_tests_required</code></td><td>Minimum lines changed to require tests (default: 50)</td></tr><tr><td><code>max_files_per_pr</code></td><td>Maximum files allowed in a PR (default: 15)</td></tr><tr><td><code>stale_pr_threshold</code></td><td>Days before PR considered stale (default: 5)</td></tr><tr><td><code>enabled</code></td><td>Enable/disable individual agents</td></tr></table>
 <hr>
 
 <h2>Protected Files</h2>

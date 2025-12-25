@@ -31,8 +31,10 @@ Check for missing config or invalid JSON.
 ### Tech Lead rejects everything
 
 - CI must pass
-- Tests needed for significant changes
-- PRs should be focused
+- Tests needed for significant changes (50+ lines)
+- PRs should be focused (max 15 files)
+- Code must meet 8-dimension quality standards
+- Note: PRs auto-close after 3 failed review cycles (3-strikes rule)
 
 Check logs: `docker exec barbossa barbossa logs tech-lead`
 

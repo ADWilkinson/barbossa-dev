@@ -243,10 +243,12 @@
 </ul>
 
 <h3>Tech Lead</h3>
-<p>Reviews pull requests and decides whether to merge or request changes.</p>
+<p>Reviews pull requests with comprehensive quality analysis and decides whether to merge or request changes.</p>
 <ul>
 <li>Checks CI status (must pass)</li>
-<li>Reviews code quality</li>
+<li>8-dimension quality review: code quality, feature bloat, UI/UX, tests, security, performance, complexity, integration</li>
+<li>Detects bloated code, duplicate functionality, accessibility issues</li>
+<li>3-strikes rule: Auto-closes PRs after 3 failed review cycles to prevent wasted effort</li>
 <li>Merges good PRs automatically (default behavior)</li>
 <li>Requests changes on weak PRs</li>
 <li>Set <code>auto_merge: false</code> in config to require manual merges</li>
@@ -272,6 +274,9 @@
 <ul>
 <li>Analyzes agent logs</li>
 <li>Tracks PR outcomes</li>
+<li>Detects code bloat patterns (large files, deep nesting, duplicates)</li>
+<li>Validates architecture consistency</li>
+<li>Provides actionable recommendations for quality improvements</li>
 </ul>
 
 <hr>

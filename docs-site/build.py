@@ -360,7 +360,7 @@ HOME_TEMPLATE = """<!DOCTYPE html>
 
     <main>
         <div class="hero">
-            <small>v1.0.0</small>
+            <small>v1.1.0</small>
             <h1>AI engineers that ship code while you sleep</h1>
         </div>
 
