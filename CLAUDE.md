@@ -1,7 +1,7 @@
 # Barbossa Engineer - Claude Context
 
 **Last Updated:** 2025-12-26
-**Version:** v1.2.0
+**Version:** v1.3.0
 
 ## Project Overview
 
@@ -370,6 +370,34 @@ On container startup, `validate.py` checks:
 **Critical failures block startup** to prevent silent failures.
 
 ## Development History
+
+### v1.3.0 - 2025-12-26
+- **ENHANCEMENT**: Tech Lead now detects external dependencies and setup requirements
+- **ENHANCEMENT**: Tech Lead has significantly improved frontend/UI review criteria
+- Added dimension 9: External Dependencies & Setup Requirements detection
+  - Detects when features use external APIs (Stripe, Telegram, SendGrid, etc.)
+  - Flags missing documentation for API keys, environment variables, tokens
+  - Requires PR description to include setup instructions for third-party services
+  - Identifies database migrations, OAuth setup, webhook configurations
+  - Examples: Telegram bot tokens, Vercel env vars, Firebase credentials, etc.
+- Enhanced UI/UX review criteria (dimension 4):
+  - Layout quality: spacing, alignment, visual hierarchy
+  - Component placement: logical, intuitive positioning
+  - Typography consistency: fonts, sizes, weights
+  - Responsive design: mobile, tablet, desktop breakpoints
+  - Visual polish: no alignment issues, clean look
+  - Interactive states: hover, focus, active
+  - Accessibility improvements: WCAG color contrast, ARIA labels
+- Files Modified:
+  - `prompts/tech_lead.txt`: Added dimension 9 + enhanced dimension 4
+  - All agent versions bumped to v1.3.0
+
+**Impact:**
+- Tech Lead will now REQUEST_CHANGES when features use external services without documenting setup
+- Example: Telegram notification feature would be flagged if missing bot token setup instructions
+- Stronger frontend quality enforcement prevents poorly designed UI/UX from being merged
+- Catches missing .env.example updates, README changes, deployment requirements
+- Reduces manual cleanup needed for frontend layout, responsive design, visual polish
 
 ### v1.2.0 - 2025-12-26
 - **CRITICAL FIX**: Product Manager prompt completely rewritten - NOW WORKING

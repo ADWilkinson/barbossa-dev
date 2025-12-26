@@ -42,7 +42,7 @@ from barbossa_firebase import (
 class BarbossaProduct:
     """Product Manager agent that creates feature Issues for the pipeline."""
 
-    VERSION = "1.2.0"
+    VERSION = "1.3.0"
     DEFAULT_MAX_ISSUES_PER_RUN = 3
     DEFAULT_FEATURE_BACKLOG_THRESHOLD = 20
 

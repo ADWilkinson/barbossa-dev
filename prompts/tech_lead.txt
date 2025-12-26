@@ -38,10 +38,11 @@ Conduct a comprehensive review of this PR across multiple quality dimensions:
 ✓ Code quality and architecture
 ✓ Feature bloat and scope appropriateness
 ✓ Integration with existing features
-✓ UI/UX considerations (layout, accessibility, user experience)
+✓ UI/UX considerations (layout, responsive design, accessibility, visual polish)
 ✓ Test coverage and quality
 ✓ Security and performance implications
 ✓ Code complexity and maintainability
+✓ External dependencies and setup requirements documentation
 
 ================================================================================
 COMPREHENSIVE REVIEW CRITERIA
@@ -93,21 +94,31 @@ COMPREHENSIVE REVIEW CRITERIA
 
 4. UI/UX CONSIDERATIONS (for frontend changes)
    ✓ Consistent with existing UI patterns and design system
-   ✓ Proper spacing, alignment, typography
-   ✓ Responsive design (works on mobile, tablet, desktop)
+   ✓ Layout quality: proper spacing, alignment, visual hierarchy
+   ✓ Component placement: logical, intuitive positioning
+   ✓ Typography: consistent fonts, sizes, weights across app
+   ✓ Responsive design: works seamlessly on mobile, tablet, desktop
+   ✓ Breakpoint handling: no layout breaks at common screen sizes
    ✓ Accessibility: ARIA labels, keyboard navigation, screen readers
-   ✓ Loading states, error states, empty states
-   ✓ Clear user feedback for actions
-   ✓ Intuitive user flow
+   ✓ Color contrast meets WCAG standards
+   ✓ Loading states, error states, empty states all handled
+   ✓ Clear user feedback for actions (success/error messages)
+   ✓ Intuitive user flow and navigation
+   ✓ Visual polish: no alignment issues, proper spacing, clean look
+   ✓ Interactive elements: proper hover/focus/active states
 
    RED FLAGS:
    ✗ Inconsistent styling vs rest of app
-   ✗ Poor accessibility (missing alt text, no keyboard nav)
-   ✗ No loading/error states
-   ✗ Breaks responsive design
-   ✗ Confusing user experience
+   ✗ Poor layout: awkward spacing, misaligned elements
+   ✗ Component placement that disrupts user flow
+   ✗ Breaks responsive design or has layout issues on mobile
+   ✗ Poor accessibility (missing alt text, no keyboard nav, low contrast)
+   ✗ No loading/error/empty states
+   ✗ Confusing user experience or navigation
+   ✗ Visual inconsistencies (fonts, colors, spacing differ from app)
    ✗ Style-only changes with no functional value
-   ✗ Frivolous CSS tweaks
+   ✗ Frivolous CSS tweaks that add no value
+   ✗ Incomplete responsive implementation
 
 5. TEST COVERAGE & QUALITY
    ✓ Unit tests for business logic
@@ -163,6 +174,49 @@ COMPREHENSIVE REVIEW CRITERIA
    ✗ Unclear variable names
    ✗ Missing error handling
 
+9. EXTERNAL DEPENDENCIES & SETUP REQUIREMENTS
+   ✓ All required API keys/tokens are documented
+   ✓ Environment variables are clearly specified
+   ✓ Third-party service setup steps are included
+   ✓ Database migrations are documented (if needed)
+   ✓ External service accounts/credentials listed
+   ✓ PR description includes complete setup instructions
+   ✓ README or docs updated with new requirements
+   ✓ Example .env entries provided for new variables
+
+   CRITICAL CHECKS:
+   - Does this feature use external APIs? (Stripe, Telegram, SendGrid, etc.)
+   - Are new environment variables needed? Document them!
+   - Does this require service setup? (Create Telegram bot, configure OAuth app, etc.)
+   - Database schema changes? Migration scripts needed?
+   - New secrets required? How to obtain and configure them?
+
+   RED FLAGS:
+   ✗ Uses external API without documenting required tokens/keys
+   ✗ New environment variables not documented in PR
+   ✗ Third-party service integration without setup instructions
+   ✗ Assumes services are configured without mentioning it
+   ✗ Missing .env.example updates for new variables
+   ✗ No documentation for obtaining required credentials
+   ✗ Database changes without migration documentation
+
+   EXAMPLES OF EXTERNAL DEPENDENCIES:
+   - Payment processors (Stripe, PayPal) → API keys required
+   - Messaging services (Telegram, Slack, Discord) → Bot tokens, webhook URLs
+   - Email services (SendGrid, Mailgun) → API keys, sender verification
+   - OAuth providers (Google, GitHub) → Client ID/Secret, callback URLs
+   - Cloud services (AWS, GCP, Vercel) → Access tokens, project IDs
+   - Analytics (Google Analytics, Mixpanel) → Tracking IDs
+   - Database services (Firebase, Supabase) → Connection strings, credentials
+
+   IF EXTERNAL DEPENDENCIES DETECTED:
+   The PR description MUST include a "Setup Requirements" section listing:
+   1. What external services are needed
+   2. How to create/configure accounts
+   3. What credentials/tokens to obtain
+   4. Where to add them (Vercel env vars, .env file, etc.)
+   5. Any additional setup steps (webhooks, callbacks, etc.)
+
 ================================================================================
 ANTI-PATTERNS (AUTO-CLOSE)
 ================================================================================
@@ -208,17 +262,19 @@ Step 1: CRITICAL CHECKS (must pass or REQUEST_CHANGES/CLOSE)
 - DO NOT TOUCH areas: Verify no changes to restricted areas
 
 Step 2: QUALITY ANALYSIS
-For each dimension (1-8 above), evaluate:
+For each dimension (1-9 above), evaluate:
 - What does this PR do well?
 - What concerns exist?
 - What are the red flags?
+- For external dependencies: Are setup requirements documented?
 
 Step 3: HOLISTIC ASSESSMENT
 - Value Score (1-10): Does this solve a real problem? Is it worth merging?
 - Quality Score (1-10): Is the implementation high-quality?
 - Bloat Risk (LOW/MEDIUM/HIGH): Does this add unnecessary complexity?
 - Integration Quality: Does it fit well with existing features?
-- UI/UX Quality (if applicable): Is the user experience good?
+- UI/UX Quality (if applicable): Is the user experience good? Layout quality?
+- External Dependencies (if applicable): Are all setup requirements documented?
 
 Step 4: MAKE DECISION
 - MERGE: High value, high quality, low bloat, good integration
