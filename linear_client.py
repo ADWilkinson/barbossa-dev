@@ -97,41 +97,46 @@ class LinearClient:
 
         query = """
         query GetTeam($key: String!) {
-            team(key: $key) {
-                id
-                key
-                name
+            teams(filter: { key: { eq: $key } }) {
+                nodes {
+                    id
+                    key
+                    name
+                }
             }
         }
         """
 
         result = self._graphql(query, {'key': team_key})
-        team = result.get('team')
-        if team:
+        nodes = result.get('teams', {}).get('nodes', [])
+        if nodes:
+            team = nodes[0]
             self._team_cache[team_key] = team['id']
             return team['id']
         return None
 
     def _get_state_id(self, team_key: str, state_name: str) -> Optional[str]:
         """Get workflow state ID by name (e.g., 'Backlog' -> 'uuid')."""
-        team_id = self._get_team_id(team_key)
-        if not team_id:
-            return None
-
+        # Linear API doesn't support filter on workflowStates, so fetch all and filter client-side
         query = """
-        query GetStates($teamId: String!) {
-            workflowStates(filter: { team: { id: { eq: $teamId } } }) {
+        query GetStates {
+            workflowStates(first: 100) {
                 nodes {
                     id
                     name
                     type
+                    team {
+                        key
+                    }
                 }
             }
         }
         """
 
-        result = self._graphql(query, {'teamId': team_id})
-        states = result.get('workflowStates', {}).get('nodes', [])
+        result = self._graphql(query)
+        all_states = result.get('workflowStates', {}).get('nodes', [])
+        # Filter to the requested team
+        states = [s for s in all_states if s.get('team', {}).get('key') == team_key]
 
         # Try exact match first, then case-insensitive
         for state in states:
@@ -150,23 +155,25 @@ class LinearClient:
 
     def _get_label_ids(self, team_key: str, label_names: List[str]) -> List[str]:
         """Get label IDs from label names."""
-        team_id = self._get_team_id(team_key)
-        if not team_id:
-            return []
-
+        # Linear API doesn't support filter on issueLabels, so fetch all and filter client-side
         query = """
-        query GetLabels($teamId: String!) {
-            issueLabels(filter: { team: { id: { eq: $teamId } } }) {
+        query GetLabels {
+            issueLabels(first: 100) {
                 nodes {
                     id
                     name
+                    team {
+                        key
+                    }
                 }
             }
         }
         """
 
-        result = self._graphql(query, {'teamId': team_id})
-        labels = result.get('issueLabels', {}).get('nodes', [])
+        result = self._graphql(query)
+        all_labels = result.get('issueLabels', {}).get('nodes', [])
+        # Filter to the requested team (labels without team are workspace-wide)
+        labels = [l for l in all_labels if l.get('team', {}).get('key') == team_key or l.get('team') is None]
 
         label_ids = []
         for name in label_names:
