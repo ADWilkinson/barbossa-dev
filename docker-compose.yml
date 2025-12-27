@@ -19,6 +19,8 @@ services:
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - TZ=${TZ:-UTC}
+      # Linear API key (required for Linear integration)
+      - LINEAR_API_KEY=${LINEAR_API_KEY:-}
       # Google Analytics 4 (optional - get API secret from GA4 admin)
       - GA4_API_SECRET=${GA4_API_SECRET:-}
       # Set to 'true' to disable analytics
