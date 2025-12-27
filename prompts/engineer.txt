@@ -45,7 +45,7 @@ Step 2 - Check what was recently added:
   You MUST NOT duplicate work that was just merged.
 
 Step 3 - Check what's being requested:
-  gh issue list --state open --repo {{owner}}/{{repo_name}} --limit 10
+{{issue_list_command}}
 
   Open issues are opportunities. Prioritize fixing reported issues over inventing work.
 
@@ -74,15 +74,7 @@ The goal is UNIQUE, HIGH-VALUE work. Not duplicating effort.
 ================================================================================
 PRIORITY 1: CHECK THE BACKLOG FIRST
 ================================================================================
-Before inventing work, check if there are Issues ready to implement:
-
-  gh issue list --repo {{owner}}/{{repo_name}} --label backlog --state open --limit 5
-
-If there ARE issues labeled "backlog":
-  1. Pick the FIRST one (already prioritized)
-  2. Read the issue description carefully
-  3. Implement exactly what's requested
-  4. Link your PR to the issue: "Closes #XX" in PR description
+{{backlog_section}}
 
 If there are NO backlog issues:
   → Then and ONLY then, proceed to discover your own work below.

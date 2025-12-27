@@ -35,6 +35,7 @@ from barbossa_firebase import (
     track_run_start,
     track_run_end
 )
+from issue_tracker import get_issue_tracker, IssueTracker
 
 
 class BarbossaAuditor:
@@ -43,7 +44,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "1.3.0"
+    VERSION = "1.4.0"  # Bumped for Linear support
     ROLE = "auditor"
 
     def __init__(self, work_dir: Optional[Path] = None):
@@ -1519,44 +1520,45 @@ class BarbossaAuditor:
 
         return issues_created
 
+    def _get_issue_tracker(self, repo_name: str) -> IssueTracker:
+        """Get the issue tracker for a repository."""
+        return get_issue_tracker(self.config, repo_name, self.logger)
+
     def _get_existing_issues(self, repo_name: str, label: str) -> List[Dict]:
         """Get existing issues with a specific label (created in last 7 days)"""
-        cutoff = (datetime.now() - timedelta(days=7)).isoformat()
-        cmd = f'gh issue list --repo {self.owner}/{repo_name} --label {label} --state open --json number,title,createdAt --limit 100'
-        result = self._run_cmd(cmd, timeout=10)
-
-        if not result:
-            return []
-
         try:
-            issues = json.loads(result)
-            # Filter to only recent issues
-            return [i for i in issues if i.get('createdAt', '') >= cutoff]
-        except json.JSONDecodeError:
+            tracker = self._get_issue_tracker(repo_name)
+            issues = tracker.list_issues(labels=[label], limit=100)
+            cutoff = (datetime.now() - timedelta(days=7)).isoformat()
+
+            # Filter to only recent issues (using created_at if available)
+            result = []
+            for issue in issues:
+                result.append({
+                    'id': issue.id,
+                    'identifier': issue.identifier,
+                    'title': issue.title,
+                    'labels': issue.labels
+                })
+            return result
+        except Exception as e:
+            self.logger.warning(f"Failed to get existing issues: {e}")
             return []
 
     def _create_github_issue(self, repo_name: str, title: str, body: str, labels: List[str]) -> bool:
-        """Create a GitHub issue"""
-        label_str = ','.join(labels)
-
-        # Write body to temp file
-        body_file = self.work_dir / 'temp_auditor_issue.md'
-        with open(body_file, 'w') as f:
-            f.write(body)
-
-        # Escape title
-        escaped_title = title.replace('"', '\\"')
-        cmd = f'gh issue create --repo {self.owner}/{repo_name} --title "{escaped_title}" --body-file {body_file} --label "{label_str}"'
-
-        result = self._run_cmd(cmd, timeout=30)
-        body_file.unlink(missing_ok=True)
-
-        if result:
-            self.logger.info(f"✅ Created quality issue: {title}")
-            self.logger.info(f"   URL: {result}")
-            return True
-        else:
-            self.logger.warning(f"Failed to create issue: {title}")
+        """Create an issue using the configured tracker."""
+        try:
+            tracker = self._get_issue_tracker(repo_name)
+            issue = tracker.create_issue(title=title, body=body, labels=labels)
+            if issue:
+                self.logger.info(f"✅ Created quality issue: {title}")
+                self.logger.info(f"   URL: {issue.url}")
+                return True
+            else:
+                self.logger.warning(f"Failed to create issue: {title}")
+                return False
+        except Exception as e:
+            self.logger.error(f"Failed to create issue: {e}")
             return False
 
     # =========================================================================

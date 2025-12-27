@@ -21,7 +21,7 @@ docker pull ghcr.io/adwilkinson/barbossa-dev:latest
 ```
 Discovery + Product Manager
            ↓
-     GitHub Issues (backlog)
+     Issues (GitHub or Linear)
            ↓
         Engineer → Pull Request
            ↓
@@ -114,6 +114,39 @@ With options:
 | `telemetry` | `true` (default) or `false` to disable analytics |
 | `auto_merge` | `true` = merge automatically, `false` = manual review |
 | `enabled` | Enable/disable individual agents |
+
+---
+
+## Linear Integration
+
+Use Linear instead of GitHub Issues for issue tracking:
+
+```json
+{
+  "owner": "your-github-username",
+  "issue_tracker": {
+    "type": "linear",
+    "linear": {
+      "team_key": "MUS",
+      "backlog_state": "Backlog"
+    }
+  },
+  "repositories": [...]
+}
+```
+
+Set `LINEAR_API_KEY` environment variable or add `api_key` to config.
+
+| Field | Description |
+|-------|-------------|
+| `type` | `github` (default) or `linear` |
+| `team_key` | Linear team key (e.g., "MUS", "ENG") |
+| `backlog_state` | State name for backlog (default: "Backlog") |
+
+With Linear, agents:
+- Create issues in your Linear team
+- Fetch backlog items for the Engineer
+- Link branches to Linear issues automatically
 
 ---
 
