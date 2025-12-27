@@ -45,7 +45,7 @@ Step 2 - Check what was recently added:
   You MUST NOT duplicate work that was just merged.
 
 Step 3 - Check what's being requested:
-  gh issue list --state open --repo {{owner}}/{{repo_name}} --limit 10
+{{issue_list_command}}
 
   Open issues are opportunities. Prioritize fixing reported issues over inventing work.
 
@@ -74,15 +74,7 @@ The goal is UNIQUE, HIGH-VALUE work. Not duplicating effort.
 ================================================================================
 PRIORITY 1: CHECK THE BACKLOG FIRST
 ================================================================================
-Before inventing work, check if there are Issues ready to implement:
-
-  gh issue list --repo {{owner}}/{{repo_name}} --label backlog --state open --limit 5
-
-If there ARE issues labeled "backlog":
-  1. Pick the FIRST one (already prioritized)
-  2. Read the issue description carefully
-  3. Implement exactly what's requested
-  4. Link your PR to the issue: "Closes #XX" in PR description
+{{backlog_section}}
 
 If there are NO backlog issues:
   → Then and ONLY then, proceed to discover your own work below.
@@ -154,11 +146,18 @@ QUALITY STANDARDS
 - Write clean, maintainable code
 
 MANDATORY TEST REQUIREMENTS:
+- BUG FIXES MUST include tests that verify the fix works and prevent regression
 - If you add or modify >{{min_lines_for_tests}} lines of code with business logic, you MUST add tests
-- Check for existing test patterns: look for *.test.ts or *.test.tsx files
-- Tests should cover the core functionality, not just edge cases
-- If you can't add tests (e.g., no test setup), document why in PR description
-- Tech Lead WILL REJECT PRs with >{{min_lines_for_tests}} lines and no tests
+- Check for existing test patterns:
+  - Swift/iOS: Look for *Tests.swift files, use XCTest framework
+  - TypeScript: Look for *.test.ts or *.test.tsx files
+  - Follow the existing test structure in the project
+- Tests should:
+  1. Reproduce the bug scenario (what was failing)
+  2. Verify the fix works (what now passes)
+  3. Cover edge cases related to the fix
+- If you can't add tests (e.g., no test setup), document why in PR description AND create a follow-up issue
+- Tech Lead WILL REJECT bug fix PRs without accompanying tests
 
 ABSOLUTELY DO NOT:
 - Start coding without completing PHASE 0 (state check) first

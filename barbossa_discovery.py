@@ -36,12 +36,13 @@ from barbossa_firebase import (
     track_run_start,
     track_run_end
 )
+from issue_tracker import get_issue_tracker, IssueTracker
 
 
 class BarbossaDiscovery:
-    """Autonomous discovery agent that creates GitHub Issues for the pipeline."""
+    """Autonomous discovery agent that creates issues for the pipeline."""
 
-    VERSION = "1.3.0"
+    VERSION = "1.4.0"  # Bumped for Linear support
     DEFAULT_BACKLOG_THRESHOLD = 20
 
     def __init__(self, work_dir: Optional[Path] = None):
@@ -76,9 +77,13 @@ class BarbossaDiscovery:
         self.enabled = settings.get('enabled', True)
         self.BACKLOG_THRESHOLD = settings.get('max_backlog_issues', self.DEFAULT_BACKLOG_THRESHOLD)
 
+        # Issue tracker type for logging
+        tracker_type = self.config.get('issue_tracker', {}).get('type', 'github')
+
         self.logger.info("=" * 60)
         self.logger.info(f"BARBOSSA DISCOVERY v{self.VERSION}")
         self.logger.info(f"Repositories: {len(self.repositories)}")
+        self.logger.info(f"Issue Tracker: {tracker_type}")
         self.logger.info(f"Settings: max_backlog_issues={self.BACKLOG_THRESHOLD}")
         self.logger.info("=" * 60)
 
@@ -118,52 +123,42 @@ class BarbossaDiscovery:
             self.logger.warning(f"Command failed: {cmd} - {e}")
             return None
 
+    def _get_issue_tracker(self, repo_name: str) -> IssueTracker:
+        """Get the issue tracker for a repository."""
+        return get_issue_tracker(self.config, repo_name, self.logger)
+
     def _get_backlog_count(self, repo_name: str) -> int:
         """Count open issues labeled 'backlog' for a repo."""
-        result = self._run_cmd(
-            f"gh issue list --repo {self.owner}/{repo_name} --label backlog --state open --json number"
-        )
-        if result:
-            try:
-                issues = json.loads(result)
-                return len(issues)
-            except:
-                pass
-        return 0
+        try:
+            tracker = self._get_issue_tracker(repo_name)
+            return tracker.get_backlog_count(label="backlog")
+        except Exception as e:
+            self.logger.warning(f"Failed to get backlog count: {e}")
+            return 0
 
     def _get_existing_issue_titles(self, repo_name: str) -> List[str]:
         """Get titles of existing open issues to avoid duplicates."""
-        result = self._run_cmd(
-            f"gh issue list --repo {self.owner}/{repo_name} --state open --limit 50 --json title"
-        )
-        if result:
-            try:
-                issues = json.loads(result)
-                return [i['title'].lower() for i in issues]
-            except:
-                pass
-        return []
+        try:
+            tracker = self._get_issue_tracker(repo_name)
+            return tracker.get_existing_titles(limit=50)
+        except Exception as e:
+            self.logger.warning(f"Failed to get existing titles: {e}")
+            return []
 
     def _create_issue(self, repo_name: str, title: str, body: str, labels: List[str] = None) -> bool:
-        """Create a GitHub Issue."""
+        """Create an issue using the configured tracker."""
         labels = labels or ['backlog', 'discovery']
-        label_str = ','.join(labels)
-
-        # Write body to temp file to handle special characters
-        body_file = self.work_dir / 'temp_issue_body.md'
-        with open(body_file, 'w') as f:
-            f.write(body)
-
-        cmd = f'gh issue create --repo {self.owner}/{repo_name} --title "{title}" --body-file {body_file} --label "{label_str}"'
-        result = self._run_cmd(cmd, timeout=30)
-
-        body_file.unlink(missing_ok=True)
-
-        if result:
-            self.logger.info(f"Created issue: {title}")
-            self.logger.info(f"  URL: {result}")
-            return True
-        return False
+        try:
+            tracker = self._get_issue_tracker(repo_name)
+            issue = tracker.create_issue(title=title, body=body, labels=labels)
+            if issue:
+                self.logger.info(f"Created issue: {title}")
+                self.logger.info(f"  URL: {issue.url}")
+                return True
+            return False
+        except Exception as e:
+            self.logger.error(f"Failed to create issue: {e}")
+            return False
 
     def _clone_or_update_repo(self, repo: Dict) -> Optional[Path]:
         """Ensure repo is cloned and up to date."""

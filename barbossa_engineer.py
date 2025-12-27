@@ -32,15 +32,17 @@ from barbossa_firebase import (
     track_run_start,
     track_run_end
 )
+from issue_tracker import get_issue_tracker, IssueTracker, LinearIssueTracker
 
 
 class Barbossa:
     """
     Simple personal dev assistant that creates PRs on configured repositories.
     Uses GitHub as the single source of truth - no file-based state.
+    Supports both GitHub Issues and Linear for issue tracking.
     """
 
-    VERSION = "1.3.0"
+    VERSION = "1.4.0"  # Bumped for Linear support
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths
@@ -240,11 +242,50 @@ class Barbossa:
             raise RuntimeError("Engineer prompt file not found. Check prompts/ directory.")
 
         self.logger.info("Using local prompt template")
+
+        # Build issue tracker sections based on config
+        tracker_type = self.config.get('issue_tracker', {}).get('type', 'github')
+        repo_name = repo['name']
+
+        if tracker_type == 'linear':
+            # For Linear, we inject issues directly into the prompt
+            try:
+                tracker = get_issue_tracker(self.config, repo_name, self.logger)
+                if isinstance(tracker, LinearIssueTracker):
+                    # Get Linear issues and inject them
+                    issue_list_command = f"  [Linear Issues for team {tracker.team_key}]\n"
+                    issues_context = tracker.get_issues_context(limit=10)
+                    issue_list_command += issues_context
+
+                    # Backlog section with actual issues
+                    backlog_section = f"""Before inventing work, check if there are Issues ready to implement:
+
+{tracker.get_issues_context(state="Backlog", limit=5)}
+
+If there ARE backlog issues above:
+  1. Pick the FIRST one (already prioritized)
+  2. Implement exactly what's requested
+  3. Name your branch: barbossa/<issue-identifier>-description
+  4. The branch name auto-links to the Linear issue
+"""
+                else:
+                    # Fallback to GitHub commands
+                    issue_list_command = f"  gh issue list --state open --repo {owner}/{repo_name} --limit 10"
+                    backlog_section = self._get_github_backlog_section(owner, repo_name)
+            except Exception as e:
+                self.logger.warning(f"Failed to get Linear issues, falling back to GitHub: {e}")
+                issue_list_command = f"  gh issue list --state open --repo {owner}/{repo_name} --limit 10"
+                backlog_section = self._get_github_backlog_section(owner, repo_name)
+        else:
+            # GitHub - use CLI commands
+            issue_list_command = f"  gh issue list --state open --repo {owner}/{repo_name} --limit 10"
+            backlog_section = self._get_github_backlog_section(owner, repo_name)
+
         # Replace template variables
         prompt = template
         prompt = prompt.replace("{{session_id}}", session_id)
         prompt = prompt.replace("{{timestamp}}", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        prompt = prompt.replace("{{repo_name}}", repo['name'])
+        prompt = prompt.replace("{{repo_name}}", repo_name)
         prompt = prompt.replace("{{repo_url}}", repo['url'])
         prompt = prompt.replace("{{owner}}", owner)
         prompt = prompt.replace("{{description}}", repo.get('description', 'No description provided.'))
@@ -253,6 +294,8 @@ class Barbossa:
         prompt = prompt.replace("{{design_section}}", design_section)
         prompt = prompt.replace("{{dnt_section}}", dnt_section)
         prompt = prompt.replace("{{closed_pr_section}}", closed_pr_section)
+        prompt = prompt.replace("{{issue_list_command}}", issue_list_command)
+        prompt = prompt.replace("{{backlog_section}}", backlog_section)
         prompt = prompt.replace("{{pkg_manager}}", pkg_manager.upper())
         prompt = prompt.replace("{{install_cmd}}", install_cmd)
         prompt = prompt.replace("{{build_cmd}}", build_cmd)
@@ -260,6 +303,19 @@ class Barbossa:
         prompt = prompt.replace("{{env_file}}", env_file)
         prompt = prompt.replace("{{min_lines_for_tests}}", str(min_lines_for_tests))
         return prompt
+
+    def _get_github_backlog_section(self, owner: str, repo_name: str) -> str:
+        """Generate the backlog section for GitHub Issues."""
+        return f"""Before inventing work, check if there are Issues ready to implement:
+
+  gh issue list --repo {owner}/{repo_name} --label backlog --state open --limit 5
+
+If there ARE issues labeled "backlog":
+  1. Pick the FIRST one (already prioritized)
+  2. Read the issue description carefully
+  3. Implement exactly what's requested
+  4. Link your PR to the issue: "Closes #XX" in PR description
+"""
 
     def _save_session(self, repo_name: str, session_id: str, prompt: str, output_file: Path):
         """Save session details for web portal"""

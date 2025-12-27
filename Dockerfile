@@ -36,6 +36,10 @@ RUN useradd -m -u 1000 -s /bin/bash barbossa
 # Set working directory
 WORKDIR /app
 
+# Copy and install Python requirements
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
 # Copy application files - all agents
 COPY barbossa_engineer.py .
 COPY barbossa_tech_lead.py .
@@ -44,6 +48,8 @@ COPY barbossa_product.py .
 COPY barbossa_auditor.py .
 COPY barbossa_firebase.py .
 COPY barbossa_prompts.py .
+COPY linear_client.py .
+COPY issue_tracker.py .
 
 # Copy prompts directory (local prompt templates)
 COPY prompts/ prompts/

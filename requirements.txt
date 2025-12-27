@@ -1,3 +1,2 @@
-# No Python dependencies required - uses system packages only
-# Flask removed (web portal removed)
-# requests is available in base Python image
+# Python dependencies
+requests>=2.28.0  # For Linear API client
