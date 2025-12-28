@@ -21,7 +21,7 @@ gh auth setup-git 2>/dev/null || true
 echo "Running validation..."
 echo ""
 
-if ! python3 /app/validate.py; then
+if ! python3 /app/scripts/validate.py; then
     echo ""
     echo "========================================"
     echo "  STARTUP BLOCKED - Fix errors above"
@@ -43,7 +43,7 @@ echo ""
 # ========================================
 
 echo "Generating schedule from config..."
-python3 /app/generate_crontab.py > /app/crontab
+python3 /app/scripts/generate_crontab.py > /app/crontab
 echo ""
 
 echo "Active schedule:"

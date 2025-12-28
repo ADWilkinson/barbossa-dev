@@ -24,7 +24,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from linear_client import LinearClient, LinearIssue
+from barbossa.utils.linear_client import LinearClient, LinearIssue
 
 
 @dataclass

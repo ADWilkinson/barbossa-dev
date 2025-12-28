@@ -112,7 +112,7 @@ def generate_crontab(config_path: Path) -> str:
     if engineer_settings.get('enabled', True):
         cron = resolve_schedule(schedule.get('engineer')) or DEFAULTS['engineer']['cron']
         lines.append(f"# Engineer - {DEFAULTS['engineer']['description']}")
-        lines.append(f'{cron} cd /app && python3 barbossa_engineer.py >> /app/logs/cron.log 2>&1')
+        lines.append(f'{cron} cd /app && PYTHONPATH=/app/src python3 -m barbossa.agents.engineer >> /app/logs/cron.log 2>&1')
         lines.append("")
 
     # Tech Lead
@@ -120,7 +120,7 @@ def generate_crontab(config_path: Path) -> str:
     if tech_lead_settings.get('enabled', True):
         cron = resolve_schedule(schedule.get('tech_lead')) or DEFAULTS['tech_lead']['cron']
         lines.append(f"# Tech Lead - {DEFAULTS['tech_lead']['description']}")
-        lines.append(f'{cron} cd /app && python3 barbossa_tech_lead.py >> /app/logs/tech_lead_cron.log 2>&1')
+        lines.append(f'{cron} cd /app && PYTHONPATH=/app/src python3 -m barbossa.agents.tech_lead >> /app/logs/tech_lead_cron.log 2>&1')
         lines.append("")
 
     # Discovery
@@ -128,7 +128,7 @@ def generate_crontab(config_path: Path) -> str:
     if discovery_settings.get('enabled', True):
         cron = resolve_schedule(schedule.get('discovery')) or DEFAULTS['discovery']['cron']
         lines.append(f"# Discovery - {DEFAULTS['discovery']['description']}")
-        lines.append(f'{cron} cd /app && python3 barbossa_discovery.py >> /app/logs/discovery_cron.log 2>&1')
+        lines.append(f'{cron} cd /app && PYTHONPATH=/app/src python3 -m barbossa.agents.discovery >> /app/logs/discovery_cron.log 2>&1')
         lines.append("")
 
     # Product Manager
@@ -136,7 +136,7 @@ def generate_crontab(config_path: Path) -> str:
     if product_settings.get('enabled', True):
         cron = resolve_schedule(schedule.get('product_manager')) or DEFAULTS['product_manager']['cron']
         lines.append(f"# Product Manager - {DEFAULTS['product_manager']['description']}")
-        lines.append(f'{cron} cd /app && python3 barbossa_product.py >> /app/logs/product_cron.log 2>&1')
+        lines.append(f'{cron} cd /app && PYTHONPATH=/app/src python3 -m barbossa.agents.product >> /app/logs/product_cron.log 2>&1')
         lines.append("")
 
     # Auditor
@@ -144,7 +144,7 @@ def generate_crontab(config_path: Path) -> str:
     if auditor_settings.get('enabled', True):
         cron = resolve_schedule(schedule.get('auditor')) or DEFAULTS['auditor']['cron']
         lines.append(f"# Auditor - {DEFAULTS['auditor']['description']}")
-        lines.append(f'{cron} cd /app && python3 barbossa_auditor.py --days 7 >> /app/logs/auditor_cron.log 2>&1')
+        lines.append(f'{cron} cd /app && PYTHONPATH=/app/src python3 -m barbossa.agents.auditor --days 7 >> /app/logs/auditor_cron.log 2>&1')
         lines.append("")
 
     # Required empty line at end

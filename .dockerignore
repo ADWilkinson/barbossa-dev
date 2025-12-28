@@ -1,0 +1,65 @@
+# Git directory
+.git/
+.gitignore
+
+# Documentation site
+docs-site/
+
+# Web portal (unused)
+web_portal/
+
+# Large directories not needed in container
+projects/
+logs/
+changelogs/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local config
+config/repositories.json
+config/env/*.env
+config/env/*.env.local
+
+# Credentials
+*.key
+*.pem
+*.crt
+config/firebase-service-account.json
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+
+# Firebase
+.firebase/
+
+# Node modules
+node_modules/

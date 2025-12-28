@@ -29,14 +29,14 @@ from typing import Dict, List, Optional
 import uuid
 
 # Local prompt loading and optional analytics/state tracking
-from barbossa_prompts import get_system_prompt
-from barbossa_firebase import (
+from barbossa.utils.prompts import get_system_prompt
+from barbossa.agents.firebase import (
     get_client,
     check_version,
     track_run_start,
     track_run_end
 )
-from issue_tracker import get_issue_tracker, IssueTracker
+from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker
 
 
 class BarbossaDiscovery:

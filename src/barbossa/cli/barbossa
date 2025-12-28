@@ -43,11 +43,11 @@ def get_app_dir():
         return Path(env_dir)
 
     # Check if running in Docker
-    if Path('/app').exists() and Path('/app/barbossa_engineer.py').exists():
+    if Path('/app').exists() and Path('/app/src/barbossa').exists():
         return Path('/app')
 
-    # Running locally
-    return Path(__file__).parent
+    # Running locally - go up 3 levels from src/barbossa/cli/
+    return Path(__file__).parent.parent.parent.parent
 
 
 def run_cmd(cmd, capture=True, timeout=30):
@@ -360,11 +360,11 @@ def cmd_run(args):
     app_dir = get_app_dir()
 
     agents = {
-        'engineer': 'barbossa_engineer.py',
-        'tech-lead': 'barbossa_tech_lead.py',
-        'discovery': 'barbossa_discovery.py',
-        'product': 'barbossa_product.py',
-        'auditor': 'barbossa_auditor.py',
+        'engineer': 'barbossa.agents.engineer',
+        'tech-lead': 'barbossa.agents.tech_lead',
+        'discovery': 'barbossa.agents.discovery',
+        'product': 'barbossa.agents.product',
+        'auditor': 'barbossa.agents.auditor',
     }
 
     if not args.agent:
@@ -381,18 +381,15 @@ def cmd_run(args):
         print(f"Available: {', '.join(agents.keys())}")
         return 1
 
-    script = agents[agent]
-    script_path = app_dir / script
-
-    if not script_path.exists():
-        err(f"Agent script not found: {script_path}")
-        return 1
+    module = agents[agent]
 
     header(f"Running {agent} agent")
     print()
 
-    # Run the agent
-    os.execvp('python3', ['python3', str(script_path)])
+    # Set PYTHONPATH and run the agent as a module
+    env = os.environ.copy()
+    env['PYTHONPATH'] = str(app_dir / 'src')
+    os.execvpe('python3', ['python3', '-m', module], env)
 
 
 # =============================================================================

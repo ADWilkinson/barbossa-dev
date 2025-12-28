@@ -40,29 +40,15 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application files - all agents
-COPY barbossa_engineer.py .
-COPY barbossa_tech_lead.py .
-COPY barbossa_discovery.py .
-COPY barbossa_product.py .
-COPY barbossa_auditor.py .
-COPY barbossa_firebase.py .
-COPY barbossa_prompts.py .
-COPY linear_client.py .
-COPY issue_tracker.py .
-
-# Copy prompts directory (local prompt templates)
+# Copy application source code
+COPY src/ src/
+COPY scripts/ scripts/
 COPY prompts/ prompts/
-
-# Copy CLI and utilities
-COPY barbossa .
-COPY validate.py .
-COPY generate_crontab.py .
-COPY run.sh .
 COPY config/ config/
+COPY tests/ tests/
 
 # Make CLI executable and add to PATH
-RUN chmod +x barbossa && ln -s /app/barbossa /usr/local/bin/barbossa
+RUN chmod +x src/barbossa/cli/barbossa && ln -s /app/src/barbossa/cli/barbossa /usr/local/bin/barbossa
 
 # Create directories
 RUN mkdir -p logs changelogs projects
@@ -72,12 +58,13 @@ RUN chown -R barbossa:barbossa /app
 
 # Copy entrypoint (crontab is generated at runtime from config)
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh run.sh
+RUN chmod +x /entrypoint.sh scripts/run.sh scripts/validate.py scripts/generate_crontab.py
 
 # Switch to non-root user
 USER barbossa
 
 # Environment variables
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src
 
 ENTRYPOINT ["/entrypoint.sh"]

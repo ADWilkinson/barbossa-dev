@@ -1,28 +1,66 @@
 {
   "owner": "your-github-username",
+
+  // OPTIONAL: Issue tracker configuration (defaults to GitHub Issues)
+  // Uncomment to use Linear instead:
+  // "issue_tracker": {
+  //   "type": "linear",
+  //   "linear": {
+  //     "team_key": "MUS",
+  //     "backlog_state": "Backlog"
+  //   }
+  // },
+
   "repositories": [
     {
+      // Basic single repository configuration
       "name": "my-app",
       "url": "https://github.com/your-github-username/my-app.git",
-      "package_manager": "npm"
+      "package_manager": "npm"  // Auto-detected if not specified (npm, yarn, pnpm, bun)
     }
+
+    // Advanced multi-repository configuration:
+    // {
+    //   "name": "my-backend",
+    //   "url": "https://github.com/your-github-username/my-backend.git",
+    //   "package_manager": "pnpm",
+    //   "do_not_touch": [
+    //     ".env*",
+    //     "src/lib/auth.ts",
+    //     "src/lib/stripe.ts",
+    //     "prisma/migrations/"
+    //   ]
+    // }
   ],
+
   "settings": {
+    // Global telemetry (optional, defaults to true)
     "telemetry": true,
+
+    // Engineer agent settings
     "engineer": {
       "enabled": true
     },
+
+    // Tech Lead agent settings
     "tech_lead": {
       "enabled": true,
-      "auto_merge": true
+      "auto_merge": true,              // Auto-merge approved PRs
+      "min_lines_for_tests_required": 50,  // Require tests if PR changes >50 lines
+      "max_files_per_pr": 15,          // Limit PR scope
+      "stale_pr_days": 5                // Auto-close stale PRs after N days
     },
+
+    // Discovery agent settings
     "discovery": {
       "enabled": true,
-      "max_backlog_issues": 20
+      "max_backlog_issues": 20        // Limit backlog size
     },
+
+    // Product Manager agent settings
     "product_manager": {
       "enabled": true,
-      "max_issues_per_run": 3
+      "max_issues_per_run": 3         // Limit feature suggestions per run
     }
   }
 }

@@ -24,6 +24,8 @@ pr_history.json
 # Local config (user-specific)
 barbossa.json
 config/repositories.json
+config/env/*.env
+config/env/*.env.local
 
 # Security
 security/audit.log

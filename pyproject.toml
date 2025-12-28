@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "barbossa"
+version = "1.3.0"
+description = "Autonomous AI development team powered by Claude"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Andy Wilkinson", email = "andywilkinson1993@gmail.com"}
+]
+keywords = ["ai", "automation", "development", "github", "claude"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Code Generators",
+]
+
+dependencies = [
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ADWilkinson/barbossa-dev"
+Documentation = "https://github.com/ADWilkinson/barbossa-dev#readme"
+Repository = "https://github.com/ADWilkinson/barbossa-dev"
+Issues = "https://github.com/ADWilkinson/barbossa-dev/issues"
+
+[project.scripts]
+barbossa = "barbossa.cli.barbossa:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["barbossa*"]
+namespaces = false
