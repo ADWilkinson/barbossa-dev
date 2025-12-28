@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Integration</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --ink: #1a1a1a;
+            --paper: #fafafa;
+            --ghost: #999;
+            --line: #e5e5e5;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --ink: #e5e5e5;
+                --paper: #111;
+                --ghost: #666;
+                --line: #333;
+            }
+        }
+
+        body {
+            font: 16px/1.7 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+            background: var(--paper);
+            color: var(--ink);
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        /* Navigation - just links */
+        nav {
+            margin-bottom: 4rem;
+            font-size: 14px;
+        }
+        nav a {
+            color: var(--ghost);
+            text-decoration: none;
+            margin-right: 1.5rem;
+        }
+        nav a:hover {
+            color: var(--ink);
+        }
+        nav .logo {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            vertical-align: middle;
+            margin-right: 0.25rem;
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 14px;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 3rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--line);
+        }
+
+        h2 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 3rem 0 1.5rem;
+        }
+
+        h3 {
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--ghost);
+            margin: 2rem 0 1rem;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+        }
+
+        a {
+            color: var(--ink);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin: 0 0 1.5rem 1.5rem;
+        }
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code */
+        code {
+            font-family: inherit;
+            background: var(--line);
+            padding: 0.1em 0.3em;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: var(--line);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 14px;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.75rem 1rem 0.75rem 0;
+            border-bottom: 1px solid var(--line);
+        }
+        th {
+            font-weight: 600;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            border-left: 2px solid var(--line);
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--ghost);
+        }
+
+        /* Horizontal rules */
+        hr {
+            border: none;
+            border-top: 1px solid var(--line);
+            margin: 3rem 0;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 6rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--line);
+            font-size: 13px;
+            color: var(--ghost);
+        }
+
+        /* Hero for home page */
+        .hero {
+            margin: 4rem 0;
+        }
+        .hero h1 {
+            font-size: 14px;
+            border: none;
+            padding: 0;
+            margin-bottom: 1rem;
+        }
+        .hero p {
+            font-size: 24px;
+            font-weight: 300;
+            line-height: 1.4;
+            margin-bottom: 0;
+        }
+
+        /* Features grid */
+        .features {
+            display: grid;
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+        .feature {
+            padding: 1.5rem 0;
+            border-top: 1px solid var(--line);
+        }
+        .feature h3 {
+            margin: 0 0 0.5rem;
+            font-weight: 600;
+            color: var(--ink);
+        }
+        .feature p {
+            margin: 0;
+            color: var(--ghost);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/">_b</a>
+        <a href="/quickstart.html">start</a>
+        <a href="/configuration.html">config</a>
+        <a href="/agents.html">agents</a>
+        <a href="/faq.html">faq</a>
+        <a href="https://github.com/ADWilkinson/barbossa-dev">github</a>
+    </nav>
+
+    <main>
+        <h1>Firebase Integration</h1>
+
+<p>Barbossa uses Firebase Cloud Functions for optional cloud infrastructure that enhances the system without being required.</p>
+
+<hr>
+
+<h2>Overview</h2>
+
+<p>Firebase provides these optional features:</p>
+<ul>
+<li><strong>Version compatibility checking</strong> - warns about updates (never blocks)</li>
+<li><strong>Anonymous telemetry</strong> - aggregate usage stats for improvements</li>
+<li><strong>State tracking</strong> - agent run coordination (future features)</li>
+<li><strong>Installation tracking</strong> - count active Barbossa installations</li>
+</ul>
+
+<strong>Key principle:</strong> All Firebase endpoints are optional enhancements. Barbossa works perfectly fine without them - clients gracefully degrade if Firebase is unavailable.
+
+<hr>
+
+<h2>Current Status (v1.3.0)</h2>
+
+<ul>
+<li><strong>Latest Version:</strong> v1.3.0</li>
+<li><strong>Minimum Supported:</strong> v1.0.0</li>
+<li><strong>Cloud Functions:</strong> Deployed and operational</li>
+<li><strong>Privacy:</strong> Fully transparent, no personal data collected</li>
+</ul>
+
+<hr>
+
+<h2>What Firebase Collects (Privacy-First)</h2>
+
+<h3>✅ What IS Collected</h3>
+<ul>
+<li><strong>Anonymous installation ID</strong>: SHA256 hash (not reversible to any identifying info)</li>
+<li><strong>Version number</strong>: e.g., "1.3.0"</li>
+<li><strong>Agent run counts</strong>: How many times each agent has run</li>
+<li><strong>Success rates</strong>: Whether runs completed successfully</li>
+<li><strong>Timestamps</strong>: When installations were last active</li>
+</ul>
+
+<h3>❌ What is NOT Collected</h3>
+<ul>
+<li>Repository names or URLs</li>
+<li>Code content or diffs</li>
+<li>GitHub usernames</li>
+<li>File paths or names</li>
+<li>PR titles or descriptions</li>
+<li>Any personally identifiable information</li>
+<li>Your configuration settings</li>
+</ul>
+
+<hr>
+
+<h2>Firebase Cloud Functions</h2>
+
+<h3>Endpoints</h3>
+
+<table><tr><th>Endpoint</th><th>Purpose</th><th>Privacy Level</th></tr><tr><td><code>checkVersion</code></td><td>Version compatibility check</td><td>No data stored</td></tr><tr><td><code>registerInstallation</code></td><td>Count active installations</td><td>Anonymous ID only</td></tr><tr><td><code>trackRunStart</code></td><td>Track agent run starts</td><td>Anonymous ID + agent name</td></tr><tr><td><code>trackRunEnd</code></td><td>Track agent run completion</td><td>Anonymous success/fail only</td></tr><tr><td><code>heartbeat</code></td><td>Keep installation active count</td><td>Anonymous ID only</td></tr><tr><td><code>getStats</code></td><td>Public aggregate stats</td><td>Fully aggregated, no individual data</td></tr><tr><td><code>getActiveInstallations</code></td><td>Count of active users (24h)</td><td>Count only</td></tr><tr><td><code>health</code></td><td>Health check</td><td>No data collected</td></tr></table>
+<h3>Data Retention</h3>
+
+<ul>
+<li><strong>Agent runs</strong>: 30 days</li>
+<li><strong>Installations</strong>: Active installations only (pruned after 7 days of inactivity)</li>
+<li><strong>Stats</strong>: Aggregated permanently (anonymous)</li>
+</ul>
+
+<hr>
+
+<h2>Opting Out</h2>
+
+<h3>Complete Opt-Out</h3>
+
+<p>Disable all Firebase/telemetry in <code>config/repositories.json</code>:</p>
+
+<pre><code>{
+  "settings": {
+    "telemetry": false
+  }
+}</code></pre>
+
+<p>Or via environment variable:</p>
+
+<pre><code>BARBOSSA_ANALYTICS_OPT_OUT=true</code></pre>
+
+<strong>When opted out:</strong>
+<ul>
+<li>✅ No data sent to Firebase</li>
+<li>✅ No network calls to cloud functions</li>
+<li>✅ No version checking (you won't be notified of updates)</li>
+<li>✅ System works exactly the same locally</li>
+</ul>
+
+<hr>
+
+<h2>Version Checking</h2>
+
+<p>Firebase tracks the latest Barbossa version and warns you if updates are available.</p>
+
+<strong>How it works:</strong>
+<ol>
+<li>On startup, Barbossa checks Firebase for latest version</li>
+<li>If a newer version exists, you see a log message: <code>UPDATE AVAILABLE: v1.3.0 is available</code></li>
+<li>This is a <strong>soft warning</strong> - never blocks execution</li>
+<li>If Firebase is unavailable, version check is silently skipped</li>
+</ul>
+
+<strong>Benefits:</strong>
+<ul>
+<li>Stay informed about bug fixes and new features</li>
+<li>Optional - if disabled, you won't get update notifications</li>
+</ul>
+
+<hr>
+
+<h2>Technical Implementation</h2>
+
+<h3>Client Side (<code>barbossa_firebase.py</code>)</h3>
+
+<p>The Python client handles all Firebase interactions:</p>
+
+<pre><code>CLIENT_VERSION = "1.3.0"
+FIREBASE_TIMEOUT = 5  # seconds - short timeout, never blocks</code></pre>
+
+<strong>Key design principles:</strong>
+<ul>
+<li>All Firebase calls have 5-second timeout</li>
+<li>All calls are fire-and-forget (non-blocking)</li>
+<li>Errors are logged but never crash the system</li>
+<li>Graceful degradation if Firebase is unavailable</li>
+</ul>
+
+<h3>Cloud Functions (<code>functions/index.js</code>)</h3>
+
+<p>Node.js functions deployed to Firebase Cloud Functions:</p>
+
+<pre><code>const MINIMUM_VERSION = "1.0.0";
+const LATEST_VERSION = "1.3.0";</code></pre>
+
+<strong>Deployment:</strong>
+<ul>
+<li>Hosted on Google Cloud (Firebase)</li>
+<li>Auto-scales to handle load</li>
+<li>Global CDN for low latency</li>
+<li>99.95% uptime SLA</li>
+</ul>
+
+<hr>
+
+<h2>Aggregate Stats (Public)</h2>
+
+<p>Firebase collects anonymous aggregate stats that benefit the community:</p>
+
+<strong>What you can see:</strong>
+<ul>
+<li>Total PRs created by all Barbossa installations</li>
+<li>Overall success rates</li>
+<li>Most-used agents</li>
+<li>Active installations count (last 24h)</li>
+</ul>
+
+<strong>Access stats:</strong>
+<pre><code>curl https://us-central1-barbossa-dev.cloudfunctions.net/getStats</code></pre>
+
+<p>Example response:</p>
+<pre><code>{
+  "total_runs": 15234,
+  "successful_runs": 14102,
+  "prs_created": 3421,
+  "success_rate": 92,
+  "runs_by_agent": {
+    "engineer": 5234,
+    "tech_lead": 5123,
+    "discovery": 3201,
+    "product": 1234,
+    "auditor": 442
+  }
+}</code></pre>
+
+<strong>Use cases:</strong>
+<ul>
+<li>Community insights</li>
+<li>Social proof for new users</li>
+<li>Identify popular features</li>
+<li>Track system health across all installations</li>
+</ul>
+
+<hr>
+
+<h2>Future Features (Planned)</h2>
+
+<p>Firebase state tracking enables future coordination features:</p>
+
+<h3>Agent Coordination</h3>
+<ul>
+<li><strong>Priority queuing</strong>: High-value work gets scheduled first</li>
+<li><strong>Load balancing</strong>: Distribute work across time zones</li>
+<li><strong>Rate limiting</strong>: Prevent API abuse across installations</li>
+</ul>
+
+<h3>Community Features</h3>
+<ul>
+<li><strong>Shared knowledge base</strong>: Learn from other installations</li>
+<li><strong>Best practices</strong>: Discover what works well</li>
+<li><strong>Benchmarking</strong>: Compare your results to community averages</li>
+</ul>
+
+<h3>Enhanced Monitoring</h3>
+<ul>
+<li><strong>Real-time dashboards</strong>: See your agent activity</li>
+<li><strong>Performance tracking</strong>: Identify bottlenecks</li>
+<li><strong>Anomaly detection</strong>: Alert on unusual patterns</li>
+</ul>
+
+<strong>Timeline:</strong> TBD based on community feedback
+
+<hr>
+
+<h2>Firestore Schema</h2>
+
+<h3>Collections</h3>
+
+<strong>installations</strong>
+<pre><code>{
+  installation_id: "sha256_hash",
+  version: "1.3.0",
+  last_seen: Timestamp,
+  last_agent: "engineer",
+  last_heartbeat: Timestamp
+}</code></pre>
+
+<strong>agent_runs</strong>
+<pre><code>{
+  session_id: "eng-20251226-123456-abc123",
+  installation_id: "sha256_hash",
+  agent: "engineer",
+  repo_count: 3,
+  version: "1.3.0",
+  status: "completed",
+  success: true,
+  pr_created: true,
+  started_at: "2025-12-26T12:34:56Z",
+  ended_at: "2025-12-26T12:38:23Z"
+}</code></pre>
+
+<strong>stats</strong> (global document)
+<pre><code>{
+  total_runs: 15234,
+  successful_runs: 14102,
+  prs_created: 3421,
+  runs_by_agent: {
+    engineer: 5234,
+    tech_lead: 5123,
+    discovery: 3201,
+    product: 1234,
+    auditor: 442
+  },
+  last_updated: Timestamp
+}</code></pre>
+
+<hr>
+
+<h2>Deploying Functions (Maintainers Only)</h2>
+
+<p>If you're contributing to Barbossa's Firebase functions:</p>
+
+<h3>Prerequisites</h3>
+<pre><code>npm install -g firebase-tools
+firebase login</code></pre>
+
+<h3>Deploy</h3>
+<pre><code>cd functions
+npm install
+firebase deploy --only functions</code></pre>
+
+<h3>Update Version</h3>
+<p>When releasing a new version, update <code>functions/index.js</code>:</p>
+
+<pre><code>const LATEST_VERSION = "1.3.0";  // Update this</code></pre>
+
+<p>Then redeploy functions.</p>
+
+<hr>
+
+<h2>Troubleshooting</h2>
+
+<h3>Firebase Connection Issues</h3>
+
+<strong>Symptom:</strong> Logs show <code>Failed to check version</code> or <code>Failed to track run</code>
+
+<strong>Causes:</strong>
+<ul>
+<li>Network connectivity issues</li>
+<li>Firebase API temporarily unavailable</li>
+<li>Firewall blocking Firebase domains</li>
+</ul>
+
+<strong>Resolution:</strong>
+<ul>
+<li>✅ <strong>No action needed</strong> - Barbossa continues working fine</li>
+<li>Errors are logged but don't affect functionality</li>
+<li>Optionally: Check network/firewall settings</li>
+<li>Optionally: Disable telemetry to stop seeing these logs</li>
+</ul>
+
+<h3>Version Check Failed</h3>
+
+<strong>Symptom:</strong> No update notifications even when new version exists
+
+<strong>Causes:</strong>
+<ul>
+<li>Telemetry disabled</li>
+<li>Firebase timeout (5 seconds)</li>
+<li>Network issues</li>
+</ul>
+
+<strong>Resolution:</strong>
+<ul>
+<li>Check <code>telemetry: true</code> in config</li>
+<li>Check network connectivity</li>
+<li>Manually check GitHub releases for updates</li>
+</ul>
+
+<h3>Privacy Concerns</h3>
+
+<strong>Symptom:</strong> Worried about what Firebase collects
+
+<strong>Resolution:</strong>
+<ul>
+<li>Review this document's "What Firebase Collects" section</li>
+<li>Inspect <code>barbossa_firebase.py</code> source code</li>
+<li>Inspect <code>functions/index.js</code> source code</li>
+<li>Opt out completely: <code>telemetry: false</code></li>
+</ul>
+
+<hr>
+
+<h2>FAQ</h2>
+
+<h3>Is Firebase required?</h3>
+
+<strong>No.</strong> Barbossa works perfectly without Firebase. All cloud functions are optional enhancements.
+
+<h3>What happens if Firebase is down?</h3>
+
+<p>Barbossa continues working normally. All Firebase calls have 5-second timeouts and fail gracefully.</p>
+
+<h3>Can I self-host the Firebase functions?</h3>
+
+<p>Yes, but it requires setting up your own Firebase project. The functions code is open source in <code>functions/index.js</code>.</p>
+
+<h3>Why not use a different analytics provider?</h3>
+
+<p>Firebase provides:</p>
+<ul>
+<li>Free tier (sufficient for Barbossa's needs)</li>
+<li>Excellent uptime and global CDN</li>
+<li>Simple deployment (no server management)</li>
+<li>Built-in Firestore for state tracking</li>
+</ul>
+
+<h3>How do I verify what data is sent?</h3>
+
+<ol>
+<li>Review <code>barbossa_firebase.py</code> source code</li>
+<li>Enable verbose logging to see all network calls</li>
+<li>Use a network proxy to inspect traffic</li>
+<li>All code is open source - verify yourself</li>
+</ul>
+
+<h3>Can I see my own installation's data?</h3>
+
+<p>No. Data is anonymous by design. Even we (maintainers) cannot link an installation_id hash back to a specific user or repository.</p>
+
+<hr>
+
+<h2>Contact & Support</h2>
+
+<ul>
+<li><strong>Issues:</strong> https://github.com/ADWilkinson/barbossa-dev/issues</li>
+<li><strong>Privacy Questions:</strong> Open an issue with "Privacy" label</li>
+<li><strong>Firebase Issues:</strong> Open an issue with "Firebase" label</li>
+</ul>
+
+<hr>
+
+<strong>Last Updated:</strong> 2025-12-26 (v1.3.0)
+
+    </main>
+
+    <footer>
+        MIT License · <a href="https://github.com/ADWilkinson/barbossa-dev">Source</a>
+    </footer>
+</body>
+</html>

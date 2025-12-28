@@ -272,6 +272,54 @@
 
 <hr>
 
+<h2>Issue Tracking</h2>
+
+<p>Barbossa supports both <strong>GitHub Issues</strong> (default) and <strong>Linear</strong> for issue tracking.</p>
+
+<h3>GitHub Issues (Default)</h3>
+
+<p>No configuration needed. Works out of the box with your GitHub repositories.</p>
+
+<h3>Linear Integration</h3>
+
+<p>Use Linear instead of GitHub Issues for managing backlog and feature requests:</p>
+
+<pre><code>{
+  "owner": "your-github-username",
+  "issue_tracker": {
+    "type": "linear",
+    "linear": {
+      "team_key": "MUS",
+      "backlog_state": "Backlog"
+    }
+  },
+  "repositories": [...]
+}</code></pre>
+
+<p>Set your Linear API key as an environment variable:</p>
+
+<pre><code>export LINEAR_API_KEY="lin_api_xxx"</code></pre>
+
+<p>Get your API key from <a href="https://linear.app/settings/api">Linear Settings → API</a>.</p>
+
+<strong>What happens with Linear:</strong>
+<ul>
+<li>Discovery agent creates issues in your Linear team</li>
+<li>Product Manager proposes features in Linear</li>
+<li>Engineer pulls backlog from Linear workspace</li>
+<li>PRs auto-link to Linear issues via branch naming: <code>barbossa/MUS-14-feature</code></li>
+</ul>
+
+<table><tr><th>Field</th><th>Description</th></tr><tr><td><code>team_key</code></td><td>Your Linear team key (e.g., "MUS", "ENG")</td></tr><tr><td><code>backlog_state</code></td><td>Workflow state name for backlog (default: "Backlog")</td></tr></table>
+<strong>Startup validation:</strong> Barbossa verifies Linear connectivity on startup and will fail fast if:
+<ul>
+<li><code>LINEAR_API_KEY</code> is not set</li>
+<li>Team doesn't exist</li>
+<li>API is unreachable</li>
+</ul>
+
+<hr>
+
 <h2>Multiple Repos</h2>
 
 <pre><code>{
