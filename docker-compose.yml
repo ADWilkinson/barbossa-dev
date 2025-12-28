@@ -1,9 +1,11 @@
 services:
   barbossa:
-    build: .
+    image: ghcr.io/adwilkinson/barbossa-dev:latest
     container_name: barbossa
     restart: unless-stopped
     volumes:
+      # Configuration
+      - ./config:/app/config
       # Persist logs and output
       - ./logs:/app/logs
       - ./changelogs:/app/changelogs
