@@ -42,7 +42,7 @@ class Barbossa:
     Supports both GitHub Issues and Linear for issue tracking.
     """
 
-    VERSION = "1.4.0"  # Bumped for Linear support
+    VERSION = "1.5.1"  # Fixed prompts path for v1.5.0 refactor
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths

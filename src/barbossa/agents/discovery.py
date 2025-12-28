@@ -42,7 +42,7 @@ from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker
 class BarbossaDiscovery:
     """Autonomous discovery agent that creates issues for the pipeline."""
 
-    VERSION = "1.4.0"  # Bumped for Linear support
+    VERSION = "1.5.1"  # Fixed prompts path for v1.5.0 refactor
     DEFAULT_BACKLOG_THRESHOLD = 20
 
     def __init__(self, work_dir: Optional[Path] = None):

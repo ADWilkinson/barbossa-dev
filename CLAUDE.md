@@ -1,7 +1,7 @@
 # Barbossa Engineer - Claude Context
 
 **Last Updated:** 2025-12-28
-**Version:** v1.4.0 (internal codebase: v1.5.0)
+**Version:** v1.5.1
 
 ## Project Overview
 
@@ -441,6 +441,18 @@ On container startup, `validate.py` checks:
 **Critical failures block startup** to prevent silent failures.
 
 ## Development History
+
+### v1.5.1 - 2025-12-28 (Hotfix release)
+- **CRITICAL FIX**: Fixed prompts.py path resolution after v1.5.0 refactor
+- Prompts path changed from `/app/src/barbossa/utils/prompts/` to `/app/prompts/`
+- Updated path in src/barbossa/utils/prompts.py:15 to use `parent.parent.parent.parent / "prompts"`
+- All agents now load prompts correctly at startup
+- All agent versions bumped to v1.5.1
+
+**Impact:**
+- ✅ Agents can now load prompt templates correctly
+- ✅ Fixes "Prompt file not found" error that blocked all agent execution
+- ✅ No configuration changes needed - drop-in replacement for v1.5.0
 
 ### v1.5.0 - 2025-12-28 (Internal refactor - no release)
 - **INTERNAL**: Repository restructured to proper Python package layout

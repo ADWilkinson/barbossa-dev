@@ -44,7 +44,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "1.4.0"  # Bumped for Linear support
+    VERSION = "1.5.1"  # Fixed prompts path for v1.5.0 refactor
     ROLE = "auditor"
 
     def __init__(self, work_dir: Optional[Path] = None):

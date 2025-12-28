@@ -10,8 +10,9 @@ import logging
 from pathlib import Path
 from typing import Dict, Optional
 
-# Prompt directory relative to this file
-PROMPTS_DIR = Path(__file__).parent / "prompts"
+# Prompt directory at project root (/app/prompts in container)
+# Since this file is at /app/src/barbossa/utils/prompts.py, we need to go up 4 levels to /app
+PROMPTS_DIR = Path(__file__).parent.parent.parent.parent / "prompts"
 
 # Valid agent types
 AGENT_TYPES = ["engineer", "tech_lead", "discovery", "product_manager", "auditor"]
