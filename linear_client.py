@@ -16,9 +16,54 @@ Usage:
 import json
 import logging
 import os
+import time
 import requests
 from typing import Dict, List, Optional
 from dataclasses import dataclass
+from functools import wraps
+
+
+def retry_on_rate_limit(max_retries: int = 3, base_delay: float = 1.0):
+    """
+    Decorator to retry Linear API calls on rate limit (429) or transient failures.
+    Uses exponential backoff with jitter.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            retries = 0
+            while retries <= max_retries:
+                try:
+                    result = func(*args, **kwargs)
+                    return result
+                except requests.exceptions.HTTPError as e:
+                    if hasattr(e, 'response') and e.response and e.response.status_code == 429:  # Rate limit
+                        retries += 1
+                        if retries > max_retries:
+                            raise
+
+                        # Exponential backoff with jitter
+                        delay = base_delay * (2 ** (retries - 1))
+                        jitter = delay * 0.1 * (0.5 - abs(hash(time.time()) % 100) / 100)
+                        sleep_time = delay + jitter
+
+                        logger = logging.getLogger('linear_client')
+                        logger.warning(f"Rate limited. Retry {retries}/{max_retries} after {sleep_time:.2f}s")
+                        time.sleep(sleep_time)
+                    else:
+                        raise
+                except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                    retries += 1
+                    if retries > max_retries:
+                        raise
+
+                    delay = base_delay * (2 ** (retries - 1))
+                    logger = logging.getLogger('linear_client')
+                    logger.warning(f"Transient error: {e}. Retry {retries}/{max_retries} after {delay}s")
+                    time.sleep(delay)
+            return None
+        return wrapper
+    return decorator
 
 
 @dataclass
@@ -65,8 +110,9 @@ class LinearClient:
         self.logger = logging.getLogger('linear_client')
         self._team_cache: Dict[str, str] = {}  # team_key -> team_id
 
+    @retry_on_rate_limit(max_retries=3, base_delay=1.0)
     def _graphql(self, query: str, variables: Optional[Dict] = None) -> Dict:
-        """Execute a GraphQL query against Linear API."""
+        """Execute a GraphQL query against Linear API with retry logic."""
         headers = {
             'Authorization': self.api_key,
             'Content-Type': 'application/json'
@@ -76,19 +122,16 @@ class LinearClient:
         if variables:
             payload['variables'] = variables
 
-        try:
-            response = requests.post(self.API_URL, json=payload, headers=headers, timeout=30)
-            response.raise_for_status()
-            result = response.json()
+        response = requests.post(self.API_URL, json=payload, headers=headers, timeout=30)
+        response.raise_for_status()
+        result = response.json()
 
-            if 'errors' in result:
-                self.logger.error(f"GraphQL errors: {result['errors']}")
-                return {}
+        if 'errors' in result:
+            error_messages = [err.get('message', str(err)) for err in result['errors']]
+            self.logger.error(f"GraphQL errors: {error_messages}")
+            raise ValueError(f"GraphQL errors: {error_messages}")
 
-            return result.get('data', {})
-        except Exception as e:
-            self.logger.error(f"Linear API error: {e}")
-            return {}
+        return result.get('data', {})
 
     def _get_team_id(self, team_key: str) -> Optional[str]:
         """Get team ID from team key (e.g., 'MUS' -> 'uuid')."""
@@ -107,13 +150,18 @@ class LinearClient:
         }
         """
 
-        result = self._graphql(query, {'key': team_key})
-        nodes = result.get('teams', {}).get('nodes', [])
-        if nodes:
-            team = nodes[0]
-            self._team_cache[team_key] = team['id']
-            return team['id']
-        return None
+        try:
+            result = self._graphql(query, {'key': team_key})
+            nodes = result.get('teams', {}).get('nodes', [])
+            if nodes:
+                team = nodes[0]
+                self._team_cache[team_key] = team['id']
+                return team['id']
+            self.logger.error(f"Team not found: {team_key}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Failed to get team ID for '{team_key}': {e}")
+            return None
 
     def _get_state_id(self, team_key: str, state_name: str) -> Optional[str]:
         """Get workflow state ID by name (e.g., 'Backlog' -> 'uuid')."""
@@ -133,25 +181,30 @@ class LinearClient:
         }
         """
 
-        result = self._graphql(query)
-        all_states = result.get('workflowStates', {}).get('nodes', [])
-        # Filter to the requested team
-        states = [s for s in all_states if s.get('team', {}).get('key') == team_key]
+        try:
+            result = self._graphql(query)
+            all_states = result.get('workflowStates', {}).get('nodes', [])
+            # Filter to the requested team
+            states = [s for s in all_states if s.get('team', {}).get('key') == team_key]
 
-        # Try exact match first, then case-insensitive
-        for state in states:
-            if state['name'] == state_name:
-                return state['id']
-        for state in states:
-            if state['name'].lower() == state_name.lower():
-                return state['id']
+            # Try exact match first, then case-insensitive
+            for state in states:
+                if state['name'] == state_name:
+                    return state['id']
+            for state in states:
+                if state['name'].lower() == state_name.lower():
+                    return state['id']
 
-        # Also try matching state type (backlog, started, completed, canceled)
-        for state in states:
-            if state['type'].lower() == state_name.lower():
-                return state['id']
+            # Also try matching state type (backlog, started, completed, canceled)
+            for state in states:
+                if state['type'].lower() == state_name.lower():
+                    return state['id']
 
-        return None
+            self.logger.warning(f"State '{state_name}' not found for team {team_key}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Failed to get state ID for '{state_name}' in team '{team_key}': {e}")
+            return None
 
     def _get_label_ids(self, team_key: str, label_names: List[str]) -> List[str]:
         """Get label IDs from label names."""
@@ -170,19 +223,27 @@ class LinearClient:
         }
         """
 
-        result = self._graphql(query)
-        all_labels = result.get('issueLabels', {}).get('nodes', [])
-        # Filter to the requested team (labels without team are workspace-wide)
-        labels = [l for l in all_labels if l.get('team', {}).get('key') == team_key or l.get('team') is None]
+        try:
+            result = self._graphql(query)
+            all_labels = result.get('issueLabels', {}).get('nodes', [])
+            # Filter to the requested team (labels without team are workspace-wide)
+            labels = [l for l in all_labels if l.get('team', {}).get('key') == team_key or l.get('team') is None]
 
-        label_ids = []
-        for name in label_names:
-            for label in labels:
-                if label['name'].lower() == name.lower():
-                    label_ids.append(label['id'])
-                    break
+            label_ids = []
+            for name in label_names:
+                found = False
+                for label in labels:
+                    if label['name'].lower() == name.lower():
+                        label_ids.append(label['id'])
+                        found = True
+                        break
+                if not found:
+                    self.logger.warning(f"Label '{name}' not found for team {team_key}")
 
-        return label_ids
+            return label_ids
+        except Exception as e:
+            self.logger.error(f"Failed to get label IDs for team '{team_key}': {e}")
+            return []
 
     def list_issues(
         self,
@@ -252,23 +313,27 @@ class LinearClient:
         }}
         """
 
-        result = self._graphql(query)
-        issues_data = result.get('issues', {}).get('nodes', [])
+        try:
+            result = self._graphql(query)
+            issues_data = result.get('issues', {}).get('nodes', [])
 
-        issues = []
-        for data in issues_data:
-            issues.append(LinearIssue(
-                id=data['id'],
-                identifier=data['identifier'],
-                title=data['title'],
-                description=data.get('description'),
-                state=data['state']['name'] if data.get('state') else 'Unknown',
-                labels=[l['name'] for l in data.get('labels', {}).get('nodes', [])],
-                url=data['url'],
-                created_at=data['createdAt']
-            ))
+            issues = []
+            for data in issues_data:
+                issues.append(LinearIssue(
+                    id=data['id'],
+                    identifier=data['identifier'],
+                    title=data['title'],
+                    description=data.get('description'),
+                    state=data['state']['name'] if data.get('state') else 'Unknown',
+                    labels=[l['name'] for l in data.get('labels', {}).get('nodes', [])],
+                    url=data['url'],
+                    created_at=data['createdAt']
+                ))
 
-        return issues
+            return issues
+        except Exception as e:
+            self.logger.error(f"Failed to list issues for team '{team_key}': {e}")
+            return []
 
     def get_issue(self, identifier: str) -> Optional[LinearIssue]:
         """Get a single issue by identifier (e.g., 'MUS-14')."""
@@ -293,22 +358,27 @@ class LinearClient:
         }
         """
 
-        result = self._graphql(query, {'identifier': identifier})
-        data = result.get('issue')
+        try:
+            result = self._graphql(query, {'identifier': identifier})
+            data = result.get('issue')
 
-        if not data:
+            if not data:
+                self.logger.warning(f"Issue not found: {identifier}")
+                return None
+
+            return LinearIssue(
+                id=data['id'],
+                identifier=data['identifier'],
+                title=data['title'],
+                description=data.get('description'),
+                state=data['state']['name'] if data.get('state') else 'Unknown',
+                labels=[l['name'] for l in data.get('labels', {}).get('nodes', [])],
+                url=data['url'],
+                created_at=data['createdAt']
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to get issue '{identifier}': {e}")
             return None
-
-        return LinearIssue(
-            id=data['id'],
-            identifier=data['identifier'],
-            title=data['title'],
-            description=data.get('description'),
-            state=data['state']['name'] if data.get('state') else 'Unknown',
-            labels=[l['name'] for l in data.get('labels', {}).get('nodes', [])],
-            url=data['url'],
-            created_at=data['createdAt']
-        )
 
     def create_issue(
         self,
@@ -336,72 +406,77 @@ class LinearClient:
             self.logger.error(f"Team not found: {team_key}")
             return None
 
-        # Build input
-        input_parts = [f'teamId: "{team_id}"', f'title: "{self._escape_string(title)}"']
+        # Build input using proper GraphQL variables (prevents injection)
+        input_data = {
+            'teamId': team_id,
+            'title': title
+        }
 
         if description:
-            input_parts.append(f'description: "{self._escape_string(description)}"')
+            input_data['description'] = description
 
         if state:
             state_id = self._get_state_id(team_key, state)
             if state_id:
-                input_parts.append(f'stateId: "{state_id}"')
+                input_data['stateId'] = state_id
 
         if labels:
             label_ids = self._get_label_ids(team_key, labels)
             if label_ids:
-                labels_str = ', '.join([f'"{lid}"' for lid in label_ids])
-                input_parts.append(f'labelIds: [{labels_str}]')
+                input_data['labelIds'] = label_ids
 
-        input_str = ', '.join(input_parts)
-
-        query = f"""
-        mutation CreateIssue {{
-            issueCreate(input: {{ {input_str} }}) {{
+        # Use GraphQL variables instead of string formatting (security fix)
+        query = """
+        mutation CreateIssue($input: IssueCreateInput!) {
+            issueCreate(input: $input) {
                 success
-                issue {{
+                issue {
                     id
                     identifier
                     title
                     description
-                    state {{
+                    state {
                         name
-                    }}
-                    labels {{
-                        nodes {{
+                    }
+                    labels {
+                        nodes {
                             name
-                        }}
-                    }}
+                        }
+                    }
                     url
                     createdAt
-                }}
-            }}
-        }}
+                }
+            }
+        }
         """
 
-        result = self._graphql(query)
-        create_result = result.get('issueCreate', {})
+        try:
+            result = self._graphql(query, {'input': input_data})
+            create_result = result.get('issueCreate', {})
 
-        if not create_result.get('success'):
-            self.logger.error(f"Failed to create issue: {title}")
+            if not create_result.get('success'):
+                self.logger.error(f"Failed to create issue: {title}")
+                return None
+
+            data = create_result.get('issue')
+            if not data:
+                return None
+
+            self.logger.info(f"Created issue: {data['identifier']} - {title}")
+
+            return LinearIssue(
+                id=data['id'],
+                identifier=data['identifier'],
+                title=data['title'],
+                description=data.get('description'),
+                state=data['state']['name'] if data.get('state') else 'Unknown',
+                labels=[l['name'] for l in data.get('labels', {}).get('nodes', [])],
+                url=data['url'],
+                created_at=data['createdAt']
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to create issue '{title}': {e}")
             return None
-
-        data = create_result.get('issue')
-        if not data:
-            return None
-
-        self.logger.info(f"Created issue: {data['identifier']} - {title}")
-
-        return LinearIssue(
-            id=data['id'],
-            identifier=data['identifier'],
-            title=data['title'],
-            description=data.get('description'),
-            state=data['state']['name'] if data.get('state') else 'Unknown',
-            labels=[l['name'] for l in data.get('labels', {}).get('nodes', [])],
-            url=data['url'],
-            created_at=data['createdAt']
-        )
 
     def update_issue_state(self, issue_id: str, state_name: str, team_key: str) -> bool:
         """Update an issue's state."""
@@ -440,10 +515,6 @@ class LinearClient:
         """Get just the titles of issues (for deduplication)."""
         issues = self.list_issues(team_key, state=state, limit=limit)
         return [issue.title.lower() for issue in issues]
-
-    def _escape_string(self, s: str) -> str:
-        """Escape a string for GraphQL."""
-        return s.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
 
 
 # Convenience function for simple usage

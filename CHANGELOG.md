@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2025-12-28
+
+### Added
+- **Linear Issue Tracker Integration** 🎉
+  - Full support for Linear as an alternative to GitHub Issues
+  - Unified `IssueTracker` abstraction layer works with both GitHub and Linear
+  - All agents (Engineer, Discovery, Product, Auditor) support Linear seamlessly
+  - Auto-linking to Linear issues via branch naming: `barbossa/MUS-14-description`
+  - Configuration via `issue_tracker` in `config/repositories.json`
+  - New files: `linear_client.py`, `issue_tracker.py`
+
+- **Comprehensive Test Suite** ✅
+  - `test_linear_client.py`: 15+ tests covering API calls, security, error handling
+  - `test_issue_tracker.py`: Tests for both GitHub and Linear implementations
+  - Tests prevent GraphQL injection, verify retry logic, validate abstraction layer
+  - All tests use mocking to avoid actual API calls
+
+- **Startup Validation for Linear**
+  - `validate.py` now checks Linear configuration on startup
+  - Verifies `LINEAR_API_KEY` environment variable is set
+  - Tests API connectivity to `api.linear.app`
+  - Confirms team exists and user has access
+  - Prevents silent failures with Linear misconfiguration
+
+### Security
+- **Fixed GraphQL Injection Vulnerability** (Critical) 🔒
+  - `linear_client.py` now uses proper GraphQL variables instead of string formatting
+  - Prevents injection attacks via malicious titles/descriptions
+  - Mutation queries use `$input` variables with type validation
+  - Removed unsafe `_escape_string()` method
+
+### Changed
+- **Rate Limiting & Retry Logic** 🔄
+  - Added `@retry_on_rate_limit` decorator for all Linear API calls
+  - Exponential backoff with jitter for 429 rate limit responses
+  - Retries transient failures (timeouts, connection errors)
+  - Max 3 retries before raising exception
+
+- **Improved Error Handling**
+  - All Linear API methods now have try/except with detailed error messages
+  - Better error context propagation (no more silent failures)
+  - GraphQL errors raise `ValueError` with error messages
+  - Logging includes full error context for debugging
+
+- **Agent Version Bumps**
+  - All agents bumped to v1.4.0 for Linear support
+  - `barbossa_engineer.py`: Injects Linear issues into prompts
+  - `barbossa_discovery.py`: Uses abstraction for issue creation
+  - `barbossa_product.py`: Creates feature issues in Linear
+  - `barbossa_auditor.py`: Uses abstraction for quality issues
+
+### Documentation
+- **Updated CLAUDE.md**
+  - New "Issue Tracking" section with Linear setup guide
+  - Documented GitHub vs Linear behavioral differences
+  - Added validation requirements and troubleshooting
+
+- **Updated README.md** (contributor: @puniaviision)
+  - Linear configuration examples
+  - Environment variable setup instructions
+  - Team key and backlog state configuration
+
 ## [1.0.3] - 2024-12-21
 
 ### Fixed

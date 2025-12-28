@@ -258,6 +258,59 @@ barbossa-engineer/
 
 **Commit:** 60a92e5 - "fix: update docker-compose volume mounts for non-root user"
 
+## Issue Tracking
+
+### Supported Systems
+Barbossa supports both **GitHub Issues** (default) and **Linear** for issue tracking. All agents work seamlessly with either system via a unified abstraction layer.
+
+### GitHub Issues (Default)
+- No configuration needed - works out of the box
+- Uses `gh` CLI for issue operations
+- Agents reference issues as `#123`
+- PRs linked via "Closes #123" in PR description
+
+### Linear Integration
+Configure Linear in `config/repositories.json`:
+
+```json
+{
+  "owner": "your-github-username",
+  "issue_tracker": {
+    "type": "linear",
+    "linear": {
+      "team_key": "MUS",
+      "backlog_state": "Backlog",
+      "api_key": "lin_api_xxx"  // Optional - prefer LINEAR_API_KEY env var
+    }
+  },
+  "repositories": [...]
+}
+```
+
+**Environment Variable (Recommended):**
+```bash
+export LINEAR_API_KEY="lin_api_xxx"
+# Get your API key from: https://linear.app/settings/api
+```
+
+**Linear Features:**
+- ✅ Discovery/Product agents create issues in Linear team
+- ✅ Engineer agent fetches backlog from Linear
+- ✅ Auto-linking via branch naming: `barbossa/MUS-14-description`
+- ✅ All agents use unified Issue abstraction (no code changes needed)
+- ✅ Validation on startup checks Linear connectivity
+
+**Behavioral Differences:**
+- **GitHub:** Engineer uses `gh issue list` at runtime (real-time state)
+- **Linear:** Issues pre-fetched and injected into prompt (snapshot)
+
+**Startup Validation:**
+When Linear is configured, `validate.py` checks:
+- ✅ `team_key` is set in config
+- ✅ `LINEAR_API_KEY` environment variable is set
+- ✅ API connectivity to `api.linear.app`
+- ✅ Team exists and user has access
+
 ## Security Model
 
 ### Non-Root Container Execution
@@ -269,8 +322,9 @@ barbossa-engineer/
 ### Authentication
 - GitHub CLI authentication via mounted `~/.config/gh/`
 - Claude CLI authentication via mounted `~/.claude/`
+- Linear API key via `LINEAR_API_KEY` environment variable (if Linear is used)
 - Git commits signed as configured user
-- No secrets stored in environment variables
+- No secrets hardcoded in configuration files
 
 ## Agent Workflows
 
