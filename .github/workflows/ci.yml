@@ -20,14 +20,18 @@ jobs:
 
       - name: Validate Python syntax
         run: |
-          python -m py_compile barbossa_engineer.py
-          python -m py_compile barbossa_tech_lead.py
-          python -m py_compile barbossa_discovery.py
-          python -m py_compile barbossa_product.py
-          python -m py_compile barbossa_auditor.py
-          python -m py_compile barbossa_firebase.py
-          python -m py_compile validate.py
-          python -m py_compile generate_crontab.py
+          python -m py_compile src/barbossa/agents/engineer.py
+          python -m py_compile src/barbossa/agents/tech_lead.py
+          python -m py_compile src/barbossa/agents/discovery.py
+          python -m py_compile src/barbossa/agents/product.py
+          python -m py_compile src/barbossa/agents/auditor.py
+          python -m py_compile src/barbossa/agents/firebase.py
+          python -m py_compile src/barbossa/utils/prompts.py
+          python -m py_compile src/barbossa/utils/issue_tracker.py
+          python -m py_compile src/barbossa/utils/linear_client.py
+          python -m py_compile src/barbossa/cli/barbossa
+          python -m py_compile scripts/validate.py
+          python -m py_compile scripts/generate_crontab.py
 
       - name: Build Docker image
         run: docker build -t barbossa-dev:test .
