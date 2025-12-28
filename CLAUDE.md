@@ -1,7 +1,7 @@
 # Barbossa Engineer - Claude Context
 
-**Last Updated:** 2025-12-26
-**Version:** v1.3.0
+**Last Updated:** 2025-12-28
+**Version:** v1.4.0 (internal codebase: v1.5.0)
 
 ## Project Overview
 
@@ -11,25 +11,42 @@ Barbossa is an autonomous AI development team powered by Claude that manages Git
 
 ```
 barbossa-engineer/
-├── barbossa_engineer.py      # Main engineer agent - implements features from backlog
-├── barbossa_tech_lead.py     # Tech lead agent - reviews and merges PRs
-├── barbossa_discovery.py     # Discovery agent - finds code improvements
-├── barbossa_product.py       # Product manager - creates feature issues
-├── barbossa_auditor.py       # Auditor - system health checks
-├── barbossa_firebase.py      # Firebase sync (future)
-├── barbossa_prompts.py       # Shared prompt templates
-├── barbossa                  # CLI tool for manual operations
-├── validate.py               # Startup validation script
-├── generate_crontab.py       # Crontab generator from config
-├── entrypoint.sh             # Docker entrypoint
-├── Dockerfile                # Container definition (runs as non-root)
-├── docker-compose.yml        # Service orchestration
-├── config/
-│   └── repositories.json     # Repository configuration
-├── prompts/                  # Local prompt templates
-├── logs/                     # Agent execution logs
-├── changelogs/               # Generated changelogs
-└── projects/                 # Cloned repositories
+├── src/
+│   └── barbossa/            # Python package
+│       ├── agents/          # AI agent modules
+│       │   ├── engineer.py  # Main engineer - implements features from backlog
+│       │   ├── tech_lead.py # Tech lead - reviews and merges PRs
+│       │   ├── discovery.py # Discovery - finds code improvements
+│       │   ├── product.py   # Product manager - creates feature issues
+│       │   ├── auditor.py   # Auditor - system health checks
+│       │   └── firebase.py  # Firebase sync (future)
+│       ├── utils/           # Shared utilities
+│       │   ├── prompts.py   # Prompt templates loader
+│       │   ├── issue_tracker.py  # GitHub/Linear abstraction
+│       │   └── linear_client.py  # Linear API client
+│       └── cli/
+│           └── barbossa     # CLI tool for manual operations
+├── scripts/                 # Build and deployment scripts
+│   ├── validate.py          # Startup validation
+│   ├── generate_crontab.py  # Crontab generator from config
+│   ├── run.sh               # Agent runner script
+│   └── install.sh           # Installation script
+├── tests/                   # Test suite
+│   ├── test_issue_tracker.py
+│   └── test_linear_client.py
+├── config/                  # Configuration files
+│   ├── repositories.json    # Repository configuration
+│   ├── repositories.json.example
+│   └── crontab              # Generated crontab
+├── prompts/                 # Local prompt templates
+├── logs/                    # Agent execution logs
+├── changelogs/              # Generated changelogs
+├── projects/                # Cloned repositories
+├── pyproject.toml           # Python package metadata
+├── Dockerfile               # Container definition (runs as non-root)
+├── docker-compose.prod.yml  # Production orchestration
+├── docker-compose.dev.yml   # Development orchestration
+└── entrypoint.sh            # Docker entrypoint
 ```
 
 ## Current System State
@@ -424,6 +441,40 @@ On container startup, `validate.py` checks:
 **Critical failures block startup** to prevent silent failures.
 
 ## Development History
+
+### v1.5.0 - 2025-12-28 (Internal refactor - no release)
+- **INTERNAL**: Repository restructured to proper Python package layout
+- **NOTE**: This was an internal code reorganization with no user-facing changes
+- Restructured to `src/barbossa/` Python package structure:
+  - `src/barbossa/agents/` - All AI agent modules
+  - `src/barbossa/utils/` - Shared utilities (prompts, issue_tracker, linear_client)
+  - `src/barbossa/cli/` - CLI tool
+  - `scripts/` - Build and deployment scripts
+  - `tests/` - Test suite
+- Added `pyproject.toml` for proper Python package metadata
+- All imports updated to module-based paths (`from barbossa.agents import engineer`)
+- Updated Docker build to use new directory structure
+- Set `PYTHONPATH=/app/src` in Docker environment
+- Fixed crontab generation to use module imports (`python3 -m barbossa.agents.engineer`)
+- CLI now callable as modules
+- Security improvements:
+  - Added `.dockerignore` for secure builds
+  - Enhanced `.gitignore` for better secret protection
+- Documentation improvements:
+  - Added `config/README.md`
+  - Added `tests/README.md`
+  - Enhanced `.env.example` with comprehensive documentation
+  - Simplified config examples
+- CI/CD workflows updated for new structure
+- Ready for OSS publication and PyPI distribution
+
+**Impact:**
+- ✅ Proper Python package structure ready for PyPI
+- ✅ Better code organization and maintainability
+- ✅ Module-based imports improve clarity
+- ✅ Enhanced security with .dockerignore
+- ⚠️ Breaking change: Requires Docker image rebuild
+- ✅ No user-facing API changes
 
 ### v1.3.0 - 2025-12-26
 - **ENHANCEMENT**: Tech Lead now detects external dependencies and setup requirements
