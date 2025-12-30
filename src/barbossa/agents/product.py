@@ -43,7 +43,7 @@ from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker
 class BarbossaProduct:
     """Product Manager agent that creates feature Issues for the pipeline."""
 
-    VERSION = "1.6.2"  # Dual Claude auth support (CLAUDE_CODE_OAUTH_TOKEN + ANTHROPIC_API_KEY)
+    VERSION = "1.6.4"  # Config-driven focus and known_gaps for quality/resilience work
     DEFAULT_MAX_ISSUES_PER_RUN = 3
     DEFAULT_FEATURE_BACKLOG_THRESHOLD = 20
 
@@ -215,8 +215,10 @@ class BarbossaProduct:
         """Generate the product analysis prompt for Claude - loaded from local file."""
         repo_name = repo['name']
 
-        # Product-specific context
-        product_context = self._get_product_context(repo_name)
+        # Product-specific context - prefer config fields, fallback to hardcoded
+        product_context = self._get_product_context_from_config(repo)
+        if not product_context:
+            product_context = self._get_product_context(repo_name)
 
         # Load template from local file
         template = get_system_prompt("product_manager")
@@ -231,6 +233,19 @@ class BarbossaProduct:
         prompt = prompt.replace("{{claude_md}}", claude_md[:8000])
         prompt = prompt.replace("{{product_context}}", product_context)
         return prompt
+
+    def _get_product_context_from_config(self, repo: Dict) -> str:
+        """Build product context from config fields (focus and known_gaps)."""
+        context_parts = []
+
+        if 'focus' in repo:
+            context_parts.append(f"DEVELOPMENT FOCUS:\n{repo['focus']}")
+
+        if 'known_gaps' in repo and repo['known_gaps']:
+            gaps_list = "\n".join([f"  - {gap}" for gap in repo['known_gaps']])
+            context_parts.append(f"KNOWN GAPS (PRIORITY OPPORTUNITIES):\n{gaps_list}")
+
+        return "\n\n".join(context_parts) if context_parts else ""
 
     def _get_product_context(self, repo_name: str) -> str:
         """Get product-specific context for each repository."""

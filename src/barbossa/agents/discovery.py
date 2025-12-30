@@ -42,7 +42,7 @@ from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker
 class BarbossaDiscovery:
     """Autonomous discovery agent that creates issues for the pipeline."""
 
-    VERSION = "1.6.2"  # Dual Claude auth support (CLAUDE_CODE_OAUTH_TOKEN + ANTHROPIC_API_KEY)
+    VERSION = "1.6.4"  # Config-driven focus and known_gaps for quality/resilience work
     DEFAULT_BACKLOG_THRESHOLD = 20
 
     def __init__(self, work_dir: Optional[Path] = None):

@@ -44,7 +44,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "1.6.2"  # Dual Claude auth support (CLAUDE_CODE_OAUTH_TOKEN + ANTHROPIC_API_KEY)
+    VERSION = "1.6.4"  # Config-driven focus and known_gaps for quality/resilience work
     ROLE = "auditor"
 
     def __init__(self, work_dir: Optional[Path] = None):

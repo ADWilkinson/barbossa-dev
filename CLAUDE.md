@@ -1,7 +1,7 @@
 # Barbossa Engineer - Claude Context
 
 **Last Updated:** 2025-12-30
-**Version:** v1.6.3
+**Version:** v1.6.4
 
 ## Project Overview
 
@@ -468,6 +468,50 @@ On container startup, `validate.py` checks:
 **Critical failures block startup** to prevent silent failures.
 
 ## Development History
+
+### v1.6.4 - 2025-12-30 (Quality & Resilience Focus)
+- **ENHANCEMENT**: Repository configuration now supports `focus` and `known_gaps` fields
+- **Impact:** Agents (Engineer, Product Manager) now read repository-specific guidance from config
+- **Purpose:** Enable per-repository focus on quality, resilience, testing, and polish vs new features
+- **Implementation:**
+  - ✅ Engineer agent reads `focus` and `known_gaps` from repository config
+  - ✅ Product Manager reads `focus` and `known_gaps` from repository config
+  - ✅ New config fields injected into agent prompts dynamically
+  - ✅ Backward compatible - repos without these fields continue to work normally
+- **Config Fields:**
+  - `focus` (string): Development focus/philosophy for the repository (e.g., "QUALITY & RESILIENCE ONLY")
+  - `known_gaps` (array): List of specific known issues and priority areas to address
+- **Files Modified:**
+  - `prompts/engineer.txt`: Added `{{focus_section}}`, `{{known_gaps_section}}`, `{{focus_guidance}}` variables
+  - `src/barbossa/agents/engineer.py:284-330`: Build and inject focus/known_gaps sections into prompts
+  - `src/barbossa/agents/product.py:214-248`: Prefer config fields over hardcoded context
+  - All agent versions bumped to v1.6.4
+  - Package version bumped to v1.6.4
+- **Example Usage:**
+  ```json
+  {
+    "name": "zkp2p-clients",
+    "focus": "QUALITY & RESILIENCE ONLY - Focus on bug fixes, edge cases, testing, security, UI polish",
+    "known_gaps": [
+      "Missing error boundaries in React components",
+      "Insufficient loading states",
+      "Weak network error handling",
+      "Limited test coverage"
+    ]
+  }
+  ```
+
+**Impact:**
+- ✅ Repository-specific agent behavior without code changes
+- ✅ Clear guidance on whether to prioritize quality vs features
+- ✅ Product Manager suggests features aligned with repository goals
+- ✅ Engineer prioritizes work from known_gaps list
+- ✅ Easier to shift focus between exploration and production-hardening phases
+
+**Behavior:**
+- **With `focus`**: Agent receives explicit development philosophy in prompt
+- **With `known_gaps`**: Agent sees prioritized list of known issues to address
+- **Without fields**: Agent behavior unchanged (backward compatible)
 
 ### v1.6.3 - 2025-12-30 (Critical bugfix release)
 - **CRITICAL BUG FIX**: Tech Lead now respects `auto_merge` setting in config

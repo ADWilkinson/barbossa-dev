@@ -42,7 +42,7 @@ class Barbossa:
     Supports both GitHub Issues and Linear for issue tracking.
     """
 
-    VERSION = "1.6.2"  # Dual Claude auth support (CLAUDE_CODE_OAUTH_TOKEN + ANTHROPIC_API_KEY)
+    VERSION = "1.6.4"  # Config-driven focus and known_gaps for quality/resilience work
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths
@@ -281,6 +281,28 @@ If there ARE backlog issues above:
             issue_list_command = f"  gh issue list --state open --repo {owner}/{repo_name} --limit 10"
             backlog_section = self._get_github_backlog_section(owner, repo_name)
 
+        # Build focus and known_gaps sections
+        focus_section = ""
+        known_gaps_section = ""
+        focus_guidance = ""
+
+        if 'focus' in repo:
+            focus_section = f"""DEVELOPMENT FOCUS:
+{repo['focus']}
+"""
+            focus_guidance = "CRITICAL: Prioritize work that aligns with the DEVELOPMENT FOCUS above."
+
+        if 'known_gaps' in repo and repo['known_gaps']:
+            gaps_list = "\n".join([f"  - {gap}" for gap in repo['known_gaps']])
+            known_gaps_section = f"""
+KNOWN GAPS & PRIORITY AREAS:
+{gaps_list}
+"""
+            if focus_guidance:
+                focus_guidance += " Address items from KNOWN GAPS & PRIORITY AREAS when possible."
+            else:
+                focus_guidance = "CRITICAL: Address items from KNOWN GAPS & PRIORITY AREAS when possible."
+
         # Replace template variables
         prompt = template
         prompt = prompt.replace("{{session_id}}", session_id)
@@ -292,6 +314,9 @@ If there ARE backlog issues above:
         prompt = prompt.replace("{{tech_section}}", tech_section)
         prompt = prompt.replace("{{arch_section}}", arch_section)
         prompt = prompt.replace("{{design_section}}", design_section)
+        prompt = prompt.replace("{{focus_section}}", focus_section)
+        prompt = prompt.replace("{{known_gaps_section}}", known_gaps_section)
+        prompt = prompt.replace("{{focus_guidance}}", focus_guidance)
         prompt = prompt.replace("{{dnt_section}}", dnt_section)
         prompt = prompt.replace("{{closed_pr_section}}", closed_pr_section)
         prompt = prompt.replace("{{issue_list_command}}", issue_list_command)

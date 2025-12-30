@@ -22,10 +22,14 @@ ARCHITECTURE:
 DESIGN SYSTEM:
 {{design_section}}
 
+{{focus_section}}
+{{known_gaps_section}}
 ================================================================================
 YOUR MISSION
 ================================================================================
 Create ONE meaningful Pull Request that adds real value to this codebase.
+
+{{focus_guidance}}
 
 ================================================================================
 PHASE 0 - MANDATORY STATE CHECK (you MUST do this FIRST)

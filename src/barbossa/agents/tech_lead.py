@@ -40,7 +40,7 @@ class BarbossaTechLead:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "1.6.3"  # Fixed auto_merge setting being ignored
+    VERSION = "1.6.4"  # Config-driven focus and known_gaps for quality/resilience work
     ROLE = "tech_lead"
 
     # Default review criteria (can be overridden in config)
