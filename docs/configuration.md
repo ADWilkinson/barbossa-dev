@@ -64,6 +64,8 @@ That's it. Barbossa auto-detects everything else.
 
 ## Protected Files
 
+**Warning:** Always protect auth, migrations, and config files from AI modification.
+
 Always protect sensitive code:
 
 ```json

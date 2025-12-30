@@ -3,78 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agents</title>
+    <title>Agents - Barbossa</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
             --ink: #1a1a1a;
             --paper: #fafafa;
-            --ghost: #999;
+            --ghost: #888;
             --line: #e5e5e5;
+            --accent: #6366f1;
+            --accent-dim: rgba(99, 102, 241, 0.1);
+            --code-bg: #2d2d2d;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --info: #3b82f6;
         }
 
         @media (prefers-color-scheme: dark) {
             :root {
                 --ink: #e5e5e5;
-                --paper: #111;
-                --ghost: #666;
-                --line: #333;
+                --paper: #0f0f0f;
+                --ghost: #888;
+                --line: #2a2a2a;
+                --accent: #818cf8;
+                --accent-dim: rgba(129, 140, 248, 0.1);
             }
         }
 
+        html { scroll-behavior: smooth; }
+
         body {
-            font: 16px/1.7 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+            font: 15px/1.7 'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
             background: var(--paper);
             color: var(--ink);
-            max-width: 680px;
+            max-width: 720px;
             margin: 0 auto;
-            padding: 4rem 2rem;
+            padding: 3rem 2rem 6rem;
         }
 
-        /* Navigation - just links */
+        /* Navigation */
         nav {
-            margin-bottom: 4rem;
-            font-size: 14px;
+            position: sticky;
+            top: 0;
+            background: var(--paper);
+            padding: 1rem 0 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--line);
+            font-size: 13px;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
         nav a {
             color: var(--ghost);
             text-decoration: none;
-            margin-right: 1.5rem;
+            padding: 0.4rem 0.7rem;
+            border-radius: 4px;
+            transition: all 0.15s;
         }
         nav a:hover {
             color: var(--ink);
+            background: var(--line);
+        }
+        nav a.active {
+            color: var(--accent);
+            background: var(--accent-dim);
         }
         nav .logo {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            vertical-align: middle;
-            margin-right: 0.25rem;
+            font-weight: 600;
+            color: var(--ink);
+            margin-right: auto;
+            padding-left: 0;
+        }
+        nav .logo:hover {
+            background: none;
+            color: var(--accent);
+        }
+
+        /* Mobile nav toggle */
+        .nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--ink);
+            cursor: pointer;
+            padding: 0.5rem;
+            font-size: 18px;
+        }
+        @media (max-width: 600px) {
+            nav {
+                flex-wrap: wrap;
+            }
+            nav .logo {
+                margin-right: 0;
+            }
+            .nav-toggle {
+                display: block;
+                margin-left: auto;
+            }
+            nav .nav-links {
+                display: none;
+                width: 100%;
+                flex-direction: column;
+                gap: 0.25rem;
+                padding-top: 1rem;
+            }
+            nav .nav-links.open {
+                display: flex;
+            }
+            nav .nav-links a {
+                width: 100%;
+            }
+        }
+        @media (min-width: 601px) {
+            nav .nav-links {
+                display: flex;
+                gap: 0.25rem;
+            }
         }
 
         /* Typography */
         h1 {
-            font-size: 14px;
-            font-weight: 400;
+            font-size: 13px;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: 3rem;
+            letter-spacing: 0.15em;
+            color: var(--ghost);
+            margin-bottom: 2.5rem;
             padding-bottom: 1rem;
             border-bottom: 1px solid var(--line);
         }
 
         h2 {
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 600;
             margin: 3rem 0 1.5rem;
+            padding-top: 1rem;
         }
 
         h3 {
             font-size: 14px;
-            font-weight: 400;
-            color: var(--ghost);
+            font-weight: 500;
+            color: var(--ink);
             margin: 2rem 0 1rem;
         }
 
@@ -83,9 +157,15 @@
         }
 
         a {
-            color: var(--ink);
+            color: var(--accent);
+            text-decoration: none;
+        }
+        a:hover {
             text-decoration: underline;
-            text-underline-offset: 2px;
+        }
+
+        strong {
+            font-weight: 600;
         }
 
         /* Lists */
@@ -95,27 +175,45 @@
         li {
             margin-bottom: 0.5rem;
         }
+        li::marker {
+            color: var(--ghost);
+        }
 
-        /* Code */
-        code {
+        /* Inline code */
+        code:not([class*="language-"]) {
             font-family: inherit;
             background: var(--line);
-            padding: 0.1em 0.3em;
+            padding: 0.15em 0.4em;
+            border-radius: 3px;
             font-size: 0.9em;
         }
 
-        pre {
-            background: var(--line);
-            padding: 1.5rem;
+        /* Code blocks with Prism */
+        pre[class*="language-"] {
+            margin: 1.5rem 0;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        pre[class*="language-"] code {
+            font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+        }
+
+        /* Fallback for code blocks without language */
+        pre:not([class*="language-"]) {
+            background: var(--code-bg);
+            color: #ccc;
+            padding: 1.25rem 1.5rem;
             margin: 1.5rem 0;
             overflow-x: auto;
             font-size: 13px;
-            line-height: 1.5;
+            line-height: 1.6;
+            border-radius: 6px;
         }
-
-        pre code {
+        pre:not([class*="language-"]) code {
             background: none;
             padding: 0;
+            color: inherit;
         }
 
         /* Tables */
@@ -123,7 +221,7 @@
             width: 100%;
             border-collapse: collapse;
             margin: 1.5rem 0;
-            font-size: 14px;
+            font-size: 13px;
         }
         th, td {
             text-align: left;
@@ -132,14 +230,46 @@
         }
         th {
             font-weight: 600;
+            color: var(--ghost);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        /* Blockquotes */
+        /* Blockquotes / Callouts */
         blockquote {
-            border-left: 2px solid var(--line);
-            padding-left: 1rem;
+            border-left: 3px solid var(--accent);
+            padding: 0.75rem 1rem;
             margin: 1.5rem 0;
-            color: var(--ghost);
+            background: var(--accent-dim);
+            border-radius: 0 6px 6px 0;
+        }
+        blockquote p {
+            margin: 0;
+        }
+
+        /* Tip/Warning/Note callouts */
+        .callout {
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+            border-radius: 6px;
+            border-left: 3px solid;
+        }
+        .callout-tip {
+            background: rgba(34, 197, 94, 0.08);
+            border-color: var(--success);
+        }
+        .callout-warning {
+            background: rgba(245, 158, 11, 0.08);
+            border-color: var(--warning);
+        }
+        .callout-info {
+            background: rgba(59, 130, 246, 0.08);
+            border-color: var(--info);
+        }
+        .callout strong {
+            display: block;
+            margin-bottom: 0.25rem;
         }
 
         /* Horizontal rules */
@@ -149,79 +279,88 @@
             margin: 3rem 0;
         }
 
+        /* Table of Contents */
+        .toc {
+            background: var(--line);
+            padding: 1.25rem 1.5rem;
+            border-radius: 6px;
+            margin: 2rem 0 3rem;
+        }
+        .toc-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--ghost);
+            margin-bottom: 0.75rem;
+        }
+        .toc ul {
+            margin: 0;
+            list-style: none;
+        }
+        .toc li {
+            margin: 0.35rem 0;
+        }
+        .toc a {
+            color: var(--ink);
+            font-size: 13px;
+        }
+
         /* Footer */
         footer {
             margin-top: 6rem;
             padding-top: 2rem;
             border-top: 1px solid var(--line);
-            font-size: 13px;
+            font-size: 12px;
+            color: var(--ghost);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        footer a {
             color: var(--ghost);
         }
-
-        /* Hero for home page */
-        .hero {
-            margin: 4rem 0;
-        }
-        .hero h1 {
-            font-size: 14px;
-            border: none;
-            padding: 0;
-            margin-bottom: 1rem;
-        }
-        .hero p {
-            font-size: 24px;
-            font-weight: 300;
-            line-height: 1.4;
-            margin-bottom: 0;
-        }
-
-        /* Features grid */
-        .features {
-            display: grid;
-            gap: 2rem;
-            margin: 3rem 0;
-        }
-        .feature {
-            padding: 1.5rem 0;
-            border-top: 1px solid var(--line);
-        }
-        .feature h3 {
-            margin: 0 0 0.5rem;
-            font-weight: 600;
+        footer a:hover {
             color: var(--ink);
         }
-        .feature p {
-            margin: 0;
-            color: var(--ghost);
-            font-size: 14px;
+
+        /* Smooth anchor scrolling offset for sticky nav */
+        h2[id], h3[id] {
+            scroll-margin-top: 80px;
         }
     </style>
 </head>
 <body>
     <nav>
-        <a href="/">_b</a>
-        <a href="/quickstart.html">start</a>
-        <a href="/configuration.html">config</a>
-        <a href="/agents.html">agents</a>
-        <a href="/faq.html">faq</a>
-        <a href="https://github.com/ADWilkinson/barbossa-dev">github</a>
+        <a href="/" class="logo">barbossa</a>
+        <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Toggle navigation">☰</button>
+        <div class="nav-links">
+            <a href="/quickstart.html" class="">quickstart</a>
+            <a href="/configuration.html" class="">config</a>
+            <a href="/agents.html" class="active">agents</a>
+            <a href="/architecture.html" class="">architecture</a>
+            <a href="/examples.html" class="">examples</a>
+            <a href="/faq.html" class="">faq</a>
+            <a href="https://github.com/ADWilkinson/barbossa-dev" target="_blank">github ↗</a>
+        </div>
     </nav>
 
     <main>
-        <h1>Agents</h1>
+        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#overview">Overview</a></li><li><a href="#pipeline">Pipeline</a></li><li><a href="#how-each-agent-works">How Each Agent Works</a></li><li><a href="#run-manually">Run Manually</a></li></ul></div>
+        <h1 id="agents">Agents</h1>
 
 <p>Five autonomous agents work on your codebase.</p>
 
 <hr>
 
-<h2>Overview</h2>
+<h2 id="overview">Overview</h2>
 
 <table><tr><th>Agent</th><th>Purpose</th></tr><tr><td><strong>Engineer</strong></td><td>Picks tasks from backlog, creates PRs</td></tr><tr><td><strong>Tech Lead</strong></td><td>Reviews PRs, merges or requests changes</td></tr><tr><td><strong>Discovery</strong></td><td>Finds TODOs, missing tests, issues</td></tr><tr><td><strong>Product Manager</strong></td><td>Proposes high-value features</td></tr><tr><td><strong>Auditor</strong></td><td>Monitors system health</td></tr></table>
 <hr>
 
-<h2>Pipeline</h2>
+<h2 id="pipeline">Pipeline</h2>
 
-<pre><code>Discovery + Product Manager
+<pre class="language-text"><code class="language-text">Discovery + Product Manager
            ↓
      GitHub Issues (backlog)
            ↓
@@ -231,9 +370,9 @@
 
 <hr>
 
-<h2>How Each Agent Works</h2>
+<h2 id="how-each-agent-works">How Each Agent Works</h2>
 
-<h3>Engineer</h3>
+<h3 id="engineer">Engineer</h3>
 <p>Picks tasks from the GitHub Issues backlog and implements them.</p>
 <ul>
 <li>Finds issues labeled <code>backlog</code></li>
@@ -242,7 +381,7 @@
 <li>Links PR to issue with <code>Closes #XX</code></li>
 </ul>
 
-<h3>Tech Lead</h3>
+<h3 id="tech-lead">Tech Lead</h3>
 <p>Reviews pull requests with comprehensive quality analysis and decides whether to merge or request changes.</p>
 <ul>
 <li>Checks CI status (must pass)</li>
@@ -254,7 +393,7 @@
 <li>Set <code>auto_merge: false</code> in config to require manual merges</li>
 </ul>
 
-<h3>Discovery</h3>
+<h3 id="discovery">Discovery</h3>
 <p>Scans the codebase for technical debt and creates GitHub Issues.</p>
 <ul>
 <li>TODO and FIXME comments</li>
@@ -262,14 +401,14 @@
 <li>Accessibility issues</li>
 </ul>
 
-<h3>Product Manager</h3>
+<h3 id="product-manager">Product Manager</h3>
 <p>Analyzes the codebase and proposes high-value features.</p>
 <ul>
 <li>Reads CLAUDE.md to understand the product</li>
 <li>Creates feature issues with acceptance criteria</li>
 </ul>
 
-<h3>Auditor</h3>
+<h3 id="auditor">Auditor</h3>
 <p>Monitors system health and identifies patterns.</p>
 <ul>
 <li>Analyzes agent logs</li>
@@ -281,16 +420,23 @@
 
 <hr>
 
-<h2>Run Manually</h2>
+<h2 id="run-manually">Run Manually</h2>
 
-<pre><code>docker exec barbossa barbossa run engineer
+<pre class="language-bash"><code class="language-bash">docker exec barbossa barbossa run engineer
 docker exec barbossa barbossa run tech-lead
 docker exec barbossa barbossa run discovery</code></pre>
 
     </main>
 
     <footer>
-        MIT License · <a href="https://github.com/ADWilkinson/barbossa-dev">Source</a>
+        <span>MIT License</span>
+        <a href="https://github.com/ADWilkinson/barbossa-dev">View on GitHub</a>
     </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
 </body>
 </html>

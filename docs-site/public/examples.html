@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuration - Barbossa</title>
+    <title>Examples - Barbossa</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <style>
@@ -336,253 +336,311 @@
         <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Toggle navigation">☰</button>
         <div class="nav-links">
             <a href="/quickstart.html" class="">quickstart</a>
-            <a href="/configuration.html" class="active">config</a>
+            <a href="/configuration.html" class="">config</a>
             <a href="/agents.html" class="">agents</a>
             <a href="/architecture.html" class="">architecture</a>
-            <a href="/examples.html" class="">examples</a>
+            <a href="/examples.html" class="active">examples</a>
             <a href="/faq.html" class="">faq</a>
             <a href="https://github.com/ADWilkinson/barbossa-dev" target="_blank">github ↗</a>
         </div>
     </nav>
 
     <main>
-        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#minimal-config">Minimal Config</a></li><li><a href="#common-options">Common Options</a></li><li><a href="#protected-files">Protected Files</a></li><li><a href="#scheduling">Scheduling</a></li><li><a href="#issue-tracking">Issue Tracking</a></li><li><a href="#multiple-repos">Multiple Repos</a></li><li><a href="#timezone">Timezone</a></li><li><a href="#privacy-telemetry">Privacy & Telemetry</a></li></ul></div>
-        <h1 id="configuration">Configuration</h1>
+        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#basic-setup">Basic Setup</a></li><li><a href="#team-configurations">Team Configurations</a></li><li><a href="#framework-specific">Framework-Specific</a></li><li><a href="#issue-tracking">Issue Tracking</a></li><li><a href="#scheduling-patterns">Scheduling Patterns</a></li><li><a href="#quality-tuning">Quality Tuning</a></li><li><a href="#privacy-options">Privacy Options</a></li><li><a href="#common-workflows">Common Workflows</a></li><li><a href="#troubleshooting-examples">Troubleshooting Examples</a></li></ul></div>
+        <h1 id="examples">Examples</h1>
 
-<p>All configuration is in <code>config/repositories.json</code>.</p>
+<p>Real-world usage scenarios and configurations.</p>
 
 <hr>
 
-<h2 id="minimal-config">Minimal Config</h2>
+<h2 id="basic-setup">Basic Setup</h2>
+
+<h3 id="single-repository">Single Repository</h3>
+
+<p>The simplest configuration - one repository with defaults:</p>
 
 <pre class="language-json"><code class="language-json">{
-  "owner": "your-github-username",
+  "owner": "yourname",
   "repositories": [
     {
       "name": "my-app",
-      "url": "https://github.com/your-github-username/my-app.git"
+      "url": "https://github.com/yourname/my-app.git"
     }
   ]
 }</code></pre>
 
-<p>That's it. Barbossa auto-detects everything else.</p>
+<p>This enables all agents with default schedules. Barbossa will:</p>
+<ul>
+<li>Find issues and create backlog items</li>
+<li>Implement fixes and features</li>
+<li>Review and merge PRs automatically</li>
+</ul>
 
 <hr>
 
-<h2 id="common-options">Common Options</h2>
+<h2 id="team-configurations">Team Configurations</h2>
+
+<h3 id="solo-developer">Solo Developer</h3>
+
+<p>Run during work hours, review manually:</p>
 
 <pre class="language-json"><code class="language-json">{
-  "owner": "your-github-username",
+  "owner": "yourname",
   "repositories": [
     {
-      "name": "my-app",
-      "url": "https://github.com/your-github-username/my-app.git",
-      "package_manager": "pnpm",
-      "do_not_touch": ["src/lib/auth.ts", "prisma/migrations/"]
+      "name": "side-project",
+      "url": "https://github.com/yourname/side-project.git",
+      "package_manager": "pnpm"
     }
   ],
   "settings": {
-    "telemetry": true,
     "tech_lead": {
-      "auto_merge": true,
-      "min_lines_for_tests_required": 50,
-      "max_files_per_pr": 15,
-      "stale_pr_threshold": 5
+      "auto_merge": false
     },
-    "discovery": { "enabled": true },
-    "product_manager": { "enabled": true }
-  }
-}</code></pre>
-
-<table><tr><th>Field</th><th>Description</th></tr><tr><td><code>package_manager</code></td><td><code>npm</code>, <code>yarn</code>, <code>pnpm</code>, or <code>bun</code> (auto-detected if omitted)</td></tr><tr><td><code>do_not_touch</code></td><td>Files/directories agents should never modify</td></tr><tr><td><code>telemetry</code></td><td><code>true</code> (default) or <code>false</code> to disable anonymous usage tracking</td></tr><tr><td><code>auto_merge</code></td><td>Enabled by default. Set to <code>false</code> for manual merge control</td></tr><tr><td><code>min_lines_for_tests_required</code></td><td>Minimum lines changed to require tests (default: 50)</td></tr><tr><td><code>max_files_per_pr</code></td><td>Maximum files allowed in a PR (default: 15)</td></tr><tr><td><code>stale_pr_threshold</code></td><td>Days before PR considered stale (default: 5)</td></tr><tr><td><code>enabled</code></td><td>Enable/disable individual agents</td></tr></table>
-<hr>
-
-<h2 id="protected-files">Protected Files</h2>
-
-<strong>Warning:</strong> Always protect auth, migrations, and config files from AI modification.
-
-<p>Always protect sensitive code:</p>
-
-<pre class="language-json"><code class="language-json">{
-  "do_not_touch": [
-    ".env*",
-    "src/lib/auth.ts",
-    "prisma/migrations/"
-  ]
-}</code></pre>
-
-<hr>
-
-<h2 id="scheduling">Scheduling</h2>
-
-<p>Agents run on optimized schedules to avoid resource contention and ensure fresh work is processed efficiently.</p>
-
-<h3 id="default-schedule">Default Schedule</h3>
-
-<pre class="language-json"><code class="language-json">{
-  "settings": {
     "schedule": {
-      "engineer": "every_2_hours",
-      "tech_lead": "0 1,3,5,7,9,11,13,15,17,19,21,23 * * *",
-      "discovery": "0 1,5,9,13,17,21 * * *",
-      "product_manager": "0 3,11,19 * * *"
+      "engineer": "0 9,12,15,18 * * 1-5",
+      "tech_lead": "30 9,12,15,18 * * 1-5",
+      "discovery": "0 10 * * 1-5",
+      "product_manager": "0 11 * * 1"
     }
   }
 }</code></pre>
 
-<strong>What runs when:</strong>
+<strong>Note:</strong> With <code>auto_merge: false</code>, Tech Lead will post approval comments but you merge manually.
 
-<table><tr><th>Agent</th><th>Frequency</th><th>Times (UTC)</th><th>Purpose</th></tr><tr><td><strong>Engineer</strong></td><td>12x daily</td><td>00:00, 02:00, 04:00...</td><td>Implements features from backlog</td></tr><tr><td><strong>Tech Lead</strong></td><td>12x daily</td><td>01:00, 03:00, 05:00...</td><td>Reviews PRs (1h after engineer)</td></tr><tr><td><strong>Discovery</strong></td><td>6x daily</td><td>01:00, 05:00, 09:00, 13:00, 17:00, 21:00</td><td>Finds issues & technical debt</td></tr><tr><td><strong>Product</strong></td><td>3x daily</td><td>03:00, 11:00, 19:00</td><td>Suggests new features</td></tr><tr><td><strong>Auditor</strong></td><td>Daily</td><td>06:30</td><td>System health check</td></tr></table>
-<h3 id="why-offset-schedules">Why Offset Schedules?</h3>
+<h3 id="small-team">Small Team</h3>
 
-<ol>
-<li><strong>Avoids API rate limits</strong> - agents don't hit Claude API simultaneously</li>
-<li><strong>Fresh PR reviews</strong> - Tech Lead runs after Engineer creates PRs</li>
-<li><strong>Healthy backlog</strong> - Discovery runs frequently to keep work queue stocked</li>
-<li><strong>Resource efficiency</strong> - No CPU/memory contention from parallel execution</li>
-</ol>
-
-<h3 id="custom-schedules">Custom Schedules</h3>
-
-<p>Use <strong>presets</strong>:</p>
+<p>Multiple repos, aggressive schedule, protected files:</p>
 
 <pre class="language-json"><code class="language-json">{
-  "schedule": {
-    "engineer": "every_3_hours",
-    "tech_lead": "every_3_hours",
-    "discovery": "4x_daily",
-    "product_manager": "2x_daily"
+  "owner": "startup-inc",
+  "repositories": [
+    {
+      "name": "frontend",
+      "url": "https://github.com/startup-inc/frontend.git",
+      "package_manager": "yarn",
+      "do_not_touch": ["src/lib/analytics.ts"]
+    },
+    {
+      "name": "backend",
+      "url": "https://github.com/startup-inc/backend.git",
+      "package_manager": "npm",
+      "do_not_touch": ["src/auth/**", "prisma/migrations/"]
+    }
+  ],
+  "settings": {
+    "tech_lead": {
+      "auto_merge": true,
+      "min_lines_for_tests_required": 30,
+      "max_files_per_pr": 10
+    },
+    "schedule": {
+      "engineer": "every_2_hours",
+      "tech_lead": "every_2_hours",
+      "discovery": "4x_daily",
+      "product_manager": "2x_daily"
+    }
   }
 }</code></pre>
 
-<p>Available presets:</p>
-<ul>
-<li><code>every_hour</code>, <code>every_2_hours</code>, <code>every_3_hours</code>, <code>every_4_hours</code>, <code>every_6_hours</code></li>
-<li><code>4x_daily</code>, <code>3x_daily</code>, <code>2x_daily</code></li>
-<li><code>daily_morning</code>, <code>daily_evening</code>, <code>daily_night</code></li>
-</ul>
+<hr>
 
-<p>Or use <strong>custom cron expressions</strong>:</p>
+<h2 id="framework-specific">Framework-Specific</h2>
+
+<h3 id="nextjs-app">Next.js App</h3>
 
 <pre class="language-json"><code class="language-json">{
-  "schedule": {
-    "engineer": "0 9,17 * * *",  // 9am and 5pm only
-    "tech_lead": "30 9,17 * * *", // 30 min after engineer
-    "discovery": "0 12 * * *",    // Noon daily
-    "product_manager": "0 18 * * 1"  // 6pm Monday only
-  }
+  "owner": "yourname",
+  "repositories": [
+    {
+      "name": "nextjs-app",
+      "url": "https://github.com/yourname/nextjs-app.git",
+      "package_manager": "pnpm",
+      "do_not_touch": [
+        ".env*",
+        "next.config.js",
+        "middleware.ts"
+      ]
+    }
+  ]
 }</code></pre>
 
-<h3 id="disable-agents">Disable Agents</h3>
+<strong>Tip:</strong> Add a <code>CLAUDE.md</code> to your repo with Next.js-specific context:
+
+<pre class="language-markdown"><code class="language-markdown"># NextJS App
+
+## Stack
+- Next.js 14 with App Router
+- TypeScript strict mode
+- Tailwind CSS
+- Prisma + PostgreSQL
+
+## Conventions
+- Server components by default
+- Client components prefixed with 'use client'
+- API routes in app/api/
+
+## Do Not Touch
+- Auth handled by NextAuth.js in middleware.ts
+- Environment variables managed externally</code></pre>
+
+<h3 id="pythonfastapi">Python/FastAPI</h3>
 
 <pre class="language-json"><code class="language-json">{
-  "schedule": {
-    "product_manager": "disabled"
-  }
+  "owner": "yourname",
+  "repositories": [
+    {
+      "name": "api-service",
+      "url": "https://github.com/yourname/api-service.git",
+      "package_manager": "pip",
+      "do_not_touch": [
+        ".env*",
+        "alembic/versions/"
+      ]
+    }
+  ]
+}</code></pre>
+
+<h3 id="monorepo">Monorepo</h3>
+
+<pre class="language-json"><code class="language-json">{
+  "owner": "yourname",
+  "repositories": [
+    {
+      "name": "monorepo",
+      "url": "https://github.com/yourname/monorepo.git",
+      "package_manager": "pnpm",
+      "do_not_touch": [
+        "packages/auth/**",
+        "packages/database/migrations/**",
+        "turbo.json"
+      ]
+    }
+  ]
 }</code></pre>
 
 <hr>
 
 <h2 id="issue-tracking">Issue Tracking</h2>
 
-<p>Barbossa supports both <strong>GitHub Issues</strong> (default) and <strong>Linear</strong> for issue tracking.</p>
-
 <h3 id="github-issues-default">GitHub Issues (Default)</h3>
 
-<p>No configuration needed. Works out of the box with your GitHub repositories.</p>
+<p>No configuration needed. Issues are created and tracked in GitHub.</p>
 
 <h3 id="linear-integration">Linear Integration</h3>
 
-<p>Use Linear instead of GitHub Issues for managing backlog and feature requests:</p>
-
 <pre class="language-json"><code class="language-json">{
-  "owner": "your-github-username",
+  "owner": "yourname",
   "issue_tracker": {
     "type": "linear",
     "linear": {
-      "team_key": "MUS",
+      "team_key": "ENG",
       "backlog_state": "Backlog"
     }
   },
-  "repositories": [...]
-}</code></pre>
-
-<p>Set your Linear API key as an environment variable:</p>
-
-<pre class="language-bash"><code class="language-bash">export LINEAR_API_KEY="lin_api_xxx"</code></pre>
-
-<p>Get your API key from <a href="https://linear.app/settings/api">Linear Settings → API</a>.</p>
-
-<strong>What happens with Linear:</strong>
-<ul>
-<li>Discovery agent creates issues in your Linear team</li>
-<li>Product Manager proposes features in Linear</li>
-<li>Engineer pulls backlog from Linear workspace</li>
-<li>PRs auto-link to Linear issues via branch naming: <code>barbossa/MUS-14-feature</code></li>
-</ul>
-
-<table><tr><th>Field</th><th>Description</th></tr><tr><td><code>team_key</code></td><td>Your Linear team key (e.g., "MUS", "ENG")</td></tr><tr><td><code>backlog_state</code></td><td>Workflow state name for backlog (default: "Backlog")</td></tr></table>
-<strong>Startup validation:</strong> Barbossa verifies Linear connectivity on startup and will fail fast if:
-<ul>
-<li><code>LINEAR_API_KEY</code> is not set</li>
-<li>Team doesn't exist</li>
-<li>API is unreachable</li>
-</ul>
-
-<hr>
-
-<h2 id="multiple-repos">Multiple Repos</h2>
-
-<pre class="language-json"><code class="language-json">{
-  "owner": "your-username",
   "repositories": [
-    { "name": "frontend", "url": "https://github.com/you/frontend.git" },
-    { "name": "backend", "url": "https://github.com/you/backend.git" }
+    {
+      "name": "app",
+      "url": "https://github.com/yourname/app.git"
+    }
   ]
 }</code></pre>
 
+<p>Set the API key:</p>
+
+<pre class="language-bash"><code class="language-bash">export LINEAR_API_KEY="lin_api_xxxx"</code></pre>
+
+<p>Linear issues automatically link to PRs via branch naming: <code>barbossa/ENG-42-fix-login-bug</code></p>
+
 <hr>
 
-<h2 id="timezone">Timezone</h2>
+<h2 id="scheduling-patterns">Scheduling Patterns</h2>
 
-<p>Set the <code>TZ</code> environment variable in docker-compose.yml to control when agents run. Default is <code>UTC</code>.</p>
+<h3 id="business-hours-only">Business Hours Only</h3>
+
+<pre class="language-json"><code class="language-json">{
+  "settings": {
+    "schedule": {
+      "engineer": "0 9,11,14,16 * * 1-5",
+      "tech_lead": "30 9,11,14,16 * * 1-5",
+      "discovery": "0 10 * * 1,3,5",
+      "product_manager": "0 15 * * 2"
+    }
+  }
+}</code></pre>
+
+<p>Set timezone in docker-compose.yml:</p>
 
 <pre class="language-yaml"><code class="language-yaml">environment:
-  - TZ=Europe/London</code></pre>
+  - TZ=America/New_York</code></pre>
 
-<h3 id="common-timezones">Common Timezones</h3>
+<h3 id="overnight-processing">Overnight Processing</h3>
 
-<table><tr><th>Region</th><th>Timezone</th></tr><tr><td>US Pacific</td><td><code>America/Los_Angeles</code></td></tr><tr><td>US Mountain</td><td><code>America/Denver</code></td></tr><tr><td>US Central</td><td><code>America/Chicago</code></td></tr><tr><td>US Eastern</td><td><code>America/New_York</code></td></tr><tr><td>UK</td><td><code>Europe/London</code></td></tr><tr><td>Central Europe</td><td><code>Europe/Berlin</code></td></tr><tr><td>Eastern Europe</td><td><code>Europe/Kiev</code></td></tr><tr><td>India</td><td><code>Asia/Kolkata</code></td></tr><tr><td>Singapore</td><td><code>Asia/Singapore</code></td></tr><tr><td>Japan</td><td><code>Asia/Tokyo</code></td></tr><tr><td>Australia East</td><td><code>Australia/Sydney</code></td></tr><tr><td>New Zealand</td><td><code>Pacific/Auckland</code></td></tr></table>
-<p>Full list: <a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">IANA Time Zones</a></p>
+<p>Run when nobody's working:</p>
+
+<pre class="language-json"><code class="language-json">{
+  "settings": {
+    "schedule": {
+      "engineer": "0 22,0,2,4,6 * * *",
+      "tech_lead": "30 22,0,2,4,6 * * *",
+      "discovery": "0 21 * * *",
+      "product_manager": "0 20 * * 0"
+    }
+  }
+}</code></pre>
+
+<h3 id="minimal-cost-conscious">Minimal (Cost-Conscious)</h3>
+
+<pre class="language-json"><code class="language-json">{
+  "settings": {
+    "schedule": {
+      "engineer": "daily_morning",
+      "tech_lead": "daily_morning",
+      "discovery": "0 12 * * 1",
+      "product_manager": "disabled"
+    }
+  }
+}</code></pre>
 
 <hr>
 
-<h2 id="privacy-telemetry">Privacy & Telemetry</h2>
+<h2 id="quality-tuning">Quality Tuning</h2>
 
-<p>Barbossa uses a hybrid telemetry system (Google Analytics 4 + Firebase Cloud Functions) to improve the project while respecting your privacy.</p>
+<h3 id="strict-mode">Strict Mode</h3>
 
-<strong>What's collected:</strong>
-<ul>
-<li>Anonymous installation ID (SHA256 hash, not reversible)</li>
-<li>Agent run counts and success rates</li>
-<li>Version number and agent types</li>
-<li>Run metadata (timestamps, success/failure booleans)</li>
-</ul>
+<p>Higher bar for PR quality:</p>
 
-<strong>What's NOT collected:</strong>
-<ul>
-<li>Repository names, URLs, or any identifying information</li>
-<li>Code content, diffs, or file contents</li>
-<li>GitHub usernames or organization names</li>
-<li>PR/issue titles, descriptions, or any repository data</li>
-<li>Your configuration settings or secrets</li>
-</ul>
+<pre class="language-json"><code class="language-json">{
+  "settings": {
+    "tech_lead": {
+      "auto_merge": true,
+      "min_lines_for_tests_required": 20,
+      "max_files_per_pr": 8,
+      "stale_pr_threshold": 3
+    }
+  }
+}</code></pre>
 
-<p>All telemetry is optional and has 5-second timeouts to ensure it never blocks execution.</p>
+<h3 id="relaxed-mode">Relaxed Mode</h3>
 
-<h3 id="opting-out">Opting Out</h3>
+<p>For rapid prototyping:</p>
 
-<p>Set <code>telemetry</code> to <code>false</code> in your config:</p>
+<pre class="language-json"><code class="language-json">{
+  "settings": {
+    "tech_lead": {
+      "auto_merge": true,
+      "min_lines_for_tests_required": 100,
+      "max_files_per_pr": 25,
+      "stale_pr_threshold": 7
+    }
+  }
+}</code></pre>
+
+<hr>
+
+<h2 id="privacy-options">Privacy Options</h2>
+
+<h3 id="telemetry-disabled">Telemetry Disabled</h3>
 
 <pre class="language-json"><code class="language-json">{
   "settings": {
@@ -590,11 +648,103 @@
   }
 }</code></pre>
 
-<p>Or via environment variable:</p>
+<p>Or via environment:</p>
 
 <pre class="language-bash"><code class="language-bash">export BARBOSSA_ANALYTICS_OPT_OUT=true</code></pre>
 
-<strong>Full details:</strong> See <a href="firebase.html">Firebase & Analytics</a> for complete technical documentation.
+<hr>
+
+<h2 id="common-workflows">Common Workflows</h2>
+
+<h3 id="adding-barbossa-to-existing-project">Adding Barbossa to Existing Project</h3>
+
+<ol>
+<li>Create <code>config/repositories.json</code> with your repo</li>
+<li>Add <code>CLAUDE.md</code> to your repository root with project context</li>
+<li>Create <code>backlog</code> label in GitHub (or use Linear)</li>
+<li>Start Barbossa</li>
+</ol>
+
+<p>Initial issues will be created by Discovery agent. Engineer picks them up automatically.</p>
+
+<h3 id="manual-triggering">Manual Triggering</h3>
+
+<p>Run any agent immediately:</p>
+
+<pre class="language-bash"><code class="language-bash"># Create issues
+docker exec barbossa barbossa run discovery
+
+# Implement from backlog
+docker exec barbossa barbossa run engineer
+
+# Review pending PRs
+docker exec barbossa barbossa run tech-lead
+
+# Propose features
+docker exec barbossa barbossa run product
+
+# Health check
+docker exec barbossa barbossa run auditor</code></pre>
+
+<h3 id="checking-status">Checking Status</h3>
+
+<pre class="language-bash"><code class="language-bash"># Overall health
+docker exec barbossa barbossa health
+
+# Recent activity
+docker exec barbossa barbossa status
+
+# Agent logs
+docker exec barbossa barbossa logs engineer
+docker exec barbossa barbossa logs tech-lead</code></pre>
+
+<h3 id="pausing-operations">Pausing Operations</h3>
+
+<pre class="language-bash"><code class="language-bash"># Stop all agents
+docker compose stop
+
+# Resume
+docker compose start</code></pre>
+
+<hr>
+
+<h2 id="troubleshooting-examples">Troubleshooting Examples</h2>
+
+<h3 id="no-prs-being-created">No PRs Being Created</h3>
+
+<p>Check for backlog issues:</p>
+
+<pre class="language-bash"><code class="language-bash"># View pending issues
+gh issue list --label backlog --repo yourname/repo
+
+# Manual run with logs
+docker exec barbossa barbossa run engineer
+docker exec barbossa barbossa logs engineer</code></pre>
+
+<h3 id="prs-keep-getting-rejected">PRs Keep Getting Rejected</h3>
+
+<p>Review the criteria:</p>
+
+<pre class="language-bash"><code class="language-bash"># Check recent Tech Lead feedback
+docker exec barbossa barbossa logs tech-lead</code></pre>
+
+<p>Common reasons:</p>
+<ul>
+<li>Missing tests (configure <code>min_lines_for_tests_required</code>)</li>
+<li>Too many files (configure <code>max_files_per_pr</code>)</li>
+<li>CI failures (fix your CI pipeline)</li>
+</ul>
+
+<h3 id="agents-not-running">Agents Not Running</h3>
+
+<pre class="language-bash"><code class="language-bash"># Check schedule
+docker exec barbossa cat /app/crontab
+
+# Check container logs
+docker compose logs -f
+
+# Validate configuration
+docker exec barbossa python scripts/validate.py</code></pre>
 
     </main>
 

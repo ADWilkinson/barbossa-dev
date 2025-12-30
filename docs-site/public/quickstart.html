@@ -3,78 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quick Start</title>
+    <title>Quick Start - Barbossa</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
             --ink: #1a1a1a;
             --paper: #fafafa;
-            --ghost: #999;
+            --ghost: #888;
             --line: #e5e5e5;
+            --accent: #6366f1;
+            --accent-dim: rgba(99, 102, 241, 0.1);
+            --code-bg: #2d2d2d;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --info: #3b82f6;
         }
 
         @media (prefers-color-scheme: dark) {
             :root {
                 --ink: #e5e5e5;
-                --paper: #111;
-                --ghost: #666;
-                --line: #333;
+                --paper: #0f0f0f;
+                --ghost: #888;
+                --line: #2a2a2a;
+                --accent: #818cf8;
+                --accent-dim: rgba(129, 140, 248, 0.1);
             }
         }
 
+        html { scroll-behavior: smooth; }
+
         body {
-            font: 16px/1.7 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+            font: 15px/1.7 'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
             background: var(--paper);
             color: var(--ink);
-            max-width: 680px;
+            max-width: 720px;
             margin: 0 auto;
-            padding: 4rem 2rem;
+            padding: 3rem 2rem 6rem;
         }
 
-        /* Navigation - just links */
+        /* Navigation */
         nav {
-            margin-bottom: 4rem;
-            font-size: 14px;
+            position: sticky;
+            top: 0;
+            background: var(--paper);
+            padding: 1rem 0 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--line);
+            font-size: 13px;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
         nav a {
             color: var(--ghost);
             text-decoration: none;
-            margin-right: 1.5rem;
+            padding: 0.4rem 0.7rem;
+            border-radius: 4px;
+            transition: all 0.15s;
         }
         nav a:hover {
             color: var(--ink);
+            background: var(--line);
+        }
+        nav a.active {
+            color: var(--accent);
+            background: var(--accent-dim);
         }
         nav .logo {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            vertical-align: middle;
-            margin-right: 0.25rem;
+            font-weight: 600;
+            color: var(--ink);
+            margin-right: auto;
+            padding-left: 0;
+        }
+        nav .logo:hover {
+            background: none;
+            color: var(--accent);
+        }
+
+        /* Mobile nav toggle */
+        .nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--ink);
+            cursor: pointer;
+            padding: 0.5rem;
+            font-size: 18px;
+        }
+        @media (max-width: 600px) {
+            nav {
+                flex-wrap: wrap;
+            }
+            nav .logo {
+                margin-right: 0;
+            }
+            .nav-toggle {
+                display: block;
+                margin-left: auto;
+            }
+            nav .nav-links {
+                display: none;
+                width: 100%;
+                flex-direction: column;
+                gap: 0.25rem;
+                padding-top: 1rem;
+            }
+            nav .nav-links.open {
+                display: flex;
+            }
+            nav .nav-links a {
+                width: 100%;
+            }
+        }
+        @media (min-width: 601px) {
+            nav .nav-links {
+                display: flex;
+                gap: 0.25rem;
+            }
         }
 
         /* Typography */
         h1 {
-            font-size: 14px;
-            font-weight: 400;
+            font-size: 13px;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: 3rem;
+            letter-spacing: 0.15em;
+            color: var(--ghost);
+            margin-bottom: 2.5rem;
             padding-bottom: 1rem;
             border-bottom: 1px solid var(--line);
         }
 
         h2 {
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 600;
             margin: 3rem 0 1.5rem;
+            padding-top: 1rem;
         }
 
         h3 {
             font-size: 14px;
-            font-weight: 400;
-            color: var(--ghost);
+            font-weight: 500;
+            color: var(--ink);
             margin: 2rem 0 1rem;
         }
 
@@ -83,9 +157,15 @@
         }
 
         a {
-            color: var(--ink);
+            color: var(--accent);
+            text-decoration: none;
+        }
+        a:hover {
             text-decoration: underline;
-            text-underline-offset: 2px;
+        }
+
+        strong {
+            font-weight: 600;
         }
 
         /* Lists */
@@ -95,27 +175,45 @@
         li {
             margin-bottom: 0.5rem;
         }
+        li::marker {
+            color: var(--ghost);
+        }
 
-        /* Code */
-        code {
+        /* Inline code */
+        code:not([class*="language-"]) {
             font-family: inherit;
             background: var(--line);
-            padding: 0.1em 0.3em;
+            padding: 0.15em 0.4em;
+            border-radius: 3px;
             font-size: 0.9em;
         }
 
-        pre {
-            background: var(--line);
-            padding: 1.5rem;
+        /* Code blocks with Prism */
+        pre[class*="language-"] {
+            margin: 1.5rem 0;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        pre[class*="language-"] code {
+            font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+        }
+
+        /* Fallback for code blocks without language */
+        pre:not([class*="language-"]) {
+            background: var(--code-bg);
+            color: #ccc;
+            padding: 1.25rem 1.5rem;
             margin: 1.5rem 0;
             overflow-x: auto;
             font-size: 13px;
-            line-height: 1.5;
+            line-height: 1.6;
+            border-radius: 6px;
         }
-
-        pre code {
+        pre:not([class*="language-"]) code {
             background: none;
             padding: 0;
+            color: inherit;
         }
 
         /* Tables */
@@ -123,7 +221,7 @@
             width: 100%;
             border-collapse: collapse;
             margin: 1.5rem 0;
-            font-size: 14px;
+            font-size: 13px;
         }
         th, td {
             text-align: left;
@@ -132,14 +230,46 @@
         }
         th {
             font-weight: 600;
+            color: var(--ghost);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        /* Blockquotes */
+        /* Blockquotes / Callouts */
         blockquote {
-            border-left: 2px solid var(--line);
-            padding-left: 1rem;
+            border-left: 3px solid var(--accent);
+            padding: 0.75rem 1rem;
             margin: 1.5rem 0;
-            color: var(--ghost);
+            background: var(--accent-dim);
+            border-radius: 0 6px 6px 0;
+        }
+        blockquote p {
+            margin: 0;
+        }
+
+        /* Tip/Warning/Note callouts */
+        .callout {
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+            border-radius: 6px;
+            border-left: 3px solid;
+        }
+        .callout-tip {
+            background: rgba(34, 197, 94, 0.08);
+            border-color: var(--success);
+        }
+        .callout-warning {
+            background: rgba(245, 158, 11, 0.08);
+            border-color: var(--warning);
+        }
+        .callout-info {
+            background: rgba(59, 130, 246, 0.08);
+            border-color: var(--info);
+        }
+        .callout strong {
+            display: block;
+            margin-bottom: 0.25rem;
         }
 
         /* Horizontal rules */
@@ -149,115 +279,141 @@
             margin: 3rem 0;
         }
 
+        /* Table of Contents */
+        .toc {
+            background: var(--line);
+            padding: 1.25rem 1.5rem;
+            border-radius: 6px;
+            margin: 2rem 0 3rem;
+        }
+        .toc-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--ghost);
+            margin-bottom: 0.75rem;
+        }
+        .toc ul {
+            margin: 0;
+            list-style: none;
+        }
+        .toc li {
+            margin: 0.35rem 0;
+        }
+        .toc a {
+            color: var(--ink);
+            font-size: 13px;
+        }
+
         /* Footer */
         footer {
             margin-top: 6rem;
             padding-top: 2rem;
             border-top: 1px solid var(--line);
-            font-size: 13px;
+            font-size: 12px;
+            color: var(--ghost);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        footer a {
             color: var(--ghost);
         }
-
-        /* Hero for home page */
-        .hero {
-            margin: 4rem 0;
-        }
-        .hero h1 {
-            font-size: 14px;
-            border: none;
-            padding: 0;
-            margin-bottom: 1rem;
-        }
-        .hero p {
-            font-size: 24px;
-            font-weight: 300;
-            line-height: 1.4;
-            margin-bottom: 0;
-        }
-
-        /* Features grid */
-        .features {
-            display: grid;
-            gap: 2rem;
-            margin: 3rem 0;
-        }
-        .feature {
-            padding: 1.5rem 0;
-            border-top: 1px solid var(--line);
-        }
-        .feature h3 {
-            margin: 0 0 0.5rem;
-            font-weight: 600;
+        footer a:hover {
             color: var(--ink);
         }
-        .feature p {
-            margin: 0;
-            color: var(--ghost);
-            font-size: 14px;
+
+        /* Smooth anchor scrolling offset for sticky nav */
+        h2[id], h3[id] {
+            scroll-margin-top: 80px;
         }
     </style>
 </head>
 <body>
     <nav>
-        <a href="/">_b</a>
-        <a href="/quickstart.html">start</a>
-        <a href="/configuration.html">config</a>
-        <a href="/agents.html">agents</a>
-        <a href="/faq.html">faq</a>
-        <a href="https://github.com/ADWilkinson/barbossa-dev">github</a>
+        <a href="/" class="logo">barbossa</a>
+        <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Toggle navigation">☰</button>
+        <div class="nav-links">
+            <a href="/quickstart.html" class="active">quickstart</a>
+            <a href="/configuration.html" class="">config</a>
+            <a href="/agents.html" class="">agents</a>
+            <a href="/architecture.html" class="">architecture</a>
+            <a href="/examples.html" class="">examples</a>
+            <a href="/faq.html" class="">faq</a>
+            <a href="https://github.com/ADWilkinson/barbossa-dev" target="_blank">github ↗</a>
+        </div>
     </nav>
 
     <main>
-        <h1>Quick Start</h1>
+        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#requirements">Requirements</a></li><li><a href="#setup">Setup</a></li><li><a href="#commands">Commands</a></li><li><a href="#what-happens-next">What Happens Next</a></li><li><a href="#next-steps">Next Steps</a></li></ul></div>
+        <h1 id="quick-start">Quick Start</h1>
 
 <p>Get Barbossa running in 5 minutes.</p>
 
 <hr>
 
-<h2>Requirements</h2>
+<h2 id="requirements">Requirements</h2>
 
 <ul>
 <li><strong>Docker</strong> - <a href="https://docs.docker.com/get-docker/">Install</a></li>
-<li><strong>Claude Max</strong> - <a href="https://claude.ai">Subscribe</a> (required for Claude Code CLI)</li>
-<li><strong>GitHub CLI</strong> - <a href="https://cli.github.com/">Install</a></li>
-<li><strong>macOS or Linux</strong> - Windows via WSL2</li>
+<li><strong>GitHub account</strong> with personal access token</li>
+<li><strong>Claude authentication</strong> (choose one):</li>
+<li><a href="https://claude.ai">Claude Pro/Max subscription</a> (recommended - long-lasting tokens)</li>
+<li><a href="https://console.anthropic.com">Anthropic API account</a> (pay-as-you-go)</li>
+<li><strong>Platform:</strong> Linux (x86_64), macOS (Intel/Apple Silicon), Windows (WSL2)</li>
 </ul>
 
 <hr>
 
-<h2>Setup</h2>
+<h2 id="setup">Setup</h2>
 
-<pre><code># 1. Authenticate
-gh auth login
-claude login
+<pre class="language-bash"><code class="language-bash"># 1. Generate authentication tokens
 
-# 2. Run install script
+# GitHub token
+gh auth token  # OR create at https://github.com/settings/tokens
+
+# Claude token (Option 1 - Recommended)
+claude setup-token   # Follow prompts to generate long-lived token
+# Claude API key (Option 2)
+# Get from: https://console.anthropic.com/settings/keys
+
+# 2. Run install script (will prompt for tokens)
 curl -fsSL https://raw.githubusercontent.com/ADWilkinson/barbossa-dev/main/install.sh | bash
 
 # 3. Start
-cd barbossa && docker compose up -d
+cd barbossa &amp;&amp; docker compose up -d
 
 # 4. Verify
 docker exec barbossa barbossa health</code></pre>
 
-<p>The script prompts for your GitHub username and repository, then creates everything for you.</p>
+<p>The install script will:</p>
+<ul>
+<li>Prompt for your GitHub username and repository</li>
+<li>Ask for your GitHub token</li>
+<li>Ask for your Claude token/API key</li>
+<li>Create a <code>.env</code> file with your authentication</li>
+<li>Configure everything automatically</li>
+</ul>
 
 <p>To add more repositories later, edit <code>config/repositories.json</code>. See <a href="configuration.html">Configuration</a> for all options.</p>
 
 <strong>Tip:</strong> Use Claude to help configure! Give it <a href="https://github.com/ADWilkinson/barbossa-dev/blob/main/llms.txt">llms.txt</a> for context.
 
+<strong>Note:</strong> Add a <code>CLAUDE.md</code> file to your repository with project-specific context. This dramatically improves the quality of generated code.
+
 <hr>
 
-<h2>Commands</h2>
+<h2 id="commands">Commands</h2>
 
-<pre><code>docker exec barbossa barbossa health          # Check status
+<pre class="language-bash"><code class="language-bash">docker exec barbossa barbossa health          # Check status
 docker exec barbossa barbossa run engineer    # Run now
 docker exec barbossa barbossa status          # Activity
 docker compose logs -f                        # Logs</code></pre>
 
 <hr>
 
-<h2>What Happens Next</h2>
+<h2 id="what-happens-next">What Happens Next</h2>
 
 <p>Barbossa runs automatically:</p>
 <ul>
@@ -270,7 +426,7 @@ docker compose logs -f                        # Logs</code></pre>
 
 <hr>
 
-<h2>Next Steps</h2>
+<h2 id="next-steps">Next Steps</h2>
 
 <ul>
 <li><a href="configuration.html">Configuration</a> - All config options</li>
@@ -281,7 +437,14 @@ docker compose logs -f                        # Logs</code></pre>
     </main>
 
     <footer>
-        MIT License · <a href="https://github.com/ADWilkinson/barbossa-dev">Source</a>
+        <span>MIT License</span>
+        <a href="https://github.com/ADWilkinson/barbossa-dev">View on GitHub</a>
     </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
 </body>
 </html>

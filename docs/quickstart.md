@@ -49,6 +49,8 @@ To add more repositories later, edit `config/repositories.json`. See [Configurat
 
 **Tip:** Use Claude to help configure! Give it [llms.txt](https://github.com/ADWilkinson/barbossa-dev/blob/main/llms.txt) for context.
 
+**Note:** Add a `CLAUDE.md` file to your repository with project-specific context. This dramatically improves the quality of generated code.
+
 ---
 
 ## Commands

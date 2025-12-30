@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barbossa</title>
+    <title>Barbossa - AI Engineers That Ship Code While You Sleep</title>
+    <meta name="description" content="Five AI agents discover features, find technical debt, implement changes, review code, and merge PRs—automatically.">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -11,162 +12,380 @@
         :root {
             --ink: #1a1a1a;
             --paper: #fafafa;
-            --ghost: #999;
+            --ghost: #888;
             --line: #e5e5e5;
+            --accent: #6366f1;
+            --accent-dim: rgba(99, 102, 241, 0.1);
         }
 
         @media (prefers-color-scheme: dark) {
             :root {
                 --ink: #e5e5e5;
-                --paper: #111;
-                --ghost: #666;
-                --line: #333;
+                --paper: #0f0f0f;
+                --ghost: #888;
+                --line: #2a2a2a;
+                --accent: #818cf8;
+                --accent-dim: rgba(129, 140, 248, 0.1);
             }
         }
 
         body {
-            font: 16px/1.7 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+            font: 15px/1.7 'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
             background: var(--paper);
             color: var(--ink);
-            max-width: 680px;
+            max-width: 720px;
             margin: 0 auto;
-            padding: 4rem 2rem;
+            padding: 3rem 2rem 6rem;
         }
 
+        /* Navigation */
         nav {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
             margin-bottom: 4rem;
-            font-size: 14px;
+            font-size: 13px;
         }
         nav a {
             color: var(--ghost);
             text-decoration: none;
-            margin-right: 1.5rem;
+            padding: 0.4rem 0.7rem;
+            border-radius: 4px;
+            transition: all 0.15s;
         }
         nav a:hover {
             color: var(--ink);
+            background: var(--line);
         }
         nav .logo {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            vertical-align: middle;
-            margin-right: 0.25rem;
+            font-weight: 600;
+            color: var(--ink);
+            margin-right: auto;
+            padding-left: 0;
+        }
+        nav .logo:hover {
+            background: none;
+            color: var(--accent);
+        }
+
+        /* Mobile nav */
+        .nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--ink);
+            cursor: pointer;
+            padding: 0.5rem;
+            font-size: 18px;
+        }
+        @media (max-width: 600px) {
+            nav {
+                flex-wrap: wrap;
+            }
+            nav .logo {
+                margin-right: 0;
+            }
+            .nav-toggle {
+                display: block;
+                margin-left: auto;
+            }
+            nav .nav-links {
+                display: none;
+                width: 100%;
+                flex-direction: column;
+                gap: 0.25rem;
+                padding-top: 1rem;
+            }
+            nav .nav-links.open {
+                display: flex;
+            }
+        }
+        @media (min-width: 601px) {
+            nav .nav-links {
+                display: flex;
+                gap: 0.25rem;
+            }
         }
 
         a {
-            color: var(--ink);
+            color: var(--accent);
+            text-decoration: none;
+        }
+        a:hover {
             text-decoration: underline;
-            text-underline-offset: 2px;
         }
 
+        /* Hero */
         .hero {
-            margin: 2rem 0 4rem;
+            margin: 2rem 0 3rem;
         }
-        .hero small {
-            font-size: 12px;
+        .hero .version {
+            display: inline-block;
+            font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.1em;
             color: var(--ghost);
+            background: var(--line);
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            margin-bottom: 1rem;
         }
         .hero h1 {
-            font-size: 32px;
-            font-weight: 300;
-            line-height: 1.3;
-            margin: 1rem 0;
+            font-size: 28px;
+            font-weight: 400;
+            line-height: 1.35;
+            margin-bottom: 1.5rem;
         }
-
-        .cta {
-            margin: 3rem 0;
-            padding: 2rem;
-            background: var(--line);
-        }
-        .cta code {
-            display: block;
+        .hero p {
+            color: var(--ghost);
             font-size: 14px;
-            background: none;
+            max-width: 540px;
         }
 
-        .features {
+        /* Install command */
+        .install {
+            margin: 3rem 0;
+            background: #2d2d2d;
+            border-radius: 6px;
+            padding: 1.25rem 1.5rem;
+            position: relative;
+        }
+        .install code {
+            color: #e5e5e5;
+            font-size: 13px;
+        }
+        .install .comment {
+            color: #6a9955;
+        }
+        .install .copy {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: 1px solid #555;
+            color: #999;
+            padding: 0.35rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+        .install .copy:hover {
+            border-color: #888;
+            color: #ccc;
+        }
+
+        /* Pipeline diagram */
+        .pipeline {
+            margin: 4rem 0;
+            background: var(--line);
+            border-radius: 6px;
+            padding: 2rem;
+        }
+        .pipeline pre {
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--ghost);
+            overflow-x: auto;
+        }
+
+        /* Agents */
+        .agents {
             margin: 4rem 0;
         }
-        .feature {
-            padding: 1.5rem 0;
-            border-top: 1px solid var(--line);
+        .agents-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--ghost);
+            margin-bottom: 1.5rem;
         }
-        .feature:last-child {
+        .agent {
+            padding: 1.25rem 0;
+            border-top: 1px solid var(--line);
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 1rem;
+            align-items: baseline;
+        }
+        .agent:last-child {
             border-bottom: 1px solid var(--line);
         }
-        .feature h3 {
+        .agent h3 {
             font-size: 14px;
+            font-weight: 600;
+        }
+        .agent p {
+            font-size: 13px;
+            color: var(--ghost);
+            margin: 0;
+        }
+        @media (max-width: 500px) {
+            .agent {
+                grid-template-columns: 1fr;
+                gap: 0.25rem;
+            }
+        }
+
+        /* CTA */
+        .cta {
+            margin: 4rem 0;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .cta a {
+            display: inline-block;
+            padding: 0.75rem 1.25rem;
+            border-radius: 4px;
+            font-size: 13px;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+        .cta .primary {
+            background: var(--accent);
+            color: white;
+        }
+        .cta .primary:hover {
+            opacity: 0.9;
+        }
+        .cta .secondary {
+            background: var(--line);
+            color: var(--ink);
+        }
+        .cta .secondary:hover {
+            background: var(--ghost);
+            color: var(--paper);
+        }
+
+        /* Features */
+        .features {
+            margin: 4rem 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+        }
+        .feature h4 {
+            font-size: 13px;
             font-weight: 600;
             margin-bottom: 0.5rem;
         }
         .feature p {
-            font-size: 14px;
+            font-size: 12px;
             color: var(--ghost);
             margin: 0;
         }
 
+        /* Footer */
         footer {
             margin-top: 6rem;
             padding-top: 2rem;
             border-top: 1px solid var(--line);
-            font-size: 13px;
+            font-size: 12px;
             color: var(--ghost);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        footer a {
+            color: var(--ghost);
+        }
+        footer a:hover {
+            color: var(--ink);
         }
     </style>
 </head>
 <body>
     <nav>
-        <a href="/">_b</a>
-        <a href="/quickstart.html">start</a>
-        <a href="/configuration.html">config</a>
-        <a href="/agents.html">agents</a>
-        <a href="/faq.html">faq</a>
-        <a href="https://github.com/ADWilkinson/barbossa-dev">github</a>
+        <a href="/" class="logo">barbossa</a>
+        <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Toggle navigation">☰</button>
+        <div class="nav-links">
+            <a href="/quickstart.html">quickstart</a>
+            <a href="/configuration.html">config</a>
+            <a href="/agents.html">agents</a>
+            <a href="/architecture.html">architecture</a>
+            <a href="/examples.html">examples</a>
+            <a href="https://github.com/ADWilkinson/barbossa-dev" target="_blank">github ↗</a>
+        </div>
     </nav>
 
     <main>
         <div class="hero">
-            <small>v1.6.1</small>
+            <span class="version">v1.6.3</span>
             <h1>AI engineers that ship code while you sleep</h1>
+            <p>Five autonomous agents discover features, find technical debt, implement changes, review code, and merge PRs. Set it up once, wake up to merged PRs.</p>
         </div>
 
-        <p>Barbossa is a team of AI agents that work on your codebase autonomously.
-        They find issues, write code, create PRs, and review each other's work.</p>
+        <div class="install">
+            <code><span class="comment"># install and run</span><br>docker pull ghcr.io/adwilkinson/barbossa-dev:latest</code>
+            <button class="copy" onclick="navigator.clipboard.writeText('docker pull ghcr.io/adwilkinson/barbossa-dev:latest')">copy</button>
+        </div>
+
+        <div class="pipeline">
+            <pre>Discovery + Product Manager    ← find issues & propose features
+           ↓
+    GitHub Issues (backlog)     ← prioritized work queue
+           ↓
+        Engineer                ← implements & creates PR
+           ↓
+       Tech Lead                ← reviews & merges</pre>
+        </div>
+
+        <div class="agents">
+            <div class="agents-title">The Team</div>
+            <div class="agent">
+                <h3>Engineer</h3>
+                <p>Picks tasks from backlog, implements features, creates pull requests with proper linking</p>
+            </div>
+            <div class="agent">
+                <h3>Tech Lead</h3>
+                <p>Reviews PRs with 8-dimension quality criteria, auto-merges or requests changes</p>
+            </div>
+            <div class="agent">
+                <h3>Discovery</h3>
+                <p>Scans codebase for TODOs, missing tests, accessibility issues, console.logs</p>
+            </div>
+            <div class="agent">
+                <h3>Product Manager</h3>
+                <p>Analyzes your docs, proposes high-value features with acceptance criteria</p>
+            </div>
+            <div class="agent">
+                <h3>Auditor</h3>
+                <p>Weekly health checks, tracks success rates, creates issues for critical problems</p>
+            </div>
+        </div>
 
         <div class="cta">
-            <code>docker pull ghcr.io/adwilkinson/barbossa-dev:latest</code>
+            <a href="/quickstart.html" class="primary">Get Started →</a>
+            <a href="https://github.com/ADWilkinson/barbossa-dev" class="secondary">View on GitHub</a>
         </div>
 
         <div class="features">
             <div class="feature">
-                <h3>Engineer</h3>
-                <p>Picks tasks from backlog, implements features, creates pull requests</p>
+                <h4>GitHub + Linear</h4>
+                <p>Works with GitHub Issues or Linear for issue tracking. Auto-links PRs to issues.</p>
             </div>
             <div class="feature">
-                <h3>Tech Lead</h3>
-                <p>Reviews PRs with strict quality criteria, merges or requests changes</p>
+                <h4>Self-Reviewing</h4>
+                <p>Tech Lead reviews Engineer's PRs. 3-strikes rule closes stalled PRs automatically.</p>
             </div>
             <div class="feature">
-                <h3>Discovery</h3>
-                <p>Scans codebase for TODOs, missing tests, accessibility issues</p>
+                <h4>Protected Files</h4>
+                <p>Configure files agents should never touch. Auth, migrations, configs stay safe.</p>
             </div>
             <div class="feature">
-                <h3>Product Manager</h3>
-                <p>Reads your docs, proposes features that align with product vision</p>
-            </div>
-            <div class="feature">
-                <h3>Auditor</h3>
-                <p>Reviews system health, identifies patterns, generates insights</p>
+                <h4>Customizable</h4>
+                <p>Override prompts, adjust schedules, tune quality settings. Make it yours.</p>
             </div>
         </div>
-
-        <p><a href="/quickstart.html">Get started →</a></p>
     </main>
 
     <footer>
-        MIT License · <a href="https://github.com/ADWilkinson/barbossa-dev">Source</a>
+        <span>MIT License</span>
+        <a href="https://github.com/ADWilkinson/barbossa-dev">View on GitHub</a>
     </footer>
 </body>
 </html>
