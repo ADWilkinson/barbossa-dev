@@ -257,17 +257,22 @@ Full list: [IANA Time Zones](https://en.wikipedia.org/wiki/List_of_tz_database_t
 
 ## Privacy & Telemetry
 
-Barbossa collects anonymous usage data to improve the project:
+Barbossa uses a hybrid telemetry system (Google Analytics 4 + Firebase Cloud Functions) to improve the project while respecting your privacy.
 
 **What's collected:**
 - Anonymous installation ID (SHA256 hash, not reversible)
 - Agent run counts and success rates
-- Version number
+- Version number and agent types
+- Run metadata (timestamps, success/failure booleans)
 
 **What's NOT collected:**
-- Repository names or URLs
-- Code content or diffs
-- Usernames or any identifying information
+- Repository names, URLs, or any identifying information
+- Code content, diffs, or file contents
+- GitHub usernames or organization names
+- PR/issue titles, descriptions, or any repository data
+- Your configuration settings or secrets
+
+All telemetry is optional and has 5-second timeouts to ensure it never blocks execution.
 
 ### Opting Out
 
@@ -284,5 +289,7 @@ Set `telemetry` to `false` in your config:
 Or via environment variable:
 
 ```bash
-BARBOSSA_ANALYTICS_OPT_OUT=true
+export BARBOSSA_ANALYTICS_OPT_OUT=true
 ```
+
+**Full details:** See [Firebase & Analytics](firebase.html) for complete technical documentation.
