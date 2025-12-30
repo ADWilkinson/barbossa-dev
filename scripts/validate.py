@@ -88,74 +88,56 @@ def validate_config():
 
 def validate_github():
     """Validate GitHub authentication."""
-    # Check gh CLI
-    success, stdout, stderr = run_cmd("gh auth status")
-
-    if success:
-        ok("GitHub CLI authenticated")
-        return True
-
-    # Try to authenticate with token if available
+    # Check for GITHUB_TOKEN environment variable (primary method)
     token = os.environ.get('GITHUB_TOKEN')
-    if token:
-        success, _, _ = run_cmd(f"echo '{token}' | gh auth login --with-token")
-        if success:
-            ok("GitHub CLI authenticated via GITHUB_TOKEN")
-            return True
+    if not token:
+        err("GITHUB_TOKEN not set")
+        print("  Generate token:")
+        print("    gh auth token")
+        print("  Or create at: https://github.com/settings/tokens")
+        print("  Then add to .env file:")
+        print("    GITHUB_TOKEN=ghp_your_token_here")
+        return False
 
-    err("GitHub CLI not authenticated")
-    print("  Run: gh auth login")
-    print("  Or set GITHUB_TOKEN environment variable")
-    return False
+    # Verify token works by authenticating gh CLI
+    success, _, _ = run_cmd(f"echo '{token}' | gh auth login --with-token")
+    if not success:
+        err("GITHUB_TOKEN invalid or gh CLI authentication failed")
+        print("  Verify token is valid at: https://github.com/settings/tokens")
+        return False
+
+    ok("GitHub authenticated via GITHUB_TOKEN")
+    return True
 
 
 def validate_claude():
-    """Validate Claude CLI authentication."""
-    # Check credentials file
-    creds_paths = [
-        Path.home() / '.claude' / '.credentials.json',
-        Path('/home/barbossa/.claude/.credentials.json'),
-        Path('/root/.claude/.credentials.json'),
-    ]
+    """Validate Claude authentication."""
+    # Check for ANTHROPIC_API_KEY environment variable (required)
+    # Can be either:
+    # 1. Claude Pro/Max subscription token (long-lasting, from claude login)
+    # 2. Pay-as-you-go API key (from console.anthropic.com)
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    if not api_key:
+        err("ANTHROPIC_API_KEY not set")
+        print("  Option 1 (Recommended): Claude Pro/Max subscription token")
+        print("    Generate a long-lasting token:")
+        print("    1. Run: claude login")
+        print("    2. Extract token from ~/.claude/.credentials.json")
+        print("    3. Add to .env: ANTHROPIC_API_KEY=<token>")
+        print()
+        print("  Option 2: Pay-as-you-go API key")
+        print("    Get from: https://console.anthropic.com/settings/keys")
+        print("    Add to .env: ANTHROPIC_API_KEY=sk-ant-api03-...")
+        return False
 
-    for creds_file in creds_paths:
-        try:
-            if creds_file.exists():
-                with open(creds_file) as f:
-                    creds = json.load(f)
+    # Basic validation - check token format
+    # Claude Pro tokens don't start with sk-ant-, API keys do
+    if api_key.startswith('sk-ant-'):
+        ok("Claude authenticated via Anthropic API key (pay-as-you-go)")
+    else:
+        ok("Claude authenticated via Claude Pro/Max token")
 
-                oauth = creds.get('claudeAiOauth', {})
-                expires_at = oauth.get('expiresAt', 0)
-
-                if expires_at:
-                    expires_ts = expires_at / 1000 if expires_at > 1e12 else expires_at
-                    expires_dt = datetime.fromtimestamp(expires_ts)
-                    now = datetime.now()
-
-                    hours_left = (expires_dt - now).total_seconds() / 3600
-
-                    if hours_left < 0:
-                        err("Claude token expired")
-                        print("  Run: claude login")
-                        return False
-                    elif hours_left < 24:
-                        warn(f"Claude token expires in {hours_left:.0f} hours")
-                        print("  Consider running: claude login")
-                        return True
-                    else:
-                        ok(f"Claude CLI authenticated (valid for {hours_left:.0f}h)")
-                        return True
-        except PermissionError:
-            # Skip paths we can't access (e.g., /root when running as non-root)
-            continue
-        except Exception as e:
-            # Skip invalid credential files
-            pass
-
-    err("Claude CLI not authenticated")
-    print("  Run: claude login")
-    print("  Then restart the container")
-    return False
+    return True
 
 
 def validate_git():

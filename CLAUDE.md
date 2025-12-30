@@ -342,37 +342,31 @@ When Linear is configured, `validate.py` checks:
 - **Why amd64:** Dockerfile uses linux-amd64 binaries (supercronic), so we're explicit about platform
 - **Performance:** Negligible overhead on Apple Silicon due to emulation for cron-based workloads
 
-### macOS Permissions Fix
-**Problem:** On macOS, credential files (~/.config/gh, ~/.claude) are owned by the host user (typically UID 501) with 600 permissions. The container needs to read these files.
-
-**Solution:** Container runs as host UID but keeps GID=1000:
-- **Linux:** Runs as 1000:1000 (default) - works as before
-- **macOS:** Runs as host UID (e.g., 501) with GID 1000
+### macOS Compatibility
+**How it works across platforms:**
+- **Linux:** Container runs as 1000:1000 (default)
+- **macOS:** Container runs as host UID (e.g., 501) with GID 1000
 - **Permissions:**
-  - /app is group-writable (775) so UID 501 with GID 1000 can write
-  - /home/barbossa is group-accessible (750) so UID 501 with GID 1000 can access mounted credentials
+  - /app is group-writable (775) so any host UID with GID 1000 can write
+  - Only ~/.gitconfig is mounted (read-only) for git user config
 - **Auto-detection:** install.sh creates .env with UID=$(id -u) on macOS
 
-**Manual setup:**
-```bash
-# macOS users: Create .env file with your UID
-echo "UID=$(id -u)" > .env
-
-# Restart container
-docker compose down && docker compose up -d
-```
-
-**Why this works:**
-- Container reads host credentials (same UID as host user)
-- Container writes to /app (member of group 1000, /app is group-writable)
-- No permission denied errors
+**Why token-based auth solves macOS issues:**
+- No credential files mounted (no permission issues)
+- No macOS Keychain dependency (tokens stored in .env)
+- Works identically on Linux and macOS
+- Tokens are platform-independent
 
 ### Authentication
-- GitHub CLI authentication via mounted `~/.config/gh/`
-- Claude CLI authentication via mounted `~/.claude/`
-- Linear API key via `LINEAR_API_KEY` environment variable (if Linear is used)
-- Git commits signed as configured user
-- No secrets hardcoded in configuration files
+**Token-based authentication (v1.6.0+):**
+- **GitHub:** `GITHUB_TOKEN` environment variable (from `gh auth token` or personal access token)
+- **Claude:** `ANTHROPIC_API_KEY` environment variable (supports both):
+  - Option 1 (Recommended): Claude Pro/Max subscription token (long-lasting, up to 1 year)
+  - Option 2: Pay-as-you-go Anthropic API key
+- **Linear:** `LINEAR_API_KEY` environment variable (optional, only if using Linear)
+- **Git:** User name/email from mounted `~/.gitconfig` (read-only)
+- All tokens configured in `.env` file
+- No credential files mounted (resolves macOS Keychain issues)
 
 ## Agent Workflows
 
@@ -464,10 +458,11 @@ docker compose restart
 ### Validation Process
 On container startup, `validate.py` checks:
 1. ✅ Config file exists and valid JSON
-2. ✅ GitHub CLI authenticated (via gh auth status or GITHUB_TOKEN)
-3. ✅ Claude CLI authenticated (checks ~/.claude/.credentials.json)
-4. ⚠️ Git user.name and user.email configured (warning only)
-5. ⚠️ SSH keys if SSH URLs configured (warning only)
+2. ✅ `GITHUB_TOKEN` environment variable set and valid
+3. ✅ `ANTHROPIC_API_KEY` environment variable set (Claude Pro token or API key)
+4. ✅ `LINEAR_API_KEY` set and valid (if Linear is configured)
+5. ⚠️ Git user.name and user.email configured (warning only)
+6. ⚠️ SSH keys if SSH URLs configured (warning only - HTTPS recommended)
 
 **Critical failures block startup** to prevent silent failures.
 
@@ -611,33 +606,44 @@ On container startup, `validate.py` checks:
 
 ### Agents Not Running
 1. Check validation: `docker logs barbossa | head -50`
-2. Verify mounts: `docker exec barbossa ls -la /home/barbossa/.claude`
+2. Verify environment variables: `docker exec barbossa env | grep -E "GITHUB_TOKEN|ANTHROPIC_API_KEY"`
 3. Check schedule: `docker exec barbossa cat /app/crontab`
 4. View recent logs: `ls -lht /app/logs/ | head`
 
 ### Authentication Issues
 ```bash
-# Re-authenticate GitHub
-gh auth login
+# Verify tokens in .env file
+cat .env
+
+# Generate new GitHub token
+gh auth token
+
+# Extract Claude Pro token
+cat ~/.claude/.credentials.json | grep sessionKey
+
+# Update .env with new tokens
+vim .env  # Edit GITHUB_TOKEN and ANTHROPIC_API_KEY
+
+# Restart container
 docker compose restart
 
-# Re-authenticate Claude
-claude login
-docker compose restart
-
-# Check credentials in container
-docker exec barbossa ls -la /home/barbossa/.claude/
-docker exec barbossa ls -la /home/barbossa/.config/gh/
+# Check validation
+docker logs barbossa | head -50
 ```
 
-### Permission Errors
-All mounts must be accessible by UID 1000 (barbossa user):
+### Token Validation Failures
 ```bash
-# Check host permissions
-ls -la ~/.claude ~/.config/gh ~/.gitconfig
+# GITHUB_TOKEN not set or invalid
+# Fix: Generate token with 'gh auth token' or create at https://github.com/settings/tokens
+# Scopes needed: repo, workflow
 
-# Should be owned by your user (UID 1000 on most systems)
-# If not, adjust permissions or ownership
+# ANTHROPIC_API_KEY not set
+# Fix Option 1 (Recommended): Extract Claude Pro token
+#   cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.sessionKey'
+# Fix Option 2: Get API key from https://console.anthropic.com/settings/keys
+
+# LINEAR_API_KEY invalid (if using Linear)
+# Fix: Get from https://linear.app/settings/api
 ```
 
 ## Contact & Support

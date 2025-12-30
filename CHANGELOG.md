@@ -7,6 +7,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2025-12-30
+
+### Changed
+- **BREAKING: Token-Based Authentication** 🔑
+  - Switched from file/keychain-based auth to environment variable tokens
+  - **GitHub:** Now requires `GITHUB_TOKEN` environment variable
+    - Generate via: `gh auth token` OR create personal access token
+    - Required scopes: `repo`, `workflow`
+  - **Claude:** Now requires `ANTHROPIC_API_KEY` environment variable
+    - Option 1 (Recommended): Claude Pro/Max subscription token (long-lasting, up to 1 year)
+    - Option 2: Pay-as-you-go Anthropic API key
+  - **Why:** Resolves macOS Keychain compatibility issues completely
+  - **Impact:** Works identically on all platforms (Linux, macOS, Windows)
+
+### Fixed
+- **macOS Authentication** 🍎
+  - Fixed authentication failures on macOS caused by Keychain storage
+  - No longer depends on mounted credential directories (~/.config/gh, ~/.claude)
+  - Tokens stored in .env file work across all platforms
+  - Eliminates permission issues from v1.5.3/v1.5.4
+
+### Added
+- **Enhanced Install Script**
+  - Now prompts for GitHub token during installation
+  - Prompts for Claude token/API key with clear instructions
+  - Auto-creates .env file with all required tokens
+  - Auto-detects macOS and adds UID to .env
+- **Updated Validation**
+  - Validates `GITHUB_TOKEN` is set and authenticates gh CLI
+  - Validates `ANTHROPIC_API_KEY` is set (supports both token types)
+  - Clear error messages with token generation instructions
+  - Distinguishes between Claude Pro tokens and API keys
+
+### Documentation
+- **README.md:** New Authentication section with token generation guides
+- **CLAUDE.md:** Updated authentication model, validation process, troubleshooting
+- **.env.example:** Comprehensive token documentation with examples
+- **install.sh:** Interactive token prompts with help text
+
+### Removed
+- Removed credential directory mounts from docker-compose files
+  - No longer mount ~/.config/gh
+  - No longer mount ~/.claude
+  - Only ~/.gitconfig mounted (read-only, for git user.name/email)
+- Removed macOS permission workarounds (no longer needed with token auth)
+
+### Migration Guide
+For existing users upgrading from v1.5.x:
+
+1. **Generate tokens:**
+   ```bash
+   # GitHub token
+   gh auth token
+
+   # Claude Pro token (recommended)
+   cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.sessionKey'
+   # OR get API key from: https://console.anthropic.com/settings/keys
+   ```
+
+2. **Update .env file:**
+   ```bash
+   cat >> .env << EOF
+   GITHUB_TOKEN=<your_github_token>
+   ANTHROPIC_API_KEY=<your_claude_token_or_api_key>
+   EOF
+   ```
+
+3. **Restart container:**
+   ```bash
+   docker compose down
+   docker compose pull  # Get v1.6.0 image
+   docker compose up -d
+   ```
+
 ## [1.5.4] - 2025-12-30
 
 ### Fixed

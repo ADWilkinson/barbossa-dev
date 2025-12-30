@@ -43,23 +43,28 @@ Discovery + Product Manager
 ### Requirements
 
 - [Docker](https://docs.docker.com/get-docker/)
-- [Claude Max subscription](https://claude.ai) (for Claude Code CLI)
-- [GitHub CLI](https://cli.github.com/)
+- [GitHub account](https://github.com) with personal access token
+- **Claude authentication** (choose one):
+  - [Claude Pro/Max subscription](https://claude.ai) (recommended - long-lasting tokens)
+  - [Anthropic API account](https://console.anthropic.com) (pay-as-you-go)
 
 **Platform Support:**
 - Linux (x86_64, amd64)
-- macOS (Intel and Apple Silicon)
-- Uses `linux/amd64` images (Docker handles emulation on Apple Silicon)
-- macOS: install script auto-configures permissions for credential access
+- macOS (Intel and Apple Silicon via Rosetta 2 emulation)
 
 ### Setup
 
 ```bash
-# 1. Authenticate
-gh auth login
-claude login
+# 1. Generate authentication tokens
+# GitHub token
+gh auth token  # OR create at https://github.com/settings/tokens
 
-# 2. Run install script
+# Claude token (Option 1 - Recommended)
+claude login   # Then extract token from ~/.claude/.credentials.json
+# Claude API key (Option 2)
+# Get from: https://console.anthropic.com/settings/keys
+
+# 2. Run install script (will prompt for tokens)
 curl -fsSL https://raw.githubusercontent.com/ADWilkinson/barbossa-dev/main/install.sh | bash
 
 # 3. Start
@@ -69,7 +74,12 @@ cd barbossa && docker compose up -d
 docker exec barbossa barbossa health
 ```
 
-The script prompts for your GitHub username and repository, then creates everything for you.
+The install script will:
+- Prompt for your GitHub username and repository
+- Ask for your GitHub token
+- Ask for your Claude token/API key
+- Create a `.env` file with your authentication
+- Configure everything automatically
 
 To add more repositories later, edit `config/repositories.json`.
 
@@ -156,6 +166,55 @@ With Linear, agents:
 
 ---
 
+## Authentication
+
+### GitHub Token
+
+Generate a token with `repo` and `workflow` scopes:
+
+```bash
+# Option 1: Via GitHub CLI
+gh auth token
+
+# Option 2: Manual creation
+# Visit: https://github.com/settings/tokens
+# Scopes: repo, workflow
+```
+
+Add to `.env`:
+```bash
+GITHUB_TOKEN=ghp_your_token_here
+```
+
+### Claude Token
+
+**Option 1: Claude Pro/Max Subscription Token (Recommended)**
+
+Long-lasting token (up to 1 year) from your Claude subscription:
+
+```bash
+# 1. Login to Claude CLI
+claude login
+
+# 2. Extract token from credentials file
+cat ~/.claude/.credentials.json
+# Look for "sessionKey" field
+
+# 3. Add to .env
+ANTHROPIC_API_KEY=<your_session_key>
+```
+
+**Option 2: Pay-as-you-go API Key**
+
+For users preferring API billing:
+
+```bash
+# Get from: https://console.anthropic.com/settings/keys
+ANTHROPIC_API_KEY=sk-ant-api03-your_key_here
+```
+
+---
+
 ## Commands
 
 ```bash
@@ -169,16 +228,27 @@ docker compose logs -f                        # Logs
 
 ## Troubleshooting
 
-### Claude auth fails
+### Authentication failures
+
 ```bash
-claude login
+# Verify tokens in .env file
+cat .env
+
+# Update tokens
+vim .env  # Edit GITHUB_TOKEN and ANTHROPIC_API_KEY
 docker compose restart
 ```
 
-### GitHub permission denied
+### Validation errors on startup
+
 ```bash
-gh auth login
-docker compose restart
+# Check validation output
+docker logs barbossa | head -50
+
+# Common fixes:
+# - GITHUB_TOKEN not set or invalid
+# - ANTHROPIC_API_KEY not set or invalid
+# - Config file malformed
 ```
 
 See [troubleshooting docs](https://barbossa.dev/troubleshooting.html) for more.

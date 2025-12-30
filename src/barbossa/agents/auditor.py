@@ -44,7 +44,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "1.5.4"  # macOS home dir fix
+    VERSION = "1.6.0"  # macOS home dir fix
     ROLE = "auditor"
 
     def __init__(self, work_dir: Optional[Path] = None):

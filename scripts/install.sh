@@ -66,17 +66,67 @@ cat > config/repositories.json << EOF
 }
 EOF
 
-# Detect macOS and create .env file for proper permissions
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    echo ""
-    echo "Detected macOS - configuring permissions..."
-    cat > .env << EOF
-# macOS: Run container as host UID to access mounted credentials
-# This allows the container to read ~/.config/gh and ~/.claude
-UID=$(id -u)
-EOF
-    echo "Created .env with UID=$(id -u)"
+# Get GitHub token
+echo ""
+echo "GitHub Authentication"
+echo "---------------------"
+echo "Generate a token:"
+echo "  1. If you have gh CLI: gh auth token"
+echo "  2. Or create at: https://github.com/settings/tokens"
+echo "     (Required scopes: repo, workflow)"
+echo ""
+echo "Enter your GitHub token:"
+read -r GITHUB_TOKEN < /dev/tty
+
+if [ -z "$GITHUB_TOKEN" ]; then
+    echo "Error: GitHub token is required"
+    exit 1
 fi
+
+# Get Claude authentication token
+echo ""
+echo "Claude Authentication"
+echo "---------------------"
+echo "You need either:"
+echo "  Option 1 (Recommended): Claude Pro/Max subscription token"
+echo "    - Run: claude login (if not already logged in)"
+echo "    - Extract token from: ~/.claude/.credentials.json (sessionKey field)"
+echo "    - Token lasts up to 1 year"
+echo ""
+echo "  Option 2: Pay-as-you-go API key"
+echo "    - Get from: https://console.anthropic.com/settings/keys"
+echo ""
+echo "Enter your Claude token or API key:"
+read -r ANTHROPIC_API_KEY < /dev/tty
+
+if [ -z "$ANTHROPIC_API_KEY" ]; then
+    echo "Error: Claude token/API key is required"
+    exit 1
+fi
+
+# Create .env file with tokens
+echo ""
+echo "Creating .env file with authentication tokens..."
+cat > .env << EOF
+# GitHub Authentication (REQUIRED)
+GITHUB_TOKEN=$GITHUB_TOKEN
+
+# Claude API Key (REQUIRED)
+ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
+
+# Timezone (optional)
+TZ=UTC
+EOF
+
+# Add UID for macOS
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo "" >> .env
+    echo "# macOS: Run container as host UID for proper file permissions" >> .env
+    echo "UID=$(id -u)" >> .env
+    echo "Detected macOS - added UID=$(id -u) to .env"
+fi
+
+echo "Created .env with authentication tokens"
 
 echo ""
 echo "Done! Your setup is ready in ./$INSTALL_DIR"
@@ -85,25 +135,23 @@ echo "Directory structure:"
 echo "  $INSTALL_DIR/"
 echo "  ├── config/"
 echo "  │   └── repositories.json"
+echo "  ├── .env (authentication tokens)"
 echo "  ├── docker-compose.yml"
-if [[ "$OSTYPE" == "darwin"* ]]; then
-echo "  ├── .env (macOS permissions config)"
-fi
 echo "  └── logs/"
 echo ""
 echo "Next steps:"
 echo ""
-echo "  1. Make sure you're authenticated:"
-echo "     gh auth login"
-echo "     claude login"
-echo ""
-echo "  2. Start Barbossa:"
+echo "  1. Start Barbossa:"
 echo "     cd $INSTALL_DIR && docker compose up -d"
 echo ""
-echo "  3. Verify it's running:"
+echo "  2. Verify it's running:"
 echo "     docker exec barbossa barbossa health"
 echo ""
+echo "  3. View logs:"
+echo "     docker logs -f barbossa"
+echo ""
 echo "To add more repositories, edit config/repositories.json"
+echo "To update tokens, edit .env file and restart: docker compose restart"
 echo ""
 echo "Docs: https://barbossa.dev"
 echo ""

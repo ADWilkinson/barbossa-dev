@@ -8,10 +8,10 @@ services:
     platform: linux/amd64
     container_name: barbossa-dev
     restart: "no"  # Don't auto-restart in dev
-    # Run as host UID but keep GID=1000 for /app access on macOS
+    # Run as host UID with GID=1000 for /app access
     # On Linux: runs as 1000:1000 (default)
     # On macOS: runs as host UID (e.g., 501) with GID 1000
-    # This allows reading host credentials AND writing to /app (group-writable)
+    # This allows writing to /app (group-writable)
     user: "${UID:-1000}:1000"
     volumes:
       # Mount source code for development
@@ -25,18 +25,18 @@ services:
       - ./changelogs:/app/changelogs
       - ./projects:/app/projects
 
-      # Git config for commits
-      - ~/.gitconfig:/home/barbossa/.gitconfig
-
-      # GitHub CLI auth (required)
-      - ~/.config/gh:/home/barbossa/.config/gh:ro
-
-      # Claude config (writable for token refresh)
-      - ~/.claude:/home/barbossa/.claude
+      # Git config for commits (only needed for user.name and user.email)
+      - ~/.gitconfig:/home/barbossa/.gitconfig:ro
     environment:
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
       - TZ=${TZ:-UTC}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # GitHub authentication (REQUIRED)
+      # Generate: gh auth token OR create personal access token at https://github.com/settings/tokens
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      # Claude API key (REQUIRED)
+      # Generate: https://console.anthropic.com/settings/keys
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # Linear API key (optional - only if using Linear for issue tracking)
+      # Generate: https://linear.app/settings/api
       - LINEAR_API_KEY=${LINEAR_API_KEY:-}
       # Disable analytics in dev
       - BARBOSSA_ANALYTICS_OPT_OUT=true
