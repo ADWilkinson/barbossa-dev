@@ -99,8 +99,9 @@ def validate_github():
         print("    GITHUB_TOKEN=ghp_your_token_here")
         return False
 
-    # Verify token works by authenticating gh CLI
-    success, _, _ = run_cmd(f"echo '{token}' | gh auth login --with-token")
+    # Verify token works by checking gh auth status
+    # When GITHUB_TOKEN is set, gh CLI uses it automatically
+    success, stdout, _ = run_cmd("gh auth status")
     if not success:
         err("GITHUB_TOKEN invalid or gh CLI authentication failed")
         print("  Verify token is valid at: https://github.com/settings/tokens")
@@ -112,30 +113,30 @@ def validate_github():
 
 def validate_claude():
     """Validate Claude authentication."""
-    # Check for ANTHROPIC_API_KEY environment variable (required)
-    # Can be either:
-    # 1. Claude Pro/Max subscription token (long-lasting, from claude login)
-    # 2. Pay-as-you-go API key (from console.anthropic.com)
+    # Check for either CLAUDE_CODE_OAUTH_TOKEN (from claude setup-token) or ANTHROPIC_API_KEY
+    oauth_token = os.environ.get('CLAUDE_CODE_OAUTH_TOKEN')
     api_key = os.environ.get('ANTHROPIC_API_KEY')
-    if not api_key:
-        err("ANTHROPIC_API_KEY not set")
-        print("  Option 1 (Recommended): Claude Pro/Max subscription token")
+
+    if not oauth_token and not api_key:
+        err("Claude authentication not set")
+        print("  Option 1 (Recommended): Claude Pro/Max OAuth token")
         print("    Generate a long-lasting token:")
         print("    1. Run: claude setup-token")
         print("    2. Follow prompts to generate token (lasts up to 1 year)")
-        print("    3. Add to .env: ANTHROPIC_API_KEY=<your_token>")
+        print("    3. Add to .env: CLAUDE_CODE_OAUTH_TOKEN=<your_token>")
         print()
         print("  Option 2: Pay-as-you-go API key")
         print("    Get from: https://console.anthropic.com/settings/keys")
         print("    Add to .env: ANTHROPIC_API_KEY=sk-ant-api03-...")
         return False
 
-    # Basic validation - check token format
-    # Claude Pro tokens don't start with sk-ant-, API keys do
-    if api_key.startswith('sk-ant-'):
-        ok("Claude authenticated via Anthropic API key (pay-as-you-go)")
-    else:
-        ok("Claude authenticated via Claude Pro/Max token")
+    # Determine which auth method is being used
+    if oauth_token:
+        # OAuth token from claude setup-token (sk-ant-oat01-...)
+        ok("Claude authenticated via OAuth token (Claude Pro/Max)")
+    elif api_key:
+        # API key from console.anthropic.com (sk-ant-api03-...)
+        ok("Claude authenticated via API key (pay-as-you-go)")
 
     return True
 

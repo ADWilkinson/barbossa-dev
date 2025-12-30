@@ -42,7 +42,7 @@ class Barbossa:
     Supports both GitHub Issues and Linear for issue tracking.
     """
 
-    VERSION = "1.6.0"  # macOS home dir fix
+    VERSION = "1.6.1"  # Dual Claude auth support (CLAUDE_CODE_OAUTH_TOKEN + ANTHROPIC_API_KEY)
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths

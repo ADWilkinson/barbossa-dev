@@ -199,7 +199,7 @@ claude setup-token
 # 2. Follow the prompts to generate a long-lived token
 
 # 3. Add to .env
-ANTHROPIC_API_KEY=<your_token_from_setup>
+CLAUDE_CODE_OAUTH_TOKEN=<your_token_from_setup>
 ```
 
 **Option 2: Pay-as-you-go API Key**
@@ -233,7 +233,7 @@ docker compose logs -f                        # Logs
 cat .env
 
 # Update tokens
-vim .env  # Edit GITHUB_TOKEN and ANTHROPIC_API_KEY
+vim .env  # Edit GITHUB_TOKEN and CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY
 docker compose restart
 ```
 
@@ -245,7 +245,7 @@ docker logs barbossa | head -50
 
 # Common fixes:
 # - GITHUB_TOKEN not set or invalid
-# - ANTHROPIC_API_KEY not set or invalid
+# - CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY not set or invalid
 # - Config file malformed
 ```
 

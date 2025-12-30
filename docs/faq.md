@@ -37,7 +37,7 @@ Add a `CLAUDE.md` to your repo with project context.
 
 **Check tokens:**
 ```bash
-cat .env  # Verify GITHUB_TOKEN and ANTHROPIC_API_KEY are set
+cat .env  # Verify GITHUB_TOKEN and CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY are set
 ```
 
 **Update tokens:**

@@ -4,7 +4,7 @@
 
 **Check tokens in .env file:**
 ```bash
-cat .env  # Verify GITHUB_TOKEN and ANTHROPIC_API_KEY are set
+cat .env  # Verify GITHUB_TOKEN and CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY are set
 ```
 
 **Generate new GitHub token:**
@@ -17,7 +17,7 @@ gh auth token  # OR create at https://github.com/settings/tokens
 ```bash
 # Option 1: Claude Pro/Max subscription token (recommended)
 claude setup-token  # Follow prompts to generate long-lived token
-# Add to .env: ANTHROPIC_API_KEY=<your_token>
+# Add to .env: CLAUDE_CODE_OAUTH_TOKEN=<your_token>
 
 # Option 2: Pay-as-you-go API key
 # Get from: https://console.anthropic.com/settings/keys

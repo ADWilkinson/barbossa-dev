@@ -23,9 +23,13 @@ services:
       # GitHub authentication (REQUIRED)
       # Generate: gh auth token OR create personal access token at https://github.com/settings/tokens
       - GITHUB_TOKEN=${GITHUB_TOKEN}
-      # Claude API key (REQUIRED)
-      # Generate: https://console.anthropic.com/settings/keys
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # Claude authentication (REQUIRED - use ONE of the following)
+      # Option 1 (Recommended): Claude Pro/Max OAuth token
+      #   Generate: claude setup-token
+      - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
+      # Option 2: Pay-as-you-go API key
+      #   Generate: https://console.anthropic.com/settings/keys
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       # Linear API key (optional - only if using Linear for issue tracking)
       # Generate: https://linear.app/settings/api
       - LINEAR_API_KEY=${LINEAR_API_KEY:-}

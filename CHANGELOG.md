@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.1] - 2025-12-30
+
+### Fixed
+- **CRITICAL: Dual Claude Authentication Support** 🔑
+  - Added support for both `CLAUDE_CODE_OAUTH_TOKEN` and `ANTHROPIC_API_KEY`
+  - **Issue:** v1.6.0 only supported `ANTHROPIC_API_KEY`, but `claude setup-token` generates OAuth tokens requiring `CLAUDE_CODE_OAUTH_TOKEN`
+  - **Impact:** Users following recommended setup had authentication failures
+  - docker-compose files now pass both environment variables to container
+  - Validation script checks for either token type
+  - Install script auto-detects token type:
+    - sk-ant-oat01-* → Sets `CLAUDE_CODE_OAUTH_TOKEN`
+    - sk-ant-api03-* → Sets `ANTHROPIC_API_KEY`
+  - Updated all documentation (README, CLAUDE.md, docs/)
+
+### Changed
+- .env.example now shows `CLAUDE_CODE_OAUTH_TOKEN` as primary authentication method
+- README and documentation updated to clarify two authentication options
+
+### Migration
+No action needed - both authentication methods now supported. If you're on v1.6.0:
+- Using `claude setup-token`? Token will now work correctly with `CLAUDE_CODE_OAUTH_TOKEN`
+- Using API key? No changes needed, `ANTHROPIC_API_KEY` continues to work
+
 ## [1.6.0] - 2025-12-30
 
 ### Changed
@@ -15,9 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **GitHub:** Now requires `GITHUB_TOKEN` environment variable
     - Generate via: `gh auth token` OR create personal access token
     - Required scopes: `repo`, `workflow`
-  - **Claude:** Now requires `ANTHROPIC_API_KEY` environment variable
-    - Option 1 (Recommended): Claude Pro/Max subscription token (long-lasting, up to 1 year)
-    - Option 2: Pay-as-you-go Anthropic API key
+  - **Claude:** Now requires `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` environment variable (v1.6.1 added dual support)
+    - Option 1 (Recommended): Claude Pro/Max OAuth token via `claude setup-token` (long-lasting, up to 1 year)
+    - Option 2: Pay-as-you-go Anthropic API key from console.anthropic.com
   - **Why:** Resolves macOS Keychain compatibility issues completely
   - **Impact:** Works identically on all platforms (Linux, macOS, Windows)
 
@@ -70,7 +93,9 @@ For existing users upgrading from v1.5.x:
    ```bash
    cat >> .env << EOF
    GITHUB_TOKEN=<your_github_token>
-   ANTHROPIC_API_KEY=<your_claude_token_or_api_key>
+   CLAUDE_CODE_OAUTH_TOKEN=<your_claude_oauth_token>
+   # OR for API key users:
+   # ANTHROPIC_API_KEY=<your_api_key>
    EOF
    ```
 

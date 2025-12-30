@@ -1,7 +1,7 @@
 # Barbossa Engineer - Claude Context
 
-**Last Updated:** 2025-12-28
-**Version:** v1.5.1
+**Last Updated:** 2025-12-30
+**Version:** v1.6.1
 
 ## Project Overview
 
@@ -459,7 +459,7 @@ docker compose restart
 On container startup, `validate.py` checks:
 1. ✅ Config file exists and valid JSON
 2. ✅ `GITHUB_TOKEN` environment variable set and valid
-3. ✅ `ANTHROPIC_API_KEY` environment variable set (Claude Pro token or API key)
+3. ✅ `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` environment variable set
 4. ✅ `LINEAR_API_KEY` set and valid (if Linear is configured)
 5. ⚠️ Git user.name and user.email configured (warning only)
 6. ⚠️ SSH keys if SSH URLs configured (warning only - HTTPS recommended)
@@ -467,6 +467,28 @@ On container startup, `validate.py` checks:
 **Critical failures block startup** to prevent silent failures.
 
 ## Development History
+
+### v1.6.1 - 2025-12-30 (Hotfix release)
+- **CRITICAL FIX**: Added support for both Claude authentication methods
+- **Issue:** `claude setup-token` generates OAuth tokens (sk-ant-oat01-*) requiring `CLAUDE_CODE_OAUTH_TOKEN` env var, but docker-compose only passed `ANTHROPIC_API_KEY`
+- **Impact:** Users following recommended setup (claude setup-token) had authentication failures
+- **Fix:**
+  - ✅ Added `CLAUDE_CODE_OAUTH_TOKEN` to docker-compose.prod.yml and docker-compose.dev.yml
+  - ✅ Updated validation script to check both `CLAUDE_CODE_OAUTH_TOKEN` and `ANTHROPIC_API_KEY`
+  - ✅ Updated install script to detect token type and set correct env var
+  - ✅ Updated .env.example to show `CLAUDE_CODE_OAUTH_TOKEN` as primary method
+  - ✅ Updated all documentation (README, CLAUDE.md, docs/)
+- **Token Type Detection:**
+  - sk-ant-oat01-* → Sets `CLAUDE_CODE_OAUTH_TOKEN` (from claude setup-token)
+  - sk-ant-api03-* → Sets `ANTHROPIC_API_KEY` (from console.anthropic.com)
+- **Migration:** No action needed - both methods now supported
+- All agent versions bumped to v1.6.1
+
+**Impact:**
+- ✅ Both authentication methods now work correctly
+- ✅ `claude setup-token` (recommended) now functional
+- ✅ API keys from console.anthropic.com continue to work
+- ✅ No breaking changes - backward compatible with v1.6.0
 
 ### v1.5.1 - 2025-12-28 (Hotfix release)
 - **CRITICAL FIX**: Fixed prompts.py path resolution after v1.5.0 refactor
@@ -606,7 +628,7 @@ On container startup, `validate.py` checks:
 
 ### Agents Not Running
 1. Check validation: `docker logs barbossa | head -50`
-2. Verify environment variables: `docker exec barbossa env | grep -E "GITHUB_TOKEN|ANTHROPIC_API_KEY"`
+2. Verify environment variables: `docker exec barbossa env | grep -E "GITHUB_TOKEN|CLAUDE_CODE_OAUTH_TOKEN|ANTHROPIC_API_KEY"`
 3. Check schedule: `docker exec barbossa cat /app/crontab`
 4. View recent logs: `ls -lht /app/logs/ | head`
 
@@ -618,11 +640,12 @@ cat .env
 # Generate new GitHub token
 gh auth token
 
-# Generate Claude Pro token
+# Generate Claude OAuth token (recommended)
 claude setup-token  # Follow prompts to generate long-lived token
+# Sets CLAUDE_CODE_OAUTH_TOKEN in .env
 
 # Update .env with new tokens
-vim .env  # Edit GITHUB_TOKEN and ANTHROPIC_API_KEY
+vim .env  # Edit GITHUB_TOKEN and CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY
 
 # Restart container
 docker compose restart

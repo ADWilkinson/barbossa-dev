@@ -88,19 +88,36 @@ echo ""
 echo "Claude Authentication"
 echo "---------------------"
 echo "You need either:"
-echo "  Option 1 (Recommended): Claude Pro/Max subscription token"
+echo "  Option 1 (Recommended): Claude Pro/Max OAuth token"
 echo "    - Run in a separate terminal: claude setup-token"
 echo "    - Follow prompts to generate a long-lived token (lasts up to 1 year)"
+echo "    - The token will start with: sk-ant-oat01-..."
 echo ""
 echo "  Option 2: Pay-as-you-go API key"
 echo "    - Get from: https://console.anthropic.com/settings/keys"
+echo "    - The key will start with: sk-ant-api03-..."
 echo ""
-echo "Enter your Claude token or API key:"
-read -r ANTHROPIC_API_KEY < /dev/tty
+echo "Enter your Claude OAuth token OR API key:"
+read -r CLAUDE_TOKEN < /dev/tty
 
-if [ -z "$ANTHROPIC_API_KEY" ]; then
-    echo "Error: Claude token/API key is required"
+if [ -z "$CLAUDE_TOKEN" ]; then
+    echo "Error: Claude authentication is required"
     exit 1
+fi
+
+# Detect token type and set appropriate variable
+if [[ "$CLAUDE_TOKEN" == sk-ant-oat* ]]; then
+    CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_TOKEN"
+    ANTHROPIC_API_KEY=""
+    echo "Detected Claude Pro/Max OAuth token"
+elif [[ "$CLAUDE_TOKEN" == sk-ant-api* ]]; then
+    ANTHROPIC_API_KEY="$CLAUDE_TOKEN"
+    CLAUDE_CODE_OAUTH_TOKEN=""
+    echo "Detected Anthropic API key"
+else
+    echo "Warning: Token format not recognized, setting as OAuth token"
+    CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_TOKEN"
+    ANTHROPIC_API_KEY=""
 fi
 
 # Create .env file with tokens
