@@ -9,35 +9,36 @@ How Barbossa works under the hood.
 Barbossa is a team of five AI agents running in a Docker container. Each agent has a specific role and runs on a schedule.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Docker Container                          │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │                   Cron Scheduler                      │    │
-│  │  (supercronic - runs agents on schedule)              │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                            │                                  │
-│     ┌──────────┬──────────┼──────────┬──────────┐           │
-│     ▼          ▼          ▼          ▼          ▼           │
-│  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐          │
-│  │Discov│  │Produc│  │Engine│  │Tech  │  │Audit │          │
-│  │ery   │  │t Mgr │  │er    │  │Lead  │  │or    │          │
-│  └──────┘  └──────┘  └──────┘  └──────┘  └──────┘          │
-│      │          │         │         │         │             │
-│      └──────────┴────┬────┴─────────┴─────────┘             │
-│                      ▼                                       │
-│              ┌──────────────┐                                │
-│              │  Claude CLI  │                                │
-│              │  (claude)    │                                │
-│              └──────────────┘                                │
-│                      │                                       │
-└──────────────────────┼───────────────────────────────────────┘
-                       │
-        ┌──────────────┼──────────────┐
-        ▼              ▼              ▼
-   ┌─────────┐   ┌─────────┐   ┌─────────┐
-   │ GitHub  │   │ Claude  │   │ Linear  │
-   │   API   │   │   API   │   │   API   │
-   └─────────┘   └─────────┘   └─────────┘
++--------------------------------------------------+
+|               DOCKER CONTAINER                    |
+|                                                   |
+|   +------------------------------------------+   |
+|   |           Cron Scheduler                 |   |
+|   |      (supercronic - runs on schedule)    |   |
+|   +------------------------------------------+   |
+|                       |                          |
+|       +-------+-------+-------+-------+          |
+|       |       |       |       |       |          |
+|       v       v       v       v       v          |
+|   +-------+-------+-------+-------+-------+      |
+|   |Discov-|Product|Engine-| Tech |Auditor|      |
+|   |  ery  |  Mgr  |  er   | Lead |       |      |
+|   +-------+-------+-------+-------+-------+      |
+|                       |                          |
+|                       v                          |
+|              +----------------+                  |
+|              |   Claude CLI   |                  |
+|              +----------------+                  |
+|                       |                          |
++--------------------------------------------------+
+                        |
+        +---------------+---------------+
+        |               |               |
+        v               v               v
+   +--------+      +--------+      +--------+
+   | GitHub |      | Claude |      | Linear |
+   |  API   |      |  API   |      |  API   |
+   +--------+      +--------+      +--------+
 ```
 
 ---
@@ -47,50 +48,51 @@ Barbossa is a team of five AI agents running in a Docker container. Each agent h
 Agents work together in a continuous pipeline:
 
 ```
-           ┌─────────────────────────────────────────┐
-           │         1. DISCOVERY PHASE               │
-           │                                          │
-           │  Discovery Agent        Product Manager  │
-           │  - Scans codebase      - Analyzes docs   │
-           │  - Finds TODOs         - Proposes features│
-           │  - Missing tests       - User value focus│
-           │         │                     │          │
-           │         └──────────┬──────────┘          │
-           │                    ▼                     │
-           │            GitHub Issues                 │
-           │         (labeled "backlog")              │
-           └────────────────────┬─────────────────────┘
-                                │
-           ┌────────────────────▼─────────────────────┐
-           │         2. IMPLEMENTATION PHASE          │
-           │                                          │
-           │              Engineer Agent              │
-           │  - Picks highest priority issue          │
-           │  - Reads CLAUDE.md for context           │
-           │  - Implements fix/feature                │
-           │  - Creates PR with "Closes #XX"          │
-           │                    │                     │
-           │                    ▼                     │
-           │              Pull Request                │
-           └────────────────────┬─────────────────────┘
-                                │
-           ┌────────────────────▼─────────────────────┐
-           │           3. REVIEW PHASE                │
-           │                                          │
-           │              Tech Lead Agent             │
-           │  - Waits for CI to pass                  │
-           │  - 8-dimension quality review            │
-           │  - Security, performance, tests          │
-           │                    │                     │
-           │         ┌──────────┴──────────┐          │
-           │         ▼                     ▼          │
-           │      APPROVE               REJECT        │
-           │    (auto-merge)      (request changes)   │
-           │         │                     │          │
-           │         │                     ▼          │
-           │         │           Engineer fixes PR    │
-           │         │           (up to 3 attempts)   │
-           └─────────┴────────────────────────────────┘
++------------------------------------------+
+|          1. DISCOVERY PHASE              |
+|                                          |
+|  Discovery        Product Manager        |
+|  - Scans code     - Analyzes docs        |
+|  - Finds TODOs    - Proposes features    |
+|  - Missing tests  - User value focus     |
+|           \            /                 |
+|            v          v                  |
+|          GitHub Issues                   |
+|        (labeled "backlog")               |
++------------------------------------------+
+                    |
+                    v
++------------------------------------------+
+|        2. IMPLEMENTATION PHASE           |
+|                                          |
+|            Engineer Agent                |
+|  - Picks highest priority issue          |
+|  - Reads CLAUDE.md for context           |
+|  - Implements fix/feature                |
+|  - Creates PR with "Closes #XX"          |
+|                   |                      |
+|                   v                      |
+|            Pull Request                  |
++------------------------------------------+
+                    |
+                    v
++------------------------------------------+
+|           3. REVIEW PHASE                |
+|                                          |
+|            Tech Lead Agent               |
+|  - Waits for CI to pass                  |
+|  - 8-dimension quality review            |
+|  - Security, performance, tests          |
+|                   |                      |
+|          +-------+-------+               |
+|          v               v               |
+|       APPROVE         REJECT             |
+|     (auto-merge)  (request changes)      |
+|          |               |               |
+|          |               v               |
+|          |      Engineer fixes PR        |
+|          |      (up to 3 attempts)       |
++------------------------------------------+
 ```
 
 ---

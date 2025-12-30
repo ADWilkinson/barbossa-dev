@@ -71,7 +71,7 @@ TEMPLATE = """<!DOCTYPE html>
         }}
         nav a {{
             color: var(--ghost);
-            text-decoration: none;
+            text-decoration: none !important;
             padding: 0.4rem 0.7rem;
             border-radius: 4px;
             transition: all 0.15s;
@@ -79,6 +79,7 @@ TEMPLATE = """<!DOCTYPE html>
         nav a:hover {{
             color: var(--ink);
             background: var(--line);
+            text-decoration: none !important;
         }}
         nav a.active {{
             color: var(--accent);
@@ -91,7 +92,7 @@ TEMPLATE = """<!DOCTYPE html>
             padding-left: 0;
         }}
         nav .logo:hover {{
-            background: none;
+            background: none !important;
             color: var(--accent);
         }}
 
