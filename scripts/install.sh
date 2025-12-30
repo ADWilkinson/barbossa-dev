@@ -66,6 +66,18 @@ cat > config/repositories.json << EOF
 }
 EOF
 
+# Detect macOS and create .env file for proper permissions
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo ""
+    echo "Detected macOS - configuring permissions..."
+    cat > .env << EOF
+# macOS: Run container as host UID to access mounted credentials
+# This allows the container to read ~/.config/gh and ~/.claude
+UID=$(id -u)
+EOF
+    echo "Created .env with UID=$(id -u)"
+fi
+
 echo ""
 echo "Done! Your setup is ready in ./$INSTALL_DIR"
 echo ""
@@ -74,6 +86,9 @@ echo "  $INSTALL_DIR/"
 echo "  ├── config/"
 echo "  │   └── repositories.json"
 echo "  ├── docker-compose.yml"
+if [[ "$OSTYPE" == "darwin"* ]]; then
+echo "  ├── .env (macOS permissions config)"
+fi
 echo "  └── logs/"
 echo ""
 echo "Next steps:"

@@ -50,6 +50,7 @@ Discovery + Product Manager
 - Linux (x86_64, amd64)
 - macOS (Intel and Apple Silicon)
 - Uses `linux/amd64` images (Docker handles emulation on Apple Silicon)
+- macOS: install script auto-configures permissions for credential access
 
 ### Setup
 

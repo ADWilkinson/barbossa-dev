@@ -8,6 +8,11 @@ services:
     platform: linux/amd64
     container_name: barbossa-dev
     restart: "no"  # Don't auto-restart in dev
+    # Run as host UID but keep GID=1000 for /app access on macOS
+    # On Linux: runs as 1000:1000 (default)
+    # On macOS: runs as host UID (e.g., 501) with GID 1000
+    # This allows reading host credentials AND writing to /app (group-writable)
+    user: "${UID:-1000}:1000"
     volumes:
       # Mount source code for development
       - ./src:/app/src

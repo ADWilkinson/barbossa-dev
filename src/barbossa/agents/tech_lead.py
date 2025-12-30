@@ -40,7 +40,7 @@ class BarbossaTechLead:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "1.5.2"  # macOS platform support (linux/amd64)
+    VERSION = "1.5.3"  # macOS credentials fix
     ROLE = "tech_lead"
 
     # Default review criteria (can be overridden in config)

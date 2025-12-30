@@ -53,8 +53,10 @@ RUN chmod +x src/barbossa/cli/barbossa && ln -s /app/src/barbossa/cli/barbossa /
 # Create directories
 RUN mkdir -p logs changelogs projects
 
-# Set ownership to barbossa user
-RUN chown -R barbossa:barbossa /app
+# Set ownership to barbossa user and make group-writable for macOS compatibility
+# This allows container to run as different UID but same GID (1000)
+RUN chown -R barbossa:barbossa /app && \
+    chmod -R g+w /app
 
 # Copy entrypoint (crontab is generated at runtime from config)
 COPY entrypoint.sh /entrypoint.sh

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.3] - 2025-12-30
+
+### Fixed
+- **macOS Credential Access** 🔧
+  - Fixed "Permission denied" errors when accessing ~/.config/gh and ~/.claude on macOS
+  - Container now runs as host UID with GID=1000 instead of fixed 1000:1000
+  - install.sh automatically detects macOS and creates .env with UID=$(id -u)
+  - /app directories made group-writable (775) for cross-UID access
+  - Linux behavior unchanged (defaults to 1000:1000)
+
+### Changed
+- **Dockerfile:** /app is now group-writable (chmod g+w) for macOS compatibility
+- **docker-compose.prod.yml:** Added `user: "${UID:-1000}:1000"` for dynamic UID
+- **docker-compose.dev.yml:** Added `user: "${UID:-1000}:1000"` for dynamic UID
+- **install.sh:** Auto-detects macOS and creates .env file with host UID
+- **CLAUDE.md:** Added macOS Permissions Fix section with troubleshooting
+
+### How It Works
+- **Linux:** Runs as 1000:1000 (default) - no changes needed
+- **macOS:** Runs as host UID (e.g., 501) with GID 1000
+  - Can read host credentials (same UID as host user)
+  - Can write to /app (member of group 1000, directories are group-writable)
+
 ## [1.5.2] - 2025-12-30
 
 ### Added

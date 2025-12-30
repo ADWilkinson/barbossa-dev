@@ -342,6 +342,29 @@ When Linear is configured, `validate.py` checks:
 - **Why amd64:** Dockerfile uses linux-amd64 binaries (supercronic), so we're explicit about platform
 - **Performance:** Negligible overhead on Apple Silicon due to emulation for cron-based workloads
 
+### macOS Permissions Fix
+**Problem:** On macOS, credential files (~/.config/gh, ~/.claude) are owned by the host user (typically UID 501) with 600 permissions. The container needs to read these files.
+
+**Solution:** Container runs as host UID but keeps GID=1000:
+- **Linux:** Runs as 1000:1000 (default) - works as before
+- **macOS:** Runs as host UID (e.g., 501) with GID 1000
+- **Permissions:** /app is group-writable (775) so UID 501 with GID 1000 can write
+- **Auto-detection:** install.sh creates .env with UID=$(id -u) on macOS
+
+**Manual setup:**
+```bash
+# macOS users: Create .env file with your UID
+echo "UID=$(id -u)" > .env
+
+# Restart container
+docker compose down && docker compose up -d
+```
+
+**Why this works:**
+- Container reads host credentials (same UID as host user)
+- Container writes to /app (member of group 1000, /app is group-writable)
+- No permission denied errors
+
 ### Authentication
 - GitHub CLI authentication via mounted `~/.config/gh/`
 - Claude CLI authentication via mounted `~/.claude/`
