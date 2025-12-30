@@ -1,7 +1,7 @@
 # Barbossa Engineer - Claude Context
 
 **Last Updated:** 2025-12-30
-**Version:** v1.6.1
+**Version:** v1.6.3
 
 ## Project Overview
 
@@ -468,6 +468,32 @@ On container startup, `validate.py` checks:
 **Critical failures block startup** to prevent silent failures.
 
 ## Development History
+
+### v1.6.3 - 2025-12-30 (Critical bugfix release)
+- **CRITICAL BUG FIX**: Tech Lead now respects `auto_merge` setting in config
+- **Issue:** Tech Lead was ignoring `settings.tech_lead.auto_merge: false` and automatically merging PRs anyway
+- **Impact:** PRs were being merged without manual review when auto_merge was explicitly disabled
+- **Root Cause:** Config setting was loaded but never checked before executing merge command
+- **Example:** PR #4 in zkp2p-clients was auto-merged at 15:00 UTC despite `auto_merge: false`
+- **Fix:**
+  - ✅ Added `auto_merge` check in `_execute_decision()` method before executing merge
+  - ✅ When `auto_merge: false`, Tech Lead posts approval comment instead of merging
+  - ✅ Approval comment includes scores, assessment, and note that manual merge is required
+  - ✅ When `auto_merge: true`, behavior unchanged (auto-merges as before)
+- **Files Modified:**
+  - `src/barbossa/agents/tech_lead.py:511-565`: Added auto_merge enforcement in MERGE action
+  - Tech Lead version bumped to v1.6.3
+  - Package version bumped to v1.6.3
+
+**Impact:**
+- ✅ `auto_merge: false` now works correctly - PRs get approval comments but aren't merged
+- ✅ `auto_merge: true` continues to work as before
+- ✅ Users regain control over when PRs are merged
+- ✅ Prevents unexpected merges when manual review is desired
+
+**Behavior:**
+- **When `auto_merge: false`**: Posts "✅ Tech Lead Approval - Ready to Merge" comment with scores and reasoning
+- **When `auto_merge: true`**: Executes merge immediately (existing behavior)
 
 ### v1.6.1 - 2025-12-30 (Hotfix release)
 - **CRITICAL FIX**: Added support for both Claude authentication methods

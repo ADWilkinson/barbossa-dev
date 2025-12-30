@@ -40,7 +40,7 @@ class BarbossaTechLead:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "1.6.2"  # Dual Claude auth support (CLAUDE_CODE_OAUTH_TOKEN + ANTHROPIC_API_KEY)
+    VERSION = "1.6.3"  # Fixed auto_merge setting being ignored
     ROLE = "tech_lead"
 
     # Default review criteria (can be overridden in config)
@@ -509,6 +509,45 @@ class BarbossaTechLead:
 
         try:
             if action == 'MERGE':
+                # Check auto_merge setting
+                if not self.auto_merge:
+                    # Post approval comment but don't merge
+                    value_score = decision.get('value_score', '?')
+                    quality_score = decision.get('quality_score', '?')
+                    bloat_risk = decision.get('bloat_risk', 'UNKNOWN')
+                    reasoning = decision.get('reasoning', 'No reasoning provided')[:500]
+
+                    comment_body = f"""✅ **Tech Lead Approval - Ready to Merge**
+
+**Scores:** Value {value_score}/10 | Quality {quality_score}/10 | Bloat Risk: {bloat_risk}
+
+**Assessment:**
+{reasoning}
+
+---
+_Auto-merge is disabled. Please merge manually when ready._"""
+
+                    import tempfile
+                    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+                        f.write(comment_body)
+                        temp_file = f.name
+
+                    try:
+                        comment_cmd = f'gh pr comment {pr_number} --repo {self.owner}/{repo_name} --body-file "{temp_file}"'
+                        result = subprocess.run(comment_cmd, shell=True, capture_output=True, text=True, timeout=60)
+                        success = result.returncode == 0
+                        if success:
+                            self.logger.info(f"Posted approval comment on PR #{pr_number} (auto_merge=false)")
+                        else:
+                            self.logger.error(f"Failed to post approval comment: {result.stderr}")
+                    finally:
+                        try:
+                            os.unlink(temp_file)
+                        except:
+                            pass
+                    return success
+
+                # Auto-merge is enabled - execute the merge
                 cmd = f"gh pr merge {pr_number} --repo {self.owner}/{repo_name} --squash --delete-branch"
                 result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
                 success = result.returncode == 0
