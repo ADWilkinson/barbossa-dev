@@ -7,20 +7,28 @@ Get Barbossa running in 5 minutes.
 ## Requirements
 
 - **Docker** - [Install](https://docs.docker.com/get-docker/)
-- **Claude Max** - [Subscribe](https://claude.ai) (required for Claude Code CLI)
-- **GitHub CLI** - [Install](https://cli.github.com/)
-- **macOS or Linux** - Windows via WSL2
+- **GitHub account** with personal access token
+- **Claude authentication** (choose one):
+  - [Claude Pro/Max subscription](https://claude.ai) (recommended - long-lasting tokens)
+  - [Anthropic API account](https://console.anthropic.com) (pay-as-you-go)
+- **Platform:** Linux (x86_64), macOS (Intel/Apple Silicon), Windows (WSL2)
 
 ---
 
 ## Setup
 
 ```bash
-# 1. Authenticate
-gh auth login
-claude login
+# 1. Generate authentication tokens
 
-# 2. Run install script
+# GitHub token
+gh auth token  # OR create at https://github.com/settings/tokens
+
+# Claude token (Option 1 - Recommended)
+claude login   # Then extract token from ~/.claude/.credentials.json
+# Claude API key (Option 2)
+# Get from: https://console.anthropic.com/settings/keys
+
+# 2. Run install script (will prompt for tokens)
 curl -fsSL https://raw.githubusercontent.com/ADWilkinson/barbossa-dev/main/install.sh | bash
 
 # 3. Start
@@ -30,7 +38,12 @@ cd barbossa && docker compose up -d
 docker exec barbossa barbossa health
 ```
 
-The script prompts for your GitHub username and repository, then creates everything for you.
+The install script will:
+- Prompt for your GitHub username and repository
+- Ask for your GitHub token
+- Ask for your Claude token/API key
+- Create a `.env` file with your authentication
+- Configure everything automatically
 
 To add more repositories later, edit `config/repositories.json`. See [Configuration](configuration.html) for all options.
 

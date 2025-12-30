@@ -6,7 +6,9 @@ AI agents that work on your code while you sleep. They find issues, implement fi
 
 ### Is it free?
 
-Yes. You need a Claude Max subscription from Anthropic.
+Yes. You need either:
+- Claude Pro/Max subscription (recommended - long-lasting tokens)
+- Anthropic API account (pay-as-you-go billing)
 
 ### Will it break my code?
 
@@ -31,19 +33,26 @@ docker compose start   # Resume
 
 Add a `CLAUDE.md` to your repo with project context.
 
-### Claude auth fails?
+### Authentication fails?
 
+**Check tokens:**
 ```bash
-claude login
+cat .env  # Verify GITHUB_TOKEN and ANTHROPIC_API_KEY are set
+```
+
+**Update tokens:**
+```bash
+# GitHub token
+gh auth token  # Add to .env
+
+# Claude Pro token (recommended)
+cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.sessionKey'  # Add to .env
+
+# Restart
 docker compose restart
 ```
 
-### GitHub permission denied?
-
-```bash
-gh auth login
-docker compose restart
-```
+See [Troubleshooting](troubleshooting.html) for details.
 
 ### No PRs being created?
 

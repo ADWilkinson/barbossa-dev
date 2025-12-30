@@ -1,16 +1,32 @@
 # Troubleshooting
 
-### Claude auth fails
+### Authentication failures
 
+**Check tokens in .env file:**
 ```bash
-claude login
-docker compose restart
+cat .env  # Verify GITHUB_TOKEN and ANTHROPIC_API_KEY are set
 ```
 
-### GitHub permission denied
-
+**Generate new GitHub token:**
 ```bash
-gh auth login
+gh auth token  # OR create at https://github.com/settings/tokens
+# Add to .env: GITHUB_TOKEN=ghp_your_token_here
+```
+
+**Generate new Claude token:**
+```bash
+# Option 1: Claude Pro/Max subscription token (recommended)
+cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.sessionKey'
+# Add to .env: ANTHROPIC_API_KEY=<your_session_key>
+
+# Option 2: Pay-as-you-go API key
+# Get from: https://console.anthropic.com/settings/keys
+# Add to .env: ANTHROPIC_API_KEY=sk-ant-api03-your_key_here
+```
+
+**Apply changes:**
+```bash
+vim .env  # Edit tokens
 docker compose restart
 ```
 
