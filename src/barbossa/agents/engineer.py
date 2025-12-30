@@ -42,7 +42,7 @@ class Barbossa:
     Supports both GitHub Issues and Linear for issue tracking.
     """
 
-    VERSION = "1.5.3"  # macOS credentials fix
+    VERSION = "1.5.4"  # macOS home dir fix
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.4] - 2025-12-30
+
+### Fixed
+- **macOS Home Directory Access** 🔧
+  - Fixed container unable to access /home/barbossa when running as macOS host UID
+  - Changed /home/barbossa permissions from 700 to 750 (group-accessible)
+  - Now UID 501 (macOS) with GID 1000 can access mounted credentials
+  - Completes the macOS credentials fix from v1.5.3
+
+### Technical
+- Dockerfile: Added `chmod 750 /home/barbossa` after user creation
+- Permissions: drwxr-x--- (owner full, group read+execute, other none)
+
 ## [1.5.3] - 2025-12-30
 
 ### Fixed

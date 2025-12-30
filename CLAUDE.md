@@ -348,7 +348,9 @@ When Linear is configured, `validate.py` checks:
 **Solution:** Container runs as host UID but keeps GID=1000:
 - **Linux:** Runs as 1000:1000 (default) - works as before
 - **macOS:** Runs as host UID (e.g., 501) with GID 1000
-- **Permissions:** /app is group-writable (775) so UID 501 with GID 1000 can write
+- **Permissions:**
+  - /app is group-writable (775) so UID 501 with GID 1000 can write
+  - /home/barbossa is group-accessible (750) so UID 501 with GID 1000 can access mounted credentials
 - **Auto-detection:** install.sh creates .env with UID=$(id -u) on macOS
 
 **Manual setup:**

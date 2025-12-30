@@ -43,7 +43,7 @@ from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker
 class BarbossaProduct:
     """Product Manager agent that creates feature Issues for the pipeline."""
 
-    VERSION = "1.5.3"  # macOS credentials fix
+    VERSION = "1.5.4"  # macOS home dir fix
     DEFAULT_MAX_ISSUES_PER_RUN = 3
     DEFAULT_FEATURE_BACKLOG_THRESHOLD = 20
 

@@ -31,7 +31,9 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
 RUN npm install -g @anthropic-ai/claude-code pnpm yarn
 
 # Create non-root user for running agents
-RUN useradd -m -u 1000 -s /bin/bash barbossa
+# Make home directory group-accessible (750) so macOS host UID can access mounted credentials
+RUN useradd -m -u 1000 -s /bin/bash barbossa && \
+    chmod 750 /home/barbossa
 
 # Set working directory
 WORKDIR /app
