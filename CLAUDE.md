@@ -336,6 +336,12 @@ When Linear is configured, `validate.py` checks:
 - Working directory `/app` owned by `barbossa:barbossa`
 - Enhances security by preventing root-level container breakouts
 
+### Platform Support
+- **Docker Platform:** `linux/amd64` (specified in docker-compose files)
+- **Works on:** Linux x86_64 (native), macOS Intel (native), macOS Apple Silicon (via Rosetta 2)
+- **Why amd64:** Dockerfile uses linux-amd64 binaries (supercronic), so we're explicit about platform
+- **Performance:** Negligible overhead on Apple Silicon due to emulation for cron-based workloads
+
 ### Authentication
 - GitHub CLI authentication via mounted `~/.config/gh/`
 - Claude CLI authentication via mounted `~/.claude/`

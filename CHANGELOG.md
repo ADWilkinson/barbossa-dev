@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.2] - 2025-12-30
+
+### Added
+- **macOS Platform Support** 🍎
+  - Added `platform: linux/amd64` to docker-compose.prod.yml and docker-compose.dev.yml
+  - Works on macOS Intel (native) and Apple Silicon (via Rosetta 2 emulation)
+  - Docker transparently handles emulation on Apple Silicon
+  - Updated README.md with platform support section
+  - Updated CLAUDE.md with platform architecture documentation
+  - Updated docs/firebase.md with version 1.5.2 and platform info
+
+### Changed
+- **Documentation Updates**
+  - README now explicitly lists Linux x86_64, macOS Intel, and macOS Apple Silicon as supported
+  - CLAUDE.md documents platform architecture and design rationale
+  - Firebase docs updated to v1.5.2 across all version references
+
+### Technical
+- All agents bumped to v1.5.2
+- Firebase CLIENT_VERSION updated to 1.5.2
+- No code changes - purely platform configuration
+
 ## [1.4.0] - 2025-12-28
 
 ### Added

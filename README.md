@@ -46,6 +46,11 @@ Discovery + Product Manager
 - [Claude Max subscription](https://claude.ai) (for Claude Code CLI)
 - [GitHub CLI](https://cli.github.com/)
 
+**Platform Support:**
+- Linux (x86_64, amd64)
+- macOS (Intel and Apple Silicon)
+- Uses `linux/amd64` images (Docker handles emulation on Apple Silicon)
+
 ### Setup
 
 ```bash

@@ -1,6 +1,7 @@
 services:
   barbossa:
     image: ghcr.io/adwilkinson/barbossa-dev:latest
+    platform: linux/amd64
     container_name: barbossa
     restart: unless-stopped
     volumes:

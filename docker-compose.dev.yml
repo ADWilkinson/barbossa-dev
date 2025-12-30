@@ -5,6 +5,7 @@
 services:
   barbossa:
     build: .
+    platform: linux/amd64
     container_name: barbossa-dev
     restart: "no"  # Don't auto-restart in dev
     volumes:

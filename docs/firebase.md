@@ -16,12 +16,13 @@ Firebase provides these optional features:
 
 ---
 
-## Current Status (v1.3.0)
+## Current Status (v1.5.2)
 
-- **Latest Version:** v1.3.0
+- **Latest Version:** v1.5.2
 - **Minimum Supported:** v1.0.0
 - **Cloud Functions:** Deployed and operational
 - **Privacy:** Fully transparent, no personal data collected
+- **Platform Support:** Linux (x86_64/amd64), macOS (Intel + Apple Silicon)
 
 ---
 
@@ -102,7 +103,7 @@ Firebase tracks the latest Barbossa version and warns you if updates are availab
 
 **How it works:**
 1. On startup, Barbossa checks Firebase for latest version
-2. If a newer version exists, you see a log message: `UPDATE AVAILABLE: v1.3.0 is available`
+2. If a newer version exists, you see a log message: `UPDATE AVAILABLE: v1.5.2 is available`
 3. This is a **soft warning** - never blocks execution
 4. If Firebase is unavailable, version check is silently skipped
 
@@ -119,7 +120,7 @@ Firebase tracks the latest Barbossa version and warns you if updates are availab
 The Python client handles all Firebase interactions:
 
 ```python
-CLIENT_VERSION = "1.3.0"
+CLIENT_VERSION = "1.5.2"
 FIREBASE_TIMEOUT = 5  # seconds - short timeout, never blocks
 ```
 
@@ -135,7 +136,7 @@ Node.js functions deployed to Firebase Cloud Functions:
 
 ```javascript
 const MINIMUM_VERSION = "1.0.0";
-const LATEST_VERSION = "1.3.0";
+const LATEST_VERSION = "1.5.2";
 ```
 
 **Deployment:**
@@ -217,7 +218,7 @@ Firebase state tracking enables future coordination features:
 ```javascript
 {
   installation_id: "sha256_hash",
-  version: "1.3.0",
+  version: "1.5.2",
   last_seen: Timestamp,
   last_agent: "engineer",
   last_heartbeat: Timestamp
@@ -231,7 +232,7 @@ Firebase state tracking enables future coordination features:
   installation_id: "sha256_hash",
   agent: "engineer",
   repo_count: 3,
-  version: "1.3.0",
+  version: "1.5.2",
   status: "completed",
   success: true,
   pr_created: true,
@@ -280,7 +281,7 @@ firebase deploy --only functions
 When releasing a new version, update `functions/index.js`:
 
 ```javascript
-const LATEST_VERSION = "1.3.0";  // Update this
+const LATEST_VERSION = "1.5.2";  // Update this
 ```
 
 Then redeploy functions.
@@ -373,4 +374,4 @@ No. Data is anonymous by design. Even we (maintainers) cannot link an installati
 
 ---
 
-**Last Updated:** 2025-12-26 (v1.3.0)
+**Last Updated:** 2025-12-30 (v1.5.2)

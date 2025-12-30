@@ -44,7 +44,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "1.5.1"  # Fixed prompts path for v1.5.0 refactor
+    VERSION = "1.5.2"  # macOS platform support (linux/amd64)
     ROLE = "auditor"
 
     def __init__(self, work_dir: Optional[Path] = None):
