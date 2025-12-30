@@ -107,45 +107,23 @@ def check_github_cli():
 
 
 def check_claude_cli():
-    """Check Claude CLI authentication."""
-    # Check if claude is installed
-    success, stdout, stderr = run_cmd("claude --version")
-    if not success:
-        return False, "Claude CLI not installed", "Run: npm install -g @anthropic-ai/claude-code"
+    """Check Claude CLI authentication via environment variables."""
+    # Check for either CLAUDE_CODE_OAUTH_TOKEN (from claude setup-token) or ANTHROPIC_API_KEY
+    oauth_token = os.environ.get('CLAUDE_CODE_OAUTH_TOKEN')
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
 
-    # Check credentials file
-    creds_paths = [
-        Path.home() / '.claude' / '.credentials.json',
-        Path('/root/.claude/.credentials.json'),
-        Path('/home/barbossa/.claude/.credentials.json'),
-    ]
+    if not oauth_token and not api_key:
+        return False, "Claude authentication not set", "Set CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY in .env"
 
-    for creds_file in creds_paths:
-        if creds_file.exists():
-            try:
-                with open(creds_file) as f:
-                    creds = json.load(f)
+    # Determine which auth method is being used
+    if oauth_token:
+        # OAuth token from claude setup-token (sk-ant-oat01-...)
+        return True, "Claude authenticated via OAuth token", None
+    elif api_key:
+        # API key from console.anthropic.com (sk-ant-api03-...)
+        return True, "Claude authenticated via API key", None
 
-                oauth = creds.get('claudeAiOauth', {})
-                expires_at = oauth.get('expiresAt', 0)
-
-                if expires_at:
-                    expires_ts = expires_at / 1000 if expires_at > 1e12 else expires_at
-                    expires_dt = datetime.fromtimestamp(expires_ts)
-                    now = datetime.now()
-
-                    hours_left = (expires_dt - now).total_seconds() / 3600
-
-                    if hours_left < 0:
-                        return False, "Claude token expired", "Run: claude login"
-                    elif hours_left < 24:
-                        return True, f"Claude authenticated (expires in {hours_left:.0f}h)", "Consider running: claude login"
-                    else:
-                        return True, f"Claude authenticated (valid for {hours_left:.0f}h)", None
-            except:
-                pass
-
-    return False, "Claude CLI not authenticated", "Run: claude login"
+    return False, "Claude authentication not set", "Set CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY in .env"
 
 
 def check_ssh_keys():

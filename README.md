@@ -131,6 +131,37 @@ With options:
 | `auto_merge` | `true` = merge automatically, `false` = manual review |
 | `enabled` | Enable/disable individual agents |
 
+### Scheduling
+
+Agents run on optimized schedules to avoid resource contention:
+
+```json
+{
+  "settings": {
+    "schedule": {
+      "engineer": "every_2_hours",
+      "tech_lead": "0 1,3,5,7,9,11,13,15,17,19,21,23 * * *",
+      "discovery": "0 1,5,9,13,17,21 * * *",
+      "product_manager": "0 3,11,19 * * *"
+    }
+  }
+}
+```
+
+**Default Schedule:**
+- **Engineer:** 12x daily (00:00, 02:00, 04:00...) - implements features
+- **Tech Lead:** 12x daily (01:00, 03:00, 05:00...) - reviews PRs 1h after engineer
+- **Discovery:** 6x daily (01:00, 05:00, 09:00, 13:00, 17:00, 21:00) - finds issues
+- **Product:** 3x daily (03:00, 11:00, 19:00) - suggests features
+
+**Why Offset?**
+- Avoids simultaneous API calls and resource contention
+- Tech Lead reviews PRs created in previous hour
+- Discovery keeps backlog fresh for next Engineer run
+- Ensures smooth operation across all agents
+
+Available presets: `every_hour`, `every_2_hours`, `every_3_hours`, `4x_daily`, `3x_daily`, `2x_daily`, `daily_morning`, or use custom cron expressions.
+
 ---
 
 ## Linear Integration

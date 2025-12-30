@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.2] - 2025-12-30
+
+### Fixed
+- **Health Check Permission Bug** 🩹
+  - Fixed `barbossa health` command trying to access `/root/.claude/.credentials.json` instead of checking environment variables
+  - Health check now properly validates `CLAUDE_CODE_OAUTH_TOKEN` and `ANTHROPIC_API_KEY` env vars
+  - Resolves "Permission denied" error when running as non-root user
+
+### Changed
+- **Optimized Agent Scheduling** ⚡
+  - **Tech Lead:** Now runs 1 hour after Engineer (01:00, 03:00, etc.) to review fresh PRs
+  - **Discovery:** Increased to 6x daily (was 4x) at 01:00, 05:00, 09:00, 13:00, 17:00, 21:00 to keep backlog stocked
+  - **Product Manager:** Offset to 03:00, 11:00, 19:00 to avoid resource contention
+  - **Why:** Prevents simultaneous API calls, reduces rate limiting, ensures Tech Lead reviews work from previous hour
+  - Updated all documentation (README, CLAUDE.md, config examples, docs/)
+
 ## [1.6.1] - 2025-12-30
 
 ### Fixed

@@ -37,6 +37,15 @@
     // Global telemetry (optional, defaults to true)
     "telemetry": true,
 
+    // Agent scheduling (optional - defaults shown below)
+    // Optimized to avoid resource contention and ensure fresh work is processed
+    "schedule": {
+      "engineer": "every_2_hours",                           // 12x daily at :00
+      "tech_lead": "0 1,3,5,7,9,11,13,15,17,19,21,23 * * *", // 12x daily 1h after engineer
+      "discovery": "0 1,5,9,13,17,21 * * *",                 // 6x daily offset
+      "product_manager": "0 3,11,19 * * *"                   // 3x daily offset
+    },
+
     // Engineer agent settings
     "engineer": {
       "enabled": true

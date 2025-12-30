@@ -52,14 +52,15 @@ barbossa-engineer/
 ## Current System State
 
 ### Active Configuration
-- **Repositories:** 2 (peerlytics, usdctofiat)
+- **Repositories:** 1 (scallywag-br-io)
 - **Owner:** ADWilkinson
-- **Schedule:**
-  - Engineer: Every 2 hours (0,2,4,6,8,10,12,14,16,18,20,22 UTC)
-  - Tech Lead: Every 2 hours (0,2,4,6,8,10,12,14,16,18,20,22 UTC)
-  - Discovery: 4x daily (0,6,12,18 UTC)
-  - Product Manager: 3x daily (7,15,23 UTC)
+- **Schedule (Optimized):**
+  - Engineer: 12x daily at :00 (0,2,4,6,8,10,12,14,16,18,20,22 UTC)
+  - Tech Lead: 12x daily at :00 (1,3,5,7,9,11,13,15,17,19,21,23 UTC) - 1h after engineer
+  - Discovery: 6x daily offset (1,5,9,13,17,21 UTC) - keeps backlog stocked
+  - Product Manager: 3x daily offset (3,11,19 UTC) - quality over quantity
   - Auditor: Daily at 06:30 UTC
+- **Schedule Philosophy:** Agents offset to avoid resource contention, ensure fresh PRs are reviewed in next cycle, and keep backlog healthy
 
 ### Tech Lead Settings
 - Auto-merge: Enabled

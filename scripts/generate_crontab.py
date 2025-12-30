@@ -3,11 +3,14 @@
 Generate crontab from config/repositories.json schedule settings.
 
 Default schedule (if not configured):
-- Engineer: every 2 hours at :00
-- Tech Lead: every 2 hours at :35
-- Discovery: 4x daily (00:00, 06:00, 12:00, 18:00)
-- Product Manager: 3x daily (07:00, 15:00, 23:00)
+- Engineer: every 2 hours at :00 (12x daily)
+- Tech Lead: 1h after engineer (12x daily) - avoids collision, reviews fresh PRs
+- Discovery: 6x daily offset from engineer - keeps backlog stocked
+- Product Manager: 3x daily offset - quality over quantity
 - Auditor: daily at 06:30
+
+Schedule philosophy: Offset agents to avoid resource contention and ensure
+fresh work is reviewed/processed in the next cycle.
 """
 
 import json
@@ -16,22 +19,23 @@ from pathlib import Path
 
 
 # Default schedules (cron format)
+# Optimized to avoid resource contention and ensure fresh work is processed
 DEFAULTS = {
     'engineer': {
         'cron': '0 0,2,4,6,8,10,12,14,16,18,20,22 * * *',
-        'description': 'Every 2 hours at :00'
+        'description': '12x daily at :00 (every 2 hours)'
     },
     'tech_lead': {
-        'cron': '35 0,2,4,6,8,10,12,14,16,18,20,22 * * *',
-        'description': 'Every 2 hours at :35 (after engineer)'
+        'cron': '0 1,3,5,7,9,11,13,15,17,19,21,23 * * *',
+        'description': '12x daily at :00 (1h after engineer, reviews fresh PRs)'
     },
     'discovery': {
-        'cron': '0 0,6,12,18 * * *',
-        'description': '4x daily (00:00, 06:00, 12:00, 18:00)'
+        'cron': '0 1,5,9,13,17,21 * * *',
+        'description': '6x daily offset (keeps backlog stocked)'
     },
     'product_manager': {
-        'cron': '0 7,15,23 * * *',
-        'description': '3x daily (07:00, 15:00, 23:00)'
+        'cron': '0 3,11,19 * * *',
+        'description': '3x daily offset (quality over quantity)'
     },
     'auditor': {
         'cron': '30 6 * * *',

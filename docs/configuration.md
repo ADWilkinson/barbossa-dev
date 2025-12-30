@@ -78,6 +78,87 @@ Always protect sensitive code:
 
 ---
 
+## Scheduling
+
+Agents run on optimized schedules to avoid resource contention and ensure fresh work is processed efficiently.
+
+### Default Schedule
+
+```json
+{
+  "settings": {
+    "schedule": {
+      "engineer": "every_2_hours",
+      "tech_lead": "0 1,3,5,7,9,11,13,15,17,19,21,23 * * *",
+      "discovery": "0 1,5,9,13,17,21 * * *",
+      "product_manager": "0 3,11,19 * * *"
+    }
+  }
+}
+```
+
+**What runs when:**
+
+| Agent | Frequency | Times (UTC) | Purpose |
+|-------|-----------|-------------|---------|
+| **Engineer** | 12x daily | 00:00, 02:00, 04:00... | Implements features from backlog |
+| **Tech Lead** | 12x daily | 01:00, 03:00, 05:00... | Reviews PRs (1h after engineer) |
+| **Discovery** | 6x daily | 01:00, 05:00, 09:00, 13:00, 17:00, 21:00 | Finds issues & technical debt |
+| **Product** | 3x daily | 03:00, 11:00, 19:00 | Suggests new features |
+| **Auditor** | Daily | 06:30 | System health check |
+
+### Why Offset Schedules?
+
+1. **Avoids API rate limits** - agents don't hit Claude API simultaneously
+2. **Fresh PR reviews** - Tech Lead runs after Engineer creates PRs
+3. **Healthy backlog** - Discovery runs frequently to keep work queue stocked
+4. **Resource efficiency** - No CPU/memory contention from parallel execution
+
+### Custom Schedules
+
+Use **presets**:
+
+```json
+{
+  "schedule": {
+    "engineer": "every_3_hours",
+    "tech_lead": "every_3_hours",
+    "discovery": "4x_daily",
+    "product_manager": "2x_daily"
+  }
+}
+```
+
+Available presets:
+- `every_hour`, `every_2_hours`, `every_3_hours`, `every_4_hours`, `every_6_hours`
+- `4x_daily`, `3x_daily`, `2x_daily`
+- `daily_morning`, `daily_evening`, `daily_night`
+
+Or use **custom cron expressions**:
+
+```json
+{
+  "schedule": {
+    "engineer": "0 9,17 * * *",  // 9am and 5pm only
+    "tech_lead": "30 9,17 * * *", // 30 min after engineer
+    "discovery": "0 12 * * *",    // Noon daily
+    "product_manager": "0 18 * * 1"  // 6pm Monday only
+  }
+}
+```
+
+### Disable Agents
+
+```json
+{
+  "schedule": {
+    "product_manager": "disabled"
+  }
+}
+```
+
+---
+
 ## Issue Tracking
 
 Barbossa supports both **GitHub Issues** (default) and **Linear** for issue tracking.
