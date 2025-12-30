@@ -2,22 +2,43 @@
 
 > AI engineers that ship code while you sleep.
 
-Barbossa is an autonomous development pipeline with five AI agents that work on your codebase 24/7.
+Barbossa is an autonomous development pipeline with five AI agents that work on your codebase 24/7. Version 1.6.3.
+
+## Five Agents
+
+| Agent | Purpose | Frequency |
+|-------|---------|-----------|
+| **Engineer** | Picks tasks from backlog, creates PRs | 12x daily |
+| **Tech Lead** | Reviews PRs with 8-dimension quality analysis, merges or requests changes | 12x daily (1h after engineer) |
+| **Discovery** | Finds TODOs, missing tests, accessibility issues | 6x daily |
+| **Product Manager** | Proposes high-value features | 3x daily |
+| **Auditor** | System health checks, quality pattern detection | Daily |
+
+**Pipeline:** Discovery/Product → GitHub Issues (backlog) → Engineer → PR → Tech Lead → Merge/Reject
 
 ## Requirements
 
 - Docker
-- Claude Max subscription (provides Claude Code CLI)
-- GitHub CLI (`gh auth login`)
+- **Claude authentication** (choose one):
+  - Claude Pro/Max subscription (recommended - long-lasting tokens via `claude setup-token`)
+  - Anthropic API account (pay-as-you-go)
+- GitHub account with personal access token (`gh auth token`)
 
 ## Setup
 
 ```bash
-# 1. Authenticate
-gh auth login
-claude login
+# 1. Generate authentication tokens
 
-# 2. Run install script
+# GitHub token
+gh auth token  # OR create at https://github.com/settings/tokens
+
+# Claude token (Option 1 - Recommended)
+claude setup-token   # Follow prompts to generate long-lived token
+
+# Claude API key (Option 2)
+# Get from: https://console.anthropic.com/settings/keys
+
+# 2. Run install script (will prompt for tokens)
 curl -fsSL https://raw.githubusercontent.com/ADWilkinson/barbossa-dev/main/install.sh | bash
 
 # 3. Start
@@ -27,7 +48,7 @@ cd barbossa && docker compose up -d
 docker exec barbossa barbossa health
 ```
 
-The script prompts for your GitHub username and repository, then creates everything.
+The install script prompts for your GitHub username, repository, and authentication tokens, then creates everything automatically.
 
 To add more repositories later, edit `config/repositories.json`.
 
@@ -47,7 +68,7 @@ Minimal config (`config/repositories.json`):
 }
 ```
 
-With options:
+Common options:
 
 ```json
 {
@@ -62,41 +83,194 @@ With options:
   ],
   "settings": {
     "telemetry": true,
-    "tech_lead": { "auto_merge": true }
+    "tech_lead": {
+      "auto_merge": true,
+      "min_lines_for_tests_required": 50,
+      "max_files_per_pr": 15,
+      "stale_pr_threshold": 5
+    },
+    "discovery": { "enabled": true },
+    "product_manager": { "enabled": true }
   }
 }
 ```
 
 | Field | Description |
 |-------|-------------|
-| `package_manager` | `npm`, `yarn`, `pnpm`, or `bun` (auto-detected) |
+| `package_manager` | `npm`, `yarn`, `pnpm`, or `bun` (auto-detected if omitted) |
 | `do_not_touch` | Files/directories agents should never modify |
-| `auto_merge` | `true` = auto-merge PRs, `false` = manual review |
+| `auto_merge` | `true` = auto-merge PRs (default), `false` = manual review |
+| `min_lines_for_tests_required` | Minimum lines changed to require tests (default: 50) |
+| `max_files_per_pr` | Maximum files allowed in a PR (default: 15) |
+| `stale_pr_threshold` | Days before PR considered stale (default: 5) |
+| `enabled` | Enable/disable individual agents |
+
+## Linear Integration (Optional)
+
+Use Linear instead of GitHub Issues for backlog management:
+
+```json
+{
+  "owner": "your-github-username",
+  "issue_tracker": {
+    "type": "linear",
+    "linear": {
+      "team_key": "MUS",
+      "backlog_state": "Backlog"
+    }
+  }
+}
+```
+
+Set Linear API key as environment variable:
+```bash
+export LINEAR_API_KEY="lin_api_xxx"
+```
+
+Get your API key from: https://linear.app/settings/api
 
 ## Commands
 
 ```bash
 docker exec barbossa barbossa health          # Check status
 docker exec barbossa barbossa run engineer    # Run engineer now
+docker exec barbossa barbossa run tech-lead   # Run tech lead now
+docker exec barbossa barbossa run discovery   # Run discovery now
 docker exec barbossa barbossa status          # View activity
 docker compose logs -f                        # View logs
 ```
 
+## How It Works
+
+**Optimized Schedule:**
+- Agents run on offset schedules to avoid API rate limits and ensure fresh PRs are reviewed quickly
+- Engineer runs every 2 hours (00:00, 02:00, 04:00...)
+- Tech Lead runs 1 hour after Engineer (01:00, 03:00, 05:00...)
+- Discovery runs 6x daily to keep backlog stocked
+- Product Manager runs 3x daily for quality feature suggestions
+
+**Quality Enforcement:**
+- Tech Lead performs 8-dimension quality review: code quality, feature bloat, UI/UX, tests, security, performance, complexity, integration
+- 3-strikes rule: PRs auto-close after 3 failed review cycles to prevent wasted effort
+- CI checks must pass before merge
+- Tests required for significant changes (50+ lines default)
+
+**What You Wake Up To:**
+- Discovery found issues and added them to backlog
+- Engineer picked highest priority issues and created PRs
+- Tech Lead reviewed PRs and merged the good ones
+- All changes are in your repo, ready for deployment
+
+## Privacy & Telemetry
+
+Barbossa uses hybrid telemetry (Google Analytics 4 + Firebase Cloud Functions) to improve the project.
+
+**What's collected:**
+- Anonymous installation ID (SHA256 hash, not reversible)
+- Agent run counts and success rates
+- Version number and agent types
+
+**What's NOT collected:**
+- Repository names, URLs, or any identifying information
+- Code content, diffs, or file contents
+- GitHub usernames or organization names
+- PR/issue titles or any repository data
+
+**Opt out:**
+```json
+{ "settings": { "telemetry": false } }
+```
+
+Or: `export BARBOSSA_ANALYTICS_OPT_OUT=true`
+
 ## Troubleshooting
 
-### Claude auth fails
+### Authentication failures
+
+**Check tokens:**
 ```bash
-claude login
-docker compose restart
+cat .env  # Verify GITHUB_TOKEN and CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY are set
 ```
 
-### GitHub permission denied
+**Generate new GitHub token:**
 ```bash
-gh auth login
-docker compose restart
+gh auth token  # OR create at https://github.com/settings/tokens
+# Add to .env: GITHUB_TOKEN=ghp_your_token_here
 ```
+
+**Generate new Claude token:**
+```bash
+# Option 1: Claude Pro/Max subscription token (recommended)
+claude setup-token  # Follow prompts
+# Add to .env: CLAUDE_CODE_OAUTH_TOKEN=<your_token>
+
+# Option 2: Pay-as-you-go API key
+# Get from: https://console.anthropic.com/settings/keys
+# Add to .env: ANTHROPIC_API_KEY=sk-ant-api03-your_key_here
+```
+
+**Apply changes:**
+```bash
+vim .env  # Edit tokens
+docker compose restart
+docker logs barbossa | head -50  # Check validation
+```
+
+### Container keeps restarting
+
+```bash
+docker compose logs barbossa  # Check for validation failures
+```
+
+Common causes: missing config, invalid JSON, missing tokens
+
+### No PRs created
+
+1. Check for issues labeled `backlog`: `gh issue list --label backlog`
+2. Run manually: `docker exec barbossa barbossa run engineer`
+3. Check logs: `docker exec barbossa barbossa logs engineer`
+
+### Tech Lead rejects everything
+
+- CI must pass
+- Tests needed for significant changes (50+ lines default)
+- PRs should be focused (max 15 files default)
+- Code must meet 8-dimension quality standards
+- Note: PRs auto-close after 3 failed review cycles (3-strikes rule)
+
+Check logs: `docker exec barbossa barbossa logs tech-lead`
+
+### Version check failed or Firebase errors
+
+These are non-critical - Barbossa continues working fine without external services.
+
+To disable telemetry and stop seeing these logs:
+```json
+{ "settings": { "telemetry": false } }
+```
+
+## Platform Support
+
+- **Linux:** x86_64/amd64 (native)
+- **macOS:** Intel (native), Apple Silicon (via Rosetta 2 - negligible overhead)
+- **Windows:** WSL2
 
 ## Links
 
-- Docs: https://barbossa.dev
-- GitHub: https://github.com/ADWilkinson/barbossa-dev
+- **Website:** https://barbossa.dev
+- **Docs:** https://barbossa.dev (quickstart, configuration, agents, troubleshooting, FAQ)
+- **GitHub:** https://github.com/ADWilkinson/barbossa-dev
+- **Issues:** https://github.com/ADWilkinson/barbossa-dev/issues
+
+## Version
+
+**Current:** 1.6.3 (2025-12-30)
+
+**Recent improvements:**
+- v1.6.3: Tech Lead respects auto_merge config setting
+- v1.6.1: Support for both Claude OAuth tokens and Anthropic API keys
+- v1.3.0: Enhanced UI/UX review criteria, external dependency detection
+- v1.2.0: Product Manager and Auditor functionality restored
+- v1.1.0: Engineer detects Tech Lead feedback on first review
+- v1.0.9: Tech Lead 3-strikes auto-close rule
+- v1.0.8: Enhanced quality analysis (8 dimensions, bloat detection)
