@@ -62,6 +62,97 @@ That's it. Barbossa auto-detects everything else.
 
 ---
 
+## Repository-Specific Guidance
+
+**New in v1.6.4:** Steer agent behavior per-repository using `focus` and `known_gaps` fields.
+
+### Quality vs Feature Focus
+
+Use the `focus` field to define the development philosophy for a repository:
+
+```json
+{
+  "repositories": [
+    {
+      "name": "my-production-app",
+      "url": "https://github.com/you/my-production-app.git",
+      "focus": "QUALITY & RESILIENCE ONLY - Focus exclusively on: (1) Bug fixes and edge case handling, (2) Error handling and resilience, (3) Test coverage expansion, (4) Security improvements, (5) UI/UX polish, (6) Performance optimization. DO NOT implement large new features or major architectural changes.",
+      "known_gaps": [
+        "Missing error boundaries in React components - app crashes on unhandled errors",
+        "Insufficient loading states - users see blank screens during data fetching",
+        "Weak network error handling - transactions fail silently without retry logic",
+        "Limited test coverage - critical payment flows lack E2E tests",
+        "Accessibility issues - missing ARIA labels, poor keyboard navigation"
+      ]
+    }
+  ]
+}
+```
+
+### How It Works
+
+**`focus` (string):**
+- Injected into Engineer and Product Manager prompts
+- Guides agents toward quality/polish vs new features
+- Product Manager respects focus and may decline feature suggestions
+- Engineer prioritizes work aligned with focus
+
+**`known_gaps` (array):**
+- List of specific known issues and priority areas
+- Shown to Engineer as high-priority opportunities
+- Product Manager uses these to inform feature suggestions
+- Discovery agent may also reference these areas
+
+### Examples
+
+**Production hardening:**
+```json
+{
+  "focus": "QUALITY & RESILIENCE ONLY - bug fixes, testing, security, polish",
+  "known_gaps": [
+    "Missing error boundaries",
+    "No retry logic for network failures",
+    "Insufficient test coverage"
+  ]
+}
+```
+
+**Exploration phase:**
+```json
+{
+  "focus": "FEATURE EXPLORATION - Rapidly experiment with new features and UX improvements. Focus on shipping MVPs quickly.",
+  "known_gaps": [
+    "No analytics dashboard",
+    "Missing admin panel",
+    "No user preferences system"
+  ]
+}
+```
+
+**Balanced approach:**
+```json
+{
+  "focus": "Small incremental improvements - Focus on polish, bug fixes, and minor features. Keep PRs focused and well-tested.",
+  "known_gaps": [
+    "Export functionality incomplete",
+    "Mobile responsiveness issues on tablets",
+    "Performance bottlenecks on large datasets"
+  ]
+}
+```
+
+### When to Use
+
+- **Quality focus:** Production apps needing stability and polish
+- **Feature focus:** New projects or prototypes in exploration phase
+- **Known gaps:** Clear list of issues you want agents to prioritize
+
+### Backward Compatibility
+
+Both fields are **optional**. Repositories without `focus` or `known_gaps` work normally with default agent behavior.
+
+---
+
 ## Protected Files
 
 **Warning:** Always protect auth, migrations, and config files from AI modification.
