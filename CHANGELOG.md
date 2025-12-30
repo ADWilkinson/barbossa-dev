@@ -62,7 +62,7 @@ For existing users upgrading from v1.5.x:
    gh auth token
 
    # Claude Pro token (recommended)
-   cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.sessionKey'
+   claude setup-token  # Follow prompts to generate long-lived token
    # OR get API key from: https://console.anthropic.com/settings/keys
    ```
 

@@ -60,7 +60,7 @@ Discovery + Product Manager
 gh auth token  # OR create at https://github.com/settings/tokens
 
 # Claude token (Option 1 - Recommended)
-claude login   # Then extract token from ~/.claude/.credentials.json
+claude setup-token   # Follow prompts to generate long-lived token
 # Claude API key (Option 2)
 # Get from: https://console.anthropic.com/settings/keys
 
@@ -193,15 +193,13 @@ GITHUB_TOKEN=ghp_your_token_here
 Long-lasting token (up to 1 year) from your Claude subscription:
 
 ```bash
-# 1. Login to Claude CLI
-claude login
+# 1. Run setup-token command
+claude setup-token
 
-# 2. Extract token from credentials file
-cat ~/.claude/.credentials.json
-# Look for "sessionKey" field
+# 2. Follow the prompts to generate a long-lived token
 
 # 3. Add to .env
-ANTHROPIC_API_KEY=<your_session_key>
+ANTHROPIC_API_KEY=<your_token_from_setup>
 ```
 
 **Option 2: Pay-as-you-go API Key**

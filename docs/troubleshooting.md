@@ -16,8 +16,8 @@ gh auth token  # OR create at https://github.com/settings/tokens
 **Generate new Claude token:**
 ```bash
 # Option 1: Claude Pro/Max subscription token (recommended)
-cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.sessionKey'
-# Add to .env: ANTHROPIC_API_KEY=<your_session_key>
+claude setup-token  # Follow prompts to generate long-lived token
+# Add to .env: ANTHROPIC_API_KEY=<your_token>
 
 # Option 2: Pay-as-you-go API key
 # Get from: https://console.anthropic.com/settings/keys

@@ -24,7 +24,7 @@ Get Barbossa running in 5 minutes.
 gh auth token  # OR create at https://github.com/settings/tokens
 
 # Claude token (Option 1 - Recommended)
-claude login   # Then extract token from ~/.claude/.credentials.json
+claude setup-token   # Follow prompts to generate long-lived token
 # Claude API key (Option 2)
 # Get from: https://console.anthropic.com/settings/keys
 

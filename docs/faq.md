@@ -46,7 +46,7 @@ cat .env  # Verify GITHUB_TOKEN and ANTHROPIC_API_KEY are set
 gh auth token  # Add to .env
 
 # Claude Pro token (recommended)
-cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.sessionKey'  # Add to .env
+claude setup-token  # Follow prompts, then add to .env
 
 # Restart
 docker compose restart

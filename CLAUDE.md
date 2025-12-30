@@ -618,8 +618,8 @@ cat .env
 # Generate new GitHub token
 gh auth token
 
-# Extract Claude Pro token
-cat ~/.claude/.credentials.json | grep sessionKey
+# Generate Claude Pro token
+claude setup-token  # Follow prompts to generate long-lived token
 
 # Update .env with new tokens
 vim .env  # Edit GITHUB_TOKEN and ANTHROPIC_API_KEY
@@ -638,8 +638,8 @@ docker logs barbossa | head -50
 # Scopes needed: repo, workflow
 
 # ANTHROPIC_API_KEY not set
-# Fix Option 1 (Recommended): Extract Claude Pro token
-#   cat ~/.claude/.credentials.json | jq -r '.claudeAiOauth.sessionKey'
+# Fix Option 1 (Recommended): Generate Claude Pro token
+#   claude setup-token  # Follow prompts
 # Fix Option 2: Get API key from https://console.anthropic.com/settings/keys
 
 # LINEAR_API_KEY invalid (if using Linear)
