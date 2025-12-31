@@ -40,7 +40,7 @@ class BarbossaTechLead:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "1.6.4"  # Config-driven focus and known_gaps for quality/resilience work
+    VERSION = "1.6.5"  # Skip re-reviewing already-approved PRs when auto_merge is off
     ROLE = "tech_lead"
 
     # Default review criteria (can be overridden in config)
@@ -170,6 +170,39 @@ class BarbossaTechLead:
         except Exception as e:
             self.logger.warning(f"Could not fetch comments for PR #{pr_number}: {e}")
         return []
+
+    def _has_tech_lead_approval(self, comments: List[Dict]) -> bool:
+        """Check if Tech Lead has already approved this PR for manual merge.
+
+        When auto_merge is disabled, Tech Lead posts an approval comment instead of merging.
+        If this approval comment exists, we don't need to re-review on subsequent runs.
+
+        Returns True if the PR has an unanswered Tech Lead approval.
+        """
+        APPROVAL_SIGNATURE = "✅ **Tech Lead Approval - Ready to Merge**"
+        CHANGES_SIGNATURE = "**Tech Lead Review - Changes Requested**"
+
+        # Find the latest Tech Lead action (approval or changes requested)
+        latest_approval_time = None
+        latest_changes_time = None
+
+        for comment in comments:
+            body = comment.get('body', '')
+            created = comment.get('createdAt', '')
+
+            if APPROVAL_SIGNATURE in body:
+                if not latest_approval_time or created > latest_approval_time:
+                    latest_approval_time = created
+            elif CHANGES_SIGNATURE in body:
+                if not latest_changes_time or created > latest_changes_time:
+                    latest_changes_time = created
+
+        # If there's an approval and no subsequent changes request, skip re-review
+        if latest_approval_time:
+            if not latest_changes_time or latest_approval_time > latest_changes_time:
+                return True
+
+        return False
 
     def _get_pr_diff(self, repo_name: str, pr_number: int) -> str:
         """Get the diff for a PR"""
@@ -891,13 +924,22 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                 self.logger.info(f"No remaining open PRs in {repo_name} after cleanup")
                 continue
 
-            self.logger.info(f"Found {len(open_prs)} open PRs - reviewing ALL with full context")
+            self.logger.info(f"Found {len(open_prs)} open PRs - reviewing with full context")
 
-            # Review ALL PRs - Claude will read comments and understand context
+            # Review PRs - but skip ones that already have Tech Lead approval (when auto_merge=false)
             for pr in open_prs:
+                pr_number = pr['number']
+
+                # Check if already approved (only matters when auto_merge is off)
+                if not self.auto_merge:
+                    comments = self._get_pr_comments(repo_name, pr_number)
+                    if self._has_tech_lead_approval(comments):
+                        self.logger.info(f"PR #{pr_number}: Already approved - skipping re-review (auto_merge=false)")
+                        continue
+
                 result = self.review_pr(repo, pr)
                 all_results.append(result)
-                self.logger.info(f"Completed review of PR #{pr['number']}")
+                self.logger.info(f"Completed review of PR #{pr_number}")
 
         # Summary
         self.logger.info(f"\n{'#'*70}")

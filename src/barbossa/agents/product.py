@@ -43,7 +43,7 @@ from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker
 class BarbossaProduct:
     """Product Manager agent that creates feature Issues for the pipeline."""
 
-    VERSION = "1.6.4"  # Config-driven focus and known_gaps for quality/resilience work
+    VERSION = "1.6.5"  # Skip re-reviewing already-approved PRs when auto_merge is off
     DEFAULT_MAX_ISSUES_PER_RUN = 3
     DEFAULT_FEATURE_BACKLOG_THRESHOLD = 20
 

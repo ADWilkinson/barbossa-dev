@@ -1,7 +1,7 @@
 # Barbossa Engineer - Claude Context
 
-**Last Updated:** 2025-12-30
-**Version:** v1.6.4
+**Last Updated:** 2025-12-31
+**Version:** v1.6.5
 
 ## Project Overview
 
@@ -468,6 +468,33 @@ On container startup, `validate.py` checks:
 **Critical failures block startup** to prevent silent failures.
 
 ## Development History
+
+### v1.6.5 - 2025-12-31 (Approval Detection Fix)
+- **BUG FIX**: Tech Lead no longer re-reviews PRs it has already approved
+- **Issue:** When `auto_merge: false`, Tech Lead would post duplicate approval comments on every run
+- **Example:** PR #12 in zkp2p-clients received 3 identical approval comments (01:00, 03:01, 05:01 UTC)
+- **Root Cause:** Tech Lead reviewed ALL open PRs without checking for existing approval
+- **Fix:**
+  - ✅ Added `_has_tech_lead_approval()` method to detect existing approval comments
+  - ✅ Modified `run()` loop to skip PRs that already have Tech Lead approval
+  - ✅ Approval detection is timestamp-aware (handles approval → changes → re-approval flows)
+  - ✅ Only applies when `auto_merge: false` (auto-merge handles this via actual merge)
+- **Files Modified:**
+  - `src/barbossa/agents/tech_lead.py:174-205`: Added `_has_tech_lead_approval()` method
+  - `src/barbossa/agents/tech_lead.py:929-942`: Added approval check before `review_pr()` call
+  - All agent versions bumped to v1.6.5
+  - Package version bumped to v1.6.5
+
+**Impact:**
+- ✅ No more duplicate approval comments on approved PRs
+- ✅ Saves API costs by skipping unnecessary Claude reviews
+- ✅ Cleaner PR comment history
+- ✅ PRs waiting for manual merge stay in clean approved state
+
+**Behavior:**
+- **Already approved**: Logs "PR #X: Already approved - skipping re-review" and skips
+- **Not yet reviewed**: Normal review flow continues
+- **Changes requested after approval**: Re-reviews as expected (approval invalidated)
 
 ### v1.6.4 - 2025-12-30 (Quality & Resilience Focus)
 - **ENHANCEMENT**: Repository configuration now supports `focus` and `known_gaps` fields
