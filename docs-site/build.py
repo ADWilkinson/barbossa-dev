@@ -353,7 +353,7 @@ TEMPLATE = """<!DOCTYPE html>
             <a href="/architecture.html" class="{active_architecture}">architecture</a>
             <a href="/examples.html" class="{active_examples}">examples</a>
             <a href="/faq.html" class="{active_faq}">faq</a>
-            <a href="https://github.com/ADWilkinson/barbossa-dev" target="_blank">github ↗</a>
+            <a href="https://github.com/ADWilkinson/barbossa-dev" target="_blank">github</a>
         </div>
     </nav>
 
