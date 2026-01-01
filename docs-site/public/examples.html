@@ -347,7 +347,7 @@
     </nav>
 
     <main>
-        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#basic-setup">Basic Setup</a></li><li><a href="#team-configurations">Team Configurations</a></li><li><a href="#framework-specific">Framework-Specific</a></li><li><a href="#issue-tracking">Issue Tracking</a></li><li><a href="#scheduling-patterns">Scheduling Patterns</a></li><li><a href="#quality-tuning">Quality Tuning</a></li><li><a href="#notifications">Notifications</a></li><li><a href="#privacy-options">Privacy Options</a></li><li><a href="#common-workflows">Common Workflows</a></li><li><a href="#troubleshooting-examples">Troubleshooting Examples</a></li></ul></div>
+        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#basic-setup">Basic Setup</a></li><li><a href="#team-configurations">Team Configurations</a></li><li><a href="#framework-specific">Framework-Specific</a></li><li><a href="#issue-tracking">Issue Tracking</a></li><li><a href="#scheduling-patterns">Scheduling Patterns</a></li><li><a href="#notifications">Notifications</a></li><li><a href="#privacy-options">Privacy Options</a></li><li><a href="#common-workflows">Common Workflows</a></li></ul></div>
         <h1 id="examples">Examples</h1>
 
 <p>Real-world usage scenarios and configurations.</p>
@@ -605,40 +605,6 @@
 
 <hr>
 
-<h2 id="quality-tuning">Quality Tuning</h2>
-
-<h3 id="strict-mode">Strict Mode</h3>
-
-<p>Higher bar for PR quality:</p>
-
-<pre class="language-json"><code class="language-json">{
-  "settings": {
-    "tech_lead": {
-      "auto_merge": true,
-      "min_lines_for_tests_required": 20,
-      "max_files_per_pr": 8,
-      "stale_pr_threshold": 3
-    }
-  }
-}</code></pre>
-
-<h3 id="relaxed-mode">Relaxed Mode</h3>
-
-<p>For rapid prototyping:</p>
-
-<pre class="language-json"><code class="language-json">{
-  "settings": {
-    "tech_lead": {
-      "auto_merge": true,
-      "min_lines_for_tests_required": 100,
-      "max_files_per_pr": 25,
-      "stale_pr_threshold": 7
-    }
-  }
-}</code></pre>
-
-<hr>
-
 <h2 id="notifications">Notifications</h2>
 
 <h3 id="discord-webhook">Discord Webhook</h3>
@@ -736,45 +702,7 @@ docker compose stop
 # Resume
 docker compose start</code></pre>
 
-<hr>
-
-<h2 id="troubleshooting-examples">Troubleshooting Examples</h2>
-
-<h3 id="no-prs-being-created">No PRs Being Created</h3>
-
-<p>Check for backlog issues:</p>
-
-<pre class="language-bash"><code class="language-bash"># View pending issues
-gh issue list --label backlog --repo yourname/repo
-
-# Manual run with logs
-docker exec barbossa barbossa run engineer
-docker exec barbossa barbossa logs engineer</code></pre>
-
-<h3 id="prs-keep-getting-rejected">PRs Keep Getting Rejected</h3>
-
-<p>Review the criteria:</p>
-
-<pre class="language-bash"><code class="language-bash"># Check recent Tech Lead feedback
-docker exec barbossa barbossa logs tech-lead</code></pre>
-
-<p>Common reasons:</p>
-<ul>
-<li>Missing tests (configure <code>min_lines_for_tests_required</code>)</li>
-<li>Too many files (configure <code>max_files_per_pr</code>)</li>
-<li>CI failures (fix your CI pipeline)</li>
-</ul>
-
-<h3 id="agents-not-running">Agents Not Running</h3>
-
-<pre class="language-bash"><code class="language-bash"># Check schedule
-docker exec barbossa cat /app/crontab
-
-# Check container logs
-docker compose logs -f
-
-# Validate configuration
-docker exec barbossa python scripts/validate.py</code></pre>
+<p>For troubleshooting, see <a href="troubleshooting.html">Troubleshooting</a>.</p>
 
     </main>
 

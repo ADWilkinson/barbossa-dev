@@ -347,7 +347,7 @@
     </nav>
 
     <main>
-        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#minimal-config">Minimal Config</a></li><li><a href="#common-options">Common Options</a></li><li><a href="#repository-specific-guidance">Repository-Specific Guidance</a></li><li><a href="#protected-files">Protected Files</a></li><li><a href="#scheduling">Scheduling</a></li><li><a href="#issue-tracking">Issue Tracking</a></li><li><a href="#webhook-notifications">Webhook Notifications</a></li><li><a href="#multiple-repos">Multiple Repos</a></li><li><a href="#timezone">Timezone</a></li><li><a href="#privacy-telemetry">Privacy & Telemetry</a></li></ul></div>
+        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#minimal-config">Minimal Config</a></li><li><a href="#common-options">Common Options</a></li><li><a href="#repository-specific-guidance">Repository-Specific Guidance</a></li><li><a href="#scheduling">Scheduling</a></li><li><a href="#issue-tracking">Issue Tracking</a></li><li><a href="#webhook-notifications">Webhook Notifications</a></li><li><a href="#multiple-repos">Multiple Repos</a></li><li><a href="#timezone">Timezone</a></li><li><a href="#privacy-telemetry">Privacy & Telemetry</a></li></ul></div>
         <h1 id="configuration">Configuration</h1>
 
 <p>All configuration is in <code>config/repositories.json</code>.</p>
@@ -423,83 +423,7 @@
   ]
 }</code></pre>
 
-<h3 id="how-it-works">How It Works</h3>
-
-<strong><code>focus</code> (string):</strong>
-<ul>
-<li>Injected into Engineer and Product Manager prompts</li>
-<li>Guides agents toward quality/polish vs new features</li>
-<li>Product Manager respects focus and may decline feature suggestions</li>
-<li>Engineer prioritizes work aligned with focus</li>
-</ul>
-
-<strong><code>known_gaps</code> (array):</strong>
-<ul>
-<li>List of specific known issues and priority areas</li>
-<li>Shown to Engineer as high-priority opportunities</li>
-<li>Product Manager uses these to inform feature suggestions</li>
-<li>Discovery agent may also reference these areas</li>
-</ul>
-
-<h3 id="examples">Examples</h3>
-
-<strong>Production hardening:</strong>
-<pre class="language-json"><code class="language-json">{
-  "focus": "QUALITY &amp; RESILIENCE ONLY - bug fixes, testing, security, polish",
-  "known_gaps": [
-    "Missing error boundaries",
-    "No retry logic for network failures",
-    "Insufficient test coverage"
-  ]
-}</code></pre>
-
-<strong>Exploration phase:</strong>
-<pre class="language-json"><code class="language-json">{
-  "focus": "FEATURE EXPLORATION - Rapidly experiment with new features and UX improvements. Focus on shipping MVPs quickly.",
-  "known_gaps": [
-    "No analytics dashboard",
-    "Missing admin panel",
-    "No user preferences system"
-  ]
-}</code></pre>
-
-<strong>Balanced approach:</strong>
-<pre class="language-json"><code class="language-json">{
-  "focus": "Small incremental improvements - Focus on polish, bug fixes, and minor features. Keep PRs focused and well-tested.",
-  "known_gaps": [
-    "Export functionality incomplete",
-    "Mobile responsiveness issues on tablets",
-    "Performance bottlenecks on large datasets"
-  ]
-}</code></pre>
-
-<h3 id="when-to-use">When to Use</h3>
-
-<ul>
-<li><strong>Quality focus:</strong> Production apps needing stability and polish</li>
-<li><strong>Feature focus:</strong> New projects or prototypes in exploration phase</li>
-<li><strong>Known gaps:</strong> Clear list of issues you want agents to prioritize</li>
-</ul>
-
-<h3 id="backward-compatibility">Backward Compatibility</h3>
-
-<p>Both fields are <strong>optional</strong>. Repositories without <code>focus</code> or <code>known_gaps</code> work normally with default agent behavior.</p>
-
-<hr>
-
-<h2 id="protected-files">Protected Files</h2>
-
-<strong>Warning:</strong> Always protect auth, migrations, and config files from AI modification.
-
-<p>Always protect sensitive code:</p>
-
-<pre class="language-json"><code class="language-json">{
-  "do_not_touch": [
-    ".env*",
-    "src/lib/auth.ts",
-    "prisma/migrations/"
-  ]
-}</code></pre>
+<p>Both fields are optional. Use <code>focus</code> to steer agents toward quality vs features, and <code>known_gaps</code> to list specific priorities.</p>
 
 <hr>
 
@@ -668,50 +592,6 @@
 <h3 id="notification-types">Notification Types</h3>
 
 <table><tr><th>Event</th><th>Default</th><th>Description</th></tr><tr><td><code>run_complete</code></td><td><code>true</code></td><td>Summary when any agent finishes a run</td></tr><tr><td><code>pr_created</code></td><td><code>true</code></td><td>When Engineer creates a new PR</td></tr><tr><td><code>pr_merged</code></td><td><code>true</code></td><td>When Tech Lead merges a PR (includes scores)</td></tr><tr><td><code>pr_closed</code></td><td><code>false</code></td><td>When Tech Lead closes a PR</td></tr><tr><td><code>error</code></td><td><code>true</code></td><td>When any agent encounters an error</td></tr></table>
-<h3 id="what-youll-see">What You'll See</h3>
-
-<strong>Agent Run Summaries:</strong>
-<ul>
-<li>Engineer: "Created 2 PR(s) across 3 repositories"</li>
-<li>Tech Lead: "Reviewed 4 PR(s): 2 merged, 1 needs changes"</li>
-<li>Discovery: "Created 5 backlog issue(s)"</li>
-<li>Auditor: "System health: 85/100 (healthy)"</li>
-</ul>
-
-<strong>PR Events:</strong>
-<ul>
-<li>New PR created with link and title</li>
-<li>PR merged with value/quality scores</li>
-<li>PR closed with reason</li>
-</ul>
-
-<strong>Error Alerts:</strong>
-<ul>
-<li>Agent name and error context</li>
-<li>Repository name</li>
-<li>Error message</li>
-</ul>
-
-<h3 id="design-principles">Design Principles</h3>
-
-<ul>
-<li><strong>Never blocks:</strong> Notifications run in background threads and never slow down agents</li>
-<li><strong>Graceful degradation:</strong> If Discord is unreachable, agents continue working</li>
-<li><strong>Not spammy:</strong> Only meaningful events are sent (not every action)</li>
-<li><strong>Rich formatting:</strong> Discord embeds with agent-specific colors and emojis</li>
-</ul>
-
-<h3 id="agent-colors">Agent Colors</h3>
-
-<p>Each agent has a distinctive color in Discord embeds:</p>
-<ul>
-<li><strong>Engineer:</strong> Blue</li>
-<li><strong>Tech Lead:</strong> Purple</li>
-<li><strong>Discovery:</strong> Orange</li>
-<li><strong>Product Manager:</strong> Pink</li>
-<li><strong>Auditor:</strong> Yellow</li>
-</ul>
-
 <hr>
 
 <h2 id="multiple-repos">Multiple Repos</h2>
@@ -742,30 +622,9 @@
 
 <h2 id="privacy-telemetry">Privacy & Telemetry</h2>
 
-<p>Barbossa uses a hybrid telemetry system (Google Analytics 4 + Firebase Cloud Functions) to improve the project while respecting your privacy.</p>
+<p>Anonymous usage statistics are collected by default. No identifying information is ever sent.</p>
 
-<strong>What's collected:</strong>
-<ul>
-<li>Anonymous installation ID (SHA256 hash, not reversible)</li>
-<li>Agent run counts and success rates</li>
-<li>Version number and agent types</li>
-<li>Run metadata (timestamps, success/failure booleans)</li>
-</ul>
-
-<strong>What's NOT collected:</strong>
-<ul>
-<li>Repository names, URLs, or any identifying information</li>
-<li>Code content, diffs, or file contents</li>
-<li>GitHub usernames or organization names</li>
-<li>PR/issue titles, descriptions, or any repository data</li>
-<li>Your configuration settings or secrets</li>
-</ul>
-
-<p>All telemetry is optional and has 5-second timeouts to ensure it never blocks execution.</p>
-
-<h3 id="opting-out">Opting Out</h3>
-
-<p>Set <code>telemetry</code> to <code>false</code> in your config:</p>
+<p>Opt out in config:</p>
 
 <pre class="language-json"><code class="language-json">{
   "settings": {
@@ -773,11 +632,9 @@
   }
 }</code></pre>
 
-<p>Or via environment variable:</p>
+<p>Or via environment: <code>export BARBOSSA_ANALYTICS_OPT_OUT=true</code></p>
 
-<pre class="language-bash"><code class="language-bash">export BARBOSSA_ANALYTICS_OPT_OUT=true</code></pre>
-
-<strong>Full details:</strong> See <a href="firebase.html">Firebase & Analytics</a> for complete technical documentation.
+<p>See <a href="firebase.html">Firebase & Analytics</a> for details.</p>
 
     </main>
 

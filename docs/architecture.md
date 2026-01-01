@@ -126,15 +126,7 @@ The workhorse. Picks issues and implements them.
 
 Quality gatekeeper. Reviews PRs against strict criteria.
 
-**8 Quality Dimensions:**
-1. **Code Quality** - Clean, readable, follows patterns
-2. **Feature Bloat** - No unnecessary additions
-3. **Integration** - Works with existing features
-4. **UI/UX** - Accessible, responsive, polished
-5. **Tests** - Adequate coverage for changes
-6. **Security** - No vulnerabilities introduced
-7. **Performance** - No regressions
-8. **Complexity** - Appropriate abstraction level
+Reviews PRs against 8 quality dimensions (code quality, bloat, integration, UI/UX, tests, security, performance, complexity).
 
 **Decisions:**
 - `MERGE` - Meets all criteria, auto-merges
@@ -313,18 +305,4 @@ Restart the container to apply changes.
 
 ### Linear Integration
 
-Replace GitHub Issues with Linear:
-
-```json
-{
-  "issue_tracker": {
-    "type": "linear",
-    "linear": {
-      "team_key": "ENG",
-      "backlog_state": "Backlog"
-    }
-  }
-}
-```
-
-Set `LINEAR_API_KEY` environment variable.
+See [Configuration](configuration.html#linear-integration) for Linear setup.

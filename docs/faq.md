@@ -35,24 +35,7 @@ Add a `CLAUDE.md` to your repo with project context.
 
 ### Authentication fails?
 
-**Check tokens:**
-```bash
-cat .env  # Verify GITHUB_TOKEN and CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY are set
-```
-
-**Update tokens:**
-```bash
-# GitHub token
-gh auth token  # Add to .env
-
-# Claude Pro token (recommended)
-claude setup-token  # Follow prompts, then add to .env
-
-# Restart
-docker compose restart
-```
-
-See [Troubleshooting](troubleshooting.html) for details.
+See [Troubleshooting](troubleshooting.html).
 
 ### Can I get notifications?
 

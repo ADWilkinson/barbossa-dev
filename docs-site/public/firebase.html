@@ -347,199 +347,48 @@
     </nav>
 
     <main>
-        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#overview">Overview</a></li><li><a href="#current-status-v170">Current Status (v1.7.0)</a></li><li><a href="#what-gets-collected-privacy-first">What Gets Collected (Privacy-First)</a></li><li><a href="#hybrid-architecture">Hybrid Architecture</a></li><li><a href="#how-telemetry-works">How Telemetry Works</a></li><li><a href="#data-retention">Data Retention</a></li><li><a href="#opting-out">Opting Out</a></li><li><a href="#version-checking">Version Checking</a></li><li><a href="#firestore-schema">Firestore Schema</a></li><li><a href="#aggregate-stats-public">Aggregate Stats (Public)</a></li><li><a href="#future-features-planned">Future Features (Planned)</a></li><li><a href="#technical-implementation">Technical Implementation</a></li><li><a href="#deploying-functions-maintainers-only">Deploying Functions (Maintainers Only)</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#faq">FAQ</a></li><li><a href="#contact-support">Contact & Support</a></li></ul></div>
+        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#overview">Overview</a></li><li><a href="#whats-collected">What's Collected</a></li><li><a href="#opting-out">Opting Out</a></li><li><a href="#version-checking">Version Checking</a></li><li><a href="#faq">FAQ</a></li><li><a href="#for-maintainers">For Maintainers</a></li></ul></div>
         <h1 id="firebase-analytics">Firebase & Analytics</h1>
 
-<p>Barbossa uses a hybrid telemetry architecture combining Google Analytics 4 and Firebase Cloud Functions to provide optional enhancements without ever blocking or requiring external services.</p>
+<p>Optional telemetry for version checking and anonymous usage statistics.</p>
 
 <hr>
 
 <h2 id="overview">Overview</h2>
 
-<p>Barbossa's telemetry is built on two complementary systems:</p>
-
-<strong>Google Analytics 4 (GA4)</strong>
+<p>Barbossa uses Google Analytics 4 and Firebase Cloud Functions for:</p>
 <ul>
-<li>Simple event tracking (installs, agent runs)</li>
-<li>Industry-standard analytics platform</li>
-<li>Zero infrastructure maintenance</li>
+<li>Version update notifications</li>
+<li>Anonymous usage statistics</li>
+<li>Community aggregate stats</li>
 </ul>
 
-<strong>Firebase Cloud Functions</strong>
-<ul>
-<li>Version compatibility checking</li>
-<li>Agent run coordination and state tracking</li>
-<li>Aggregate statistics for community insights</li>
-<li>Firestore database for installation tracking</li>
-</ul>
-
-<strong>Key principle:</strong> All telemetry is optional and gracefully degrades. Barbossa works perfectly without connectivity to either service.
+<strong>All telemetry is optional.</strong> Barbossa works perfectly without it.
 
 <hr>
 
-<h2 id="current-status-v170">Current Status (v1.7.0)</h2>
+<h2 id="whats-collected">What's Collected</h2>
 
+<strong>Collected (anonymous):</strong>
 <ul>
-<li><strong>Latest Version:</strong> v1.7.0</li>
-<li><strong>Minimum Supported:</strong> v1.0.0</li>
-<li><strong>Cloud Functions:</strong> Deployed to <code>barbossa-dev</code> Firebase project</li>
-<li><strong>GA4 Measurement ID:</strong> <code>G-XNTRF7ZYQ5</code></li>
-<li><strong>Privacy:</strong> Fully transparent, no personal data collected</li>
-<li><strong>Platform Support:</strong> Linux (x86_64/amd64), macOS (Intel + Apple Silicon)</li>
+<li>SHA256 hash ID (not reversible to you)</li>
+<li>Version number</li>
+<li>Agent run counts and success rates</li>
+<li>Repository count (number only)</li>
 </ul>
 
-<hr>
-
-<h2 id="what-gets-collected-privacy-first">What Gets Collected (Privacy-First)</h2>
-
-<h3 id="what-is-collected">✅ What IS Collected</h3>
-
-<strong>Via Google Analytics 4:</strong>
+<strong>NOT collected:</strong>
 <ul>
-<li><strong>Anonymous client ID</strong>: SHA256 hash of hostname + home directory (not reversible)</li>
-<li><strong>Event types</strong>: Installation events, agent run events</li>
-<li><strong>Agent types</strong>: Which agents ran (engineer, tech-lead, etc.)</li>
-<li><strong>Engagement metrics</strong>: Minimal engagement time tracking</li>
-</ul>
-
-<strong>Via Firebase Cloud Functions:</strong>
-<ul>
-<li><strong>Anonymous installation ID</strong>: Same SHA256 hash as GA4</li>
-<li><strong>Version number</strong>: e.g., "1.7.0"</li>
-<li><strong>Agent run metadata</strong>: Session IDs, start/end timestamps, success/failure</li>
-<li><strong>Repository counts</strong>: How many repos managed (number only)</li>
-<li><strong>Success rates</strong>: Whether runs completed successfully</li>
-<li><strong>PR creation</strong>: Whether PR was created (boolean only)</li>
-</ul>
-
-<h3 id="what-is-not-collected">❌ What is NOT Collected</h3>
-
-<ul>
-<li>Repository names, URLs, or any identifying information</li>
-<li>Code content, diffs, or file contents</li>
-<li>GitHub usernames or organization names</li>
-<li>File paths, directory structures, or project names</li>
-<li>PR titles, descriptions, or commit messages</li>
-<li>Issue content or labels</li>
-<li>Any personally identifiable information</li>
-<li>Your configuration settings or secrets</li>
-<li>Network requests or external API calls</li>
-<li>Command-line arguments or environment variables</li>
-</ul>
-
-<hr>
-
-<h2 id="hybrid-architecture">Hybrid Architecture</h2>
-
-<h3 id="google-analytics-4-event-tracking">Google Analytics 4 (Event Tracking)</h3>
-
-<strong>Purpose:</strong> Simple, fire-and-forget event tracking for basic usage metrics.
-
-<strong>Events Tracked:</strong>
-<ol>
-<li><strong>Install Event</strong> - When <code>register_installation()</code> is called</li>
-<li><strong>Agent Run Event</strong> - When any agent executes</li>
-</ol>
-
-<strong>Implementation:</strong>
-<pre class="language-python"><code class="language-python"># Uses GA4 Measurement Protocol
-GA4_CONFIG = {
-    "measurement_id": "G-XNTRF7ZYQ5",
-    "api_secret": os.environ.get("GA4_API_SECRET", ""),
-    "endpoint": "https://www.google-analytics.com/mp/collect"
-}</code></pre>
-
-<strong>Why GA4:</strong>
-<ul>
-<li>Industry standard analytics platform</li>
-<li>No infrastructure to maintain</li>
-<li>Simple HTTP API</li>
-<li>Free tier sufficient for all needs</li>
-<li>Built-in anomaly detection and reporting</li>
-</ul>
-
-<h3 id="firebase-cloud-functions-coordination-stats">Firebase Cloud Functions (Coordination & Stats)</h3>
-
-<strong>Purpose:</strong> Advanced features like version checking, run coordination, and community statistics.
-
-<strong>Endpoints:</strong>
-
-<table><tr><th>Endpoint</th><th>Purpose</th><th>Method</th><th>Privacy Level</th></tr><tr><td><code>checkVersion</code></td><td>Version compatibility check</td><td>GET</td><td>No data stored</td></tr><tr><td><code>registerInstallation</code></td><td>Track active installations</td><td>POST</td><td>Anonymous ID only</td></tr><tr><td><code>trackRunStart</code></td><td>Record agent run start</td><td>POST</td><td>Anonymous ID + metadata</td></tr><tr><td><code>trackRunEnd</code></td><td>Record agent run completion</td><td>POST</td><td>Anonymous success/fail</td></tr><tr><td><code>heartbeat</code></td><td>Keep installation active count accurate</td><td>POST</td><td>Anonymous ID + timestamp</td></tr><tr><td><code>getStats</code></td><td>Public aggregate statistics</td><td>GET</td><td>Fully aggregated</td></tr><tr><td><code>getActiveInstallations</code></td><td>Count of active users (24h)</td><td>GET</td><td>Count only</td></tr><tr><td><code>health</code></td><td>Health check</td><td>GET</td><td>No data collected</td></tr></table>
-<strong>Base URL:</strong>
-<pre class="language-text"><code class="language-text">https://us-central1-barbossa-450802.cloudfunctions.net</code></pre>
-
-<strong>Why Cloud Functions:</strong>
-<ul>
-<li>Soft version checking (warns of updates)</li>
-<li>Enables future coordination features</li>
-<li>Community statistics for social proof</li>
-<li>Serverless architecture (scales automatically)</li>
-<li>5-second timeout ensures never blocks execution</li>
-</ul>
-
-<hr>
-
-<h2 id="how-telemetry-works">How Telemetry Works</h2>
-
-<h3 id="on-agent-startup">On Agent Startup</h3>
-
-<pre class="language-python"><code class="language-python"># 1. Initialize Firebase client
-from barbossa.agents.firebase import get_client, check_version
-
-# 2. Check for updates (soft - never blocks)
-update_msg = check_version()
-if update_msg:
-    logger.warning(f"UPDATE AVAILABLE: {update_msg}")
-
-# 3. Register installation (GA4)
-firebase.register_installation()</code></pre>
-
-<h3 id="during-agent-execution">During Agent Execution</h3>
-
-<pre class="language-python"><code class="language-python"># 1. Track run start (Cloud Functions, fire-and-forget)
-track_run_start(agent="engineer", session_id="eng-20251230-123456", repo_count=3)
-
-# 2. Send heartbeat periodically (Cloud Functions, fire-and-forget)
-heartbeat()
-
-# 3. Track agent run (GA4, fire-and-forget)
-track_agent_run(agent="engineer")
-
-# 4. Track run end (Cloud Functions, fire-and-forget)
-track_run_end(agent="engineer", session_id="eng-20251230-123456", success=True, pr_created=True)</code></pre>
-
-<strong>Key Design Principles:</strong>
-<ul>
-<li>All calls have 5-second timeout</li>
-<li>All calls are non-blocking (fire-and-forget or background threads)</li>
-<li>Errors are logged but never crash the system</li>
-<li>Graceful degradation if Firebase/GA4 is unavailable</li>
-</ul>
-
-<hr>
-
-<h2 id="data-retention">Data Retention</h2>
-
-<strong>Google Analytics 4:</strong>
-<ul>
-<li>Event data: 2 months (GA4 free tier standard)</li>
-<li>Aggregate reports: Indefinitely (anonymous)</li>
-</ul>
-
-<strong>Firebase Firestore:</strong>
-<ul>
-<li><strong>Agent runs</strong>: 30 days (auto-pruned)</li>
-<li><strong>Installations</strong>: Active installations only (pruned after 7 days of inactivity)</li>
-<li><strong>Global stats</strong>: Aggregated permanently (fully anonymous)</li>
+<li>Repository names, URLs, code, or any identifying information</li>
+<li>GitHub usernames, PR titles, issue content</li>
+<li>Your configuration or secrets</li>
 </ul>
 
 <hr>
 
 <h2 id="opting-out">Opting Out</h2>
 
-<h3 id="complete-opt-out">Complete Opt-Out</h3>
-
-<p>Disable all telemetry (GA4 + Cloud Functions) in <code>config/repositories.json</code>:</p>
+<p>In <code>config/repositories.json</code>:</p>
 
 <pre class="language-json"><code class="language-json">{
   "settings": {
@@ -547,395 +396,45 @@ track_run_end(agent="engineer", session_id="eng-20251230-123456", success=True, 
   }
 }</code></pre>
 
-<p>Or via environment variable:</p>
+<p>Or via environment:</p>
 
 <pre class="language-bash"><code class="language-bash">export BARBOSSA_ANALYTICS_OPT_OUT=true</code></pre>
-
-<strong>When opted out:</strong>
-<ul>
-<li>✅ No data sent to GA4</li>
-<li>✅ No data sent to Firebase Cloud Functions</li>
-<li>✅ No network calls to external services</li>
-<li>✅ No version checking (you won't be notified of updates)</li>
-<li>✅ System works exactly the same locally</li>
-</ul>
-
-<h3 id="verify-opt-out">Verify Opt-Out</h3>
-
-<pre class="language-bash"><code class="language-bash">docker exec barbossa python3 -m barbossa.agents.firebase</code></pre>
-
-<p>Output will show: <code>Telemetry enabled: False</code></p>
 
 <hr>
 
 <h2 id="version-checking">Version Checking</h2>
 
-<p>Firebase Cloud Functions track the latest Barbossa version and warn you if updates are available.</p>
+<p>On startup, Barbossa checks for updates via Firebase. If a newer version exists, you'll see a warning in logs. This never blocks execution.</p>
 
-<strong>How it works:</strong>
-<ol>
-<li>On startup, Barbossa calls <code>checkVersion</code> Cloud Function</li>
-<li>Function compares your version to <code>LATEST_VERSION</code> (currently 1.7.0)</li>
-<li>If newer version exists, you see: <code>UPDATE AVAILABLE: v1.7.0 is available</code></li>
-<li>This is a <strong>soft warning</strong> - never blocks execution</li>
-<li>If Firebase is unavailable, version check is silently skipped</li>
-</ol>
-
-<strong>Response Format:</strong>
-<pre class="language-json"><code class="language-json">{
-  "compatible": true,
-  "latest": false,
-  "minimumVersion": "1.0.0",
-  "latestVersion": "1.7.0",
-  "message": "A new version 1.7.0 is available."
-}</code></pre>
-
-<strong>Benefits:</strong>
-<ul>
-<li>Stay informed about bug fixes and new features</li>
-<li>Know when you're running an outdated version</li>
-<li>Optional - disabled if telemetry is off</li>
-</ul>
-
-<hr>
-
-<h2 id="firestore-schema">Firestore Schema</h2>
-
-<h3 id="collections">Collections</h3>
-
-<strong>installations</strong>
-<pre class="language-javascript"><code class="language-javascript">{
-  installation_id: "sha256_hash",      // Anonymous ID
-  version: "1.7.0",                    // Client version
-  last_seen: Timestamp,                 // Last activity
-  last_agent: "engineer",               // Last agent run
-  last_heartbeat: Timestamp            // Last heartbeat
-}</code></pre>
-
-<strong>agent_runs</strong>
-<pre class="language-javascript"><code class="language-javascript">{
-  session_id: "eng-20251230-123456",   // Unique session ID
-  installation_id: "sha256_hash",       // Anonymous installation
-  agent: "engineer",                    // Agent type
-  repo_count: 3,                        // Number of repos (count only)
-  version: "1.7.0",                     // Client version
-  status: "completed",                  // running | completed | failed
-  success: true,                        // Boolean success
-  pr_created: true,                     // Boolean PR creation
-  started_at: "2025-12-30T12:34:56Z",  // ISO timestamp
-  ended_at: "2025-12-30T12:38:23Z",    // ISO timestamp
-  updated_at: Timestamp                 // Firestore server timestamp
-}</code></pre>
-
-<strong>stats</strong> (global aggregates document)
-<pre class="language-javascript"><code class="language-javascript">{
-  total_runs: 15234,                    // Total agent runs across all installations
-  successful_runs: 14102,               // Successful completions
-  prs_created: 3421,                    // Total PRs created
-  runs_by_agent: {
-    engineer: 5234,
-    tech_lead: 5123,
-    discovery: 3201,
-    product: 1234,
-    auditor: 442
-  },
-  last_updated: Timestamp
-}</code></pre>
-
-<hr>
-
-<h2 id="aggregate-stats-public">Aggregate Stats (Public)</h2>
-
-<p>Firebase collects anonymous aggregate stats that benefit the community.</p>
-
-<strong>Access stats API:</strong>
-<pre class="language-bash"><code class="language-bash">curl https://us-central1-barbossa-450802.cloudfunctions.net/getStats</code></pre>
-
-<p>Example response:</p>
-<pre class="language-json"><code class="language-json">{
-  "total_runs": 15234,
-  "successful_runs": 14102,
-  "prs_created": 3421,
-  "success_rate": 92,
-  "runs_by_agent": {
-    "engineer": 5234,
-    "tech_lead": 5123,
-    "discovery": 3201,
-    "product": 1234,
-    "auditor": 442
-  }
-}</code></pre>
-
-<strong>Use cases:</strong>
-<ul>
-<li>Community insights: See how Barbossa is being used</li>
-<li>Social proof: Show active installations for new users</li>
-<li>Feature prioritization: Identify most-used agents</li>
-<li>System health: Track overall success rates</li>
-</ul>
-
-<strong>Active installations:</strong>
-<pre class="language-bash"><code class="language-bash">curl https://us-central1-barbossa-450802.cloudfunctions.net/getActiveInstallations</code></pre>
-
-<p>Returns count of installations active in last 24 hours.</p>
-
-<hr>
-
-<h2 id="future-features-planned">Future Features (Planned)</h2>
-
-<p>Firebase state tracking enables future coordination features:</p>
-
-<h3 id="agent-coordination">Agent Coordination</h3>
-<ul>
-<li><strong>Priority queuing</strong>: High-value work gets scheduled first across installations</li>
-<li><strong>Load balancing</strong>: Distribute work across time zones to reduce API load</li>
-<li><strong>Rate limiting</strong>: Prevent API abuse and quota exhaustion</li>
-<li><strong>Conflict detection</strong>: Avoid simultaneous work on same issues</li>
-</ul>
-
-<h3 id="community-features">Community Features</h3>
-<ul>
-<li><strong>Shared knowledge base</strong>: Learn from other installations' successful patterns</li>
-<li><strong>Best practices</strong>: Discover what works well across the community</li>
-<li><strong>Benchmarking</strong>: Compare your results to community averages</li>
-<li><strong>Success patterns</strong>: Identify which agent combinations work best</li>
-</ul>
-
-<h3 id="enhanced-monitoring">Enhanced Monitoring</h3>
-<ul>
-<li><strong>Real-time dashboards</strong>: See your agent activity at barbossa.dev</li>
-<li><strong>Performance tracking</strong>: Identify bottlenecks in your setup</li>
-<li><strong>Anomaly detection</strong>: Alert on unusual patterns or failures</li>
-<li><strong>Health scores</strong>: Compare your installation health to community baseline</li>
-</ul>
-
-<strong>Timeline:</strong> TBD based on community feedback and demand
-
-<hr>
-
-<h2 id="technical-implementation">Technical Implementation</h2>
-
-<h3 id="client-side-codesrcbarbossaagentsfirebasepycode">Client Side (<code>src/barbossa/agents/firebase.py</code>)</h3>
-
-<strong>Constants:</strong>
-<pre class="language-python"><code class="language-python">CLIENT_VERSION = "1.7.0"
-FIREBASE_TIMEOUT = 5  # seconds - short timeout, never blocks
-FIREBASE_BASE_URL = "https://us-central1-barbossa-450802.cloudfunctions.net"
-GA4_CONFIG = {
-    "measurement_id": "G-XNTRF7ZYQ5",
-    "api_secret": os.environ.get("GA4_API_SECRET", ""),
-    "endpoint": "https://www.google-analytics.com/mp/collect"
-}</code></pre>
-
-<strong>Key design principles:</strong>
-<ul>
-<li>All Firebase calls have 5-second timeout</li>
-<li>All GA4 calls have 5-second timeout</li>
-<li>All calls are fire-and-forget (non-blocking via threads)</li>
-<li>Errors are logged but never crash the system</li>
-<li>Graceful degradation if Firebase/GA4 is unavailable</li>
-<li>Telemetry can be disabled via config or environment variable</li>
-</ul>
-
-<h3 id="server-side-codefunctionsindexjscode">Server Side (<code>functions/index.js</code>)</h3>
-
-<strong>Deployment:</strong>
-<ul>
-<li>Firebase Project: <code>barbossa-dev</code></li>
-<li>Cloud Functions Region: <code>us-central1</code></li>
-<li>Hosting: <code>barbossa.dev</code> (docs site)</li>
-<li>Firestore: Multi-region for high availability</li>
-<li>Auto-scales to handle load</li>
-<li>Global CDN for low latency</li>
-<li>99.95% uptime SLA (Google Cloud)</li>
-</ul>
-
-<strong>Version Configuration:</strong>
-<pre class="language-javascript"><code class="language-javascript">const MINIMUM_VERSION = "1.0.0";
-const LATEST_VERSION = "1.7.0";</code></pre>
-
-<strong>CORS Enabled:</strong>
-<p>All endpoints support CORS for future web dashboard at barbossa.dev.</p>
-
-<hr>
-
-<h2 id="deploying-functions-maintainers-only">Deploying Functions (Maintainers Only)</h2>
-
-<p>If you're contributing to Barbossa's Firebase infrastructure:</p>
-
-<h3 id="prerequisites">Prerequisites</h3>
-<pre class="language-bash"><code class="language-bash">npm install -g firebase-tools
-firebase login</code></pre>
-
-<h3 id="deploy-cloud-functions">Deploy Cloud Functions</h3>
-<pre class="language-bash"><code class="language-bash">cd functions
-npm install
-firebase deploy --only functions</code></pre>
-
-<h3 id="deploy-hosting-docs-site">Deploy Hosting (Docs Site)</h3>
-<pre class="language-bash"><code class="language-bash">firebase deploy --only hosting</code></pre>
-
-<h3 id="update-version">Update Version</h3>
-<p>When releasing a new version:</p>
-
-<ol>
-<li><strong>Update Cloud Functions</strong> (<code>functions/index.js</code>):</li>
-</ol>
-<pre class="language-javascript"><code class="language-javascript">const LATEST_VERSION = "1.7.0";  // Update this</code></pre>
-
-<ol>
-<li><strong>Update Python Client</strong> (<code>src/barbossa/agents/firebase.py</code>):</li>
-</ol>
-<pre class="language-python"><code class="language-python">CLIENT_VERSION = "1.7.0"  # Update this</code></pre>
-
-<ol>
-<li><strong>Redeploy:</strong></li>
-</ol>
-<pre class="language-bash"><code class="language-bash">firebase deploy --only functions</code></pre>
-
-<hr>
-
-<h2 id="troubleshooting">Troubleshooting</h2>
-
-<h3 id="firebase-connection-issues">Firebase Connection Issues</h3>
-
-<strong>Symptom:</strong> Logs show <code>Failed to check version</code> or <code>Failed to track run</code>
-
-<strong>Causes:</strong>
-<ul>
-<li>Network connectivity issues</li>
-<li>Firebase API temporarily unavailable</li>
-<li>Firewall blocking Firebase/GA4 domains</li>
-<li>Corporate proxy interfering</li>
-</ul>
-
-<strong>Resolution:</strong>
-<ul>
-<li>✅ <strong>No action needed</strong> - Barbossa continues working fine</li>
-<li>Errors are logged but don't affect functionality</li>
-<li>Check network/firewall settings if you want version updates</li>
-<li>Whitelist domains: <code>cloudfunctions.net</code>, <code>google-analytics.com</code>, <code>firebaseio.com</code></li>
-<li>Or disable telemetry to stop seeing these logs</li>
-</ul>
-
-<h3 id="version-check-failed">Version Check Failed</h3>
-
-<strong>Symptom:</strong> No update notifications even when new version exists
-
-<strong>Causes:</strong>
-<ul>
-<li>Telemetry disabled (<code>telemetry: false</code>)</li>
-<li>Firebase timeout (5 seconds)</li>
-<li>Network issues or corporate firewall</li>
-</ul>
-
-<strong>Resolution:</strong>
-<ul>
-<li>Verify <code>telemetry: true</code> in <code>config/repositories.json</code></li>
-<li>Check network connectivity to <code>cloudfunctions.net</code></li>
-<li>Manually check <a href="https://github.com/ADWilkinson/barbossa-dev/releases">GitHub releases</a> for updates</li>
-<li>Check <a href="https://barbossa.dev">barbossa.dev</a> for latest version</li>
-</ul>
-
-<h3 id="ga4-events-not-appearing">GA4 Events Not Appearing</h3>
-
-<strong>Symptom:</strong> GA4 dashboard shows no events
-
-<strong>Causes:</strong>
-<ul>
-<li>GA4 API secret not configured (optional, only needed for maintainers)</li>
-<li>GA4 has 24-48 hour processing delay</li>
-<li>Telemetry disabled</li>
-</ul>
-
-<strong>Resolution:</strong>
-<ul>
-<li>GA4 secret is optional - events may not appear in GA4 dashboard but system works fine</li>
-<li>Wait 24-48 hours for GA4 processing</li>
-<li>This doesn't affect Barbossa functionality</li>
-</ul>
-
-<h3 id="privacy-concerns">Privacy Concerns</h3>
-
-<strong>Symptom:</strong> Worried about what telemetry collects
-
-<strong>Resolution:</strong>
-<ul>
-<li>Review "What Gets Collected" section above</li>
-<li>Inspect <code>src/barbossa/agents/firebase.py</code> source code</li>
-<li>Inspect <code>functions/index.js</code> source code (all endpoints)</li>
-<li>All code is open source - verify yourself</li>
-<li>Opt out completely: <code>telemetry: false</code></li>
-<li>Use network monitoring to inspect actual traffic</li>
-</ul>
+<p>Disable version checking by opting out of telemetry.</p>
 
 <hr>
 
 <h2 id="faq">FAQ</h2>
 
-<h3 id="is-firebase-required">Is Firebase required?</h3>
+<strong>Is Firebase required?</strong>
+<p>No. Barbossa works fine without any external connectivity.</p>
 
-<strong>No.</strong> Barbossa works perfectly without Firebase or GA4. All telemetry is optional.
+<strong>Does telemetry slow things down?</strong>
+<p>No. All calls are fire-and-forget with 5-second timeouts.</p>
 
-<h3 id="what-happens-if-firebase-is-down">What happens if Firebase is down?</h3>
-
-<p>Barbossa continues working normally. All calls have 5-second timeouts and fail gracefully.</p>
-
-<h3 id="can-i-self-host-the-firebase-functions">Can I self-host the Firebase functions?</h3>
-
-<p>Yes, but requires your own Firebase project:</p>
-<ol>
-<li>Clone the repo</li>
-<li><code>firebase init</code> with your project</li>
-<li>Update <code>FIREBASE_BASE_URL</code> in <code>.env</code> to point to your functions</li>
-<li>Deploy: <code>firebase deploy</code></li>
-</ol>
-
-<h3 id="why-hybrid-ga4-cloud-functions">Why hybrid GA4 + Cloud Functions?</h3>
-
-<ul>
-<li><strong>GA4</strong>: Simple events, no infrastructure, industry standard</li>
-<li><strong>Cloud Functions</strong>: Advanced features like version checking, coordination, custom logic</li>
-<li><strong>Together</strong>: Best of both worlds - simplicity + power</li>
-</ul>
-
-<h3 id="how-do-i-verify-what-data-is-sent">How do I verify what data is sent?</h3>
-
-<ol>
-<li>Review source code: <code>src/barbossa/agents/firebase.py</code></li>
-<li>Enable verbose logging: <code>docker logs -f barbossa</code></li>
-<li>Use network proxy: Inspect HTTP requests to <code>cloudfunctions.net</code> and <code>google-analytics.com</code></li>
-<li>All code is open source - audit yourself</li>
-</ol>
-
-<h3 id="can-i-see-my-own-installations-data">Can I see my own installation's data?</h3>
-
-<p>No. Data is anonymous by design. Even maintainers cannot link an <code>installation_id</code> hash back to a specific user, repository, or machine.</p>
-
-<h3 id="does-telemetry-slow-down-barbossa">Does telemetry slow down Barbossa?</h3>
-
-<p>No. All telemetry calls are:</p>
-<ul>
-<li>Fire-and-forget (non-blocking background threads)</li>
-<li>5-second timeout maximum</li>
-<li>Errors are swallowed</li>
-<li>Zero impact on agent execution</li>
-</ul>
+<strong>Can I verify what's sent?</strong>
+<p>Yes. Review <code>src/barbossa/agents/firebase.py</code> - it's open source.</p>
 
 <hr>
 
-<h2 id="contact-support">Contact & Support</h2>
+<h2 id="for-maintainers">For Maintainers</h2>
 
-<ul>
-<li><strong>Website:</strong> <a href="https://barbossa.dev">barbossa.dev</a></li>
-<li><strong>Issues:</strong> <a href="https://github.com/ADWilkinson/barbossa-dev/issues">GitHub Issues</a></li>
-<li><strong>Privacy Questions:</strong> Open issue with "Privacy" label</li>
-<li><strong>Firebase Issues:</strong> Open issue with "Firebase" label</li>
-</ul>
+<p>Update version when releasing:</p>
 
-<hr>
+<pre class="language-bash"><code class="language-bash"># In functions/index.js
+const LATEST_VERSION = "1.7.0";
 
-<strong>Last Updated:</strong> 2026-01-01 (v1.7.0)
+# In src/barbossa/agents/firebase.py
+CLIENT_VERSION = "1.7.0"
+
+# Deploy
+firebase deploy --only functions</code></pre>
 
     </main>
 

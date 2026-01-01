@@ -89,85 +89,7 @@ Use the `focus` field to define the development philosophy for a repository:
 }
 ```
 
-### How It Works
-
-**`focus` (string):**
-- Injected into Engineer and Product Manager prompts
-- Guides agents toward quality/polish vs new features
-- Product Manager respects focus and may decline feature suggestions
-- Engineer prioritizes work aligned with focus
-
-**`known_gaps` (array):**
-- List of specific known issues and priority areas
-- Shown to Engineer as high-priority opportunities
-- Product Manager uses these to inform feature suggestions
-- Discovery agent may also reference these areas
-
-### Examples
-
-**Production hardening:**
-```json
-{
-  "focus": "QUALITY & RESILIENCE ONLY - bug fixes, testing, security, polish",
-  "known_gaps": [
-    "Missing error boundaries",
-    "No retry logic for network failures",
-    "Insufficient test coverage"
-  ]
-}
-```
-
-**Exploration phase:**
-```json
-{
-  "focus": "FEATURE EXPLORATION - Rapidly experiment with new features and UX improvements. Focus on shipping MVPs quickly.",
-  "known_gaps": [
-    "No analytics dashboard",
-    "Missing admin panel",
-    "No user preferences system"
-  ]
-}
-```
-
-**Balanced approach:**
-```json
-{
-  "focus": "Small incremental improvements - Focus on polish, bug fixes, and minor features. Keep PRs focused and well-tested.",
-  "known_gaps": [
-    "Export functionality incomplete",
-    "Mobile responsiveness issues on tablets",
-    "Performance bottlenecks on large datasets"
-  ]
-}
-```
-
-### When to Use
-
-- **Quality focus:** Production apps needing stability and polish
-- **Feature focus:** New projects or prototypes in exploration phase
-- **Known gaps:** Clear list of issues you want agents to prioritize
-
-### Backward Compatibility
-
-Both fields are **optional**. Repositories without `focus` or `known_gaps` work normally with default agent behavior.
-
----
-
-## Protected Files
-
-**Warning:** Always protect auth, migrations, and config files from AI modification.
-
-Always protect sensitive code:
-
-```json
-{
-  "do_not_touch": [
-    ".env*",
-    "src/lib/auth.ts",
-    "prisma/migrations/"
-  ]
-}
-```
+Both fields are optional. Use `focus` to steer agents toward quality vs features, and `known_gaps` to list specific priorities.
 
 ---
 
@@ -360,40 +282,6 @@ Control which events trigger notifications:
 | `pr_closed` | `false` | When Tech Lead closes a PR |
 | `error` | `true` | When any agent encounters an error |
 
-### What You'll See
-
-**Agent Run Summaries:**
-- Engineer: "Created 2 PR(s) across 3 repositories"
-- Tech Lead: "Reviewed 4 PR(s): 2 merged, 1 needs changes"
-- Discovery: "Created 5 backlog issue(s)"
-- Auditor: "System health: 85/100 (healthy)"
-
-**PR Events:**
-- New PR created with link and title
-- PR merged with value/quality scores
-- PR closed with reason
-
-**Error Alerts:**
-- Agent name and error context
-- Repository name
-- Error message
-
-### Design Principles
-
-- **Never blocks:** Notifications run in background threads and never slow down agents
-- **Graceful degradation:** If Discord is unreachable, agents continue working
-- **Not spammy:** Only meaningful events are sent (not every action)
-- **Rich formatting:** Discord embeds with agent-specific colors and emojis
-
-### Agent Colors
-
-Each agent has a distinctive color in Discord embeds:
-- **Engineer:** Blue
-- **Tech Lead:** Purple
-- **Discovery:** Orange
-- **Product Manager:** Pink
-- **Auditor:** Yellow
-
 ---
 
 ## Multiple Repos
@@ -442,26 +330,9 @@ Full list: [IANA Time Zones](https://en.wikipedia.org/wiki/List_of_tz_database_t
 
 ## Privacy & Telemetry
 
-Barbossa uses a hybrid telemetry system (Google Analytics 4 + Firebase Cloud Functions) to improve the project while respecting your privacy.
+Anonymous usage statistics are collected by default. No identifying information is ever sent.
 
-**What's collected:**
-- Anonymous installation ID (SHA256 hash, not reversible)
-- Agent run counts and success rates
-- Version number and agent types
-- Run metadata (timestamps, success/failure booleans)
-
-**What's NOT collected:**
-- Repository names, URLs, or any identifying information
-- Code content, diffs, or file contents
-- GitHub usernames or organization names
-- PR/issue titles, descriptions, or any repository data
-- Your configuration settings or secrets
-
-All telemetry is optional and has 5-second timeouts to ensure it never blocks execution.
-
-### Opting Out
-
-Set `telemetry` to `false` in your config:
+Opt out in config:
 
 ```json
 {
@@ -471,10 +342,6 @@ Set `telemetry` to `false` in your config:
 }
 ```
 
-Or via environment variable:
+Or via environment: `export BARBOSSA_ANALYTICS_OPT_OUT=true`
 
-```bash
-export BARBOSSA_ANALYTICS_OPT_OUT=true
-```
-
-**Full details:** See [Firebase & Analytics](firebase.html) for complete technical documentation.
+See [Firebase & Analytics](firebase.html) for details.

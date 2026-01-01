@@ -476,17 +476,7 @@
 
 <p>Quality gatekeeper. Reviews PRs against strict criteria.</p>
 
-<strong>8 Quality Dimensions:</strong>
-<ol>
-<li><strong>Code Quality</strong> - Clean, readable, follows patterns</li>
-<li><strong>Feature Bloat</strong> - No unnecessary additions</li>
-<li><strong>Integration</strong> - Works with existing features</li>
-<li><strong>UI/UX</strong> - Accessible, responsive, polished</li>
-<li><strong>Tests</strong> - Adequate coverage for changes</li>
-<li><strong>Security</strong> - No vulnerabilities introduced</li>
-<li><strong>Performance</strong> - No regressions</li>
-<li><strong>Complexity</strong> - Appropriate abstraction level</li>
-</ol>
+<p>Reviews PRs against 8 quality dimensions (code quality, bloat, integration, UI/UX, tests, security, performance, complexity).</p>
 
 <strong>Decisions:</strong>
 <ul>
@@ -663,19 +653,7 @@
 
 <h3 id="linear-integration">Linear Integration</h3>
 
-<p>Replace GitHub Issues with Linear:</p>
-
-<pre class="language-json"><code class="language-json">{
-  "issue_tracker": {
-    "type": "linear",
-    "linear": {
-      "team_key": "ENG",
-      "backlog_state": "Backlog"
-    }
-  }
-}</code></pre>
-
-<p>Set <code>LINEAR_API_KEY</code> environment variable.</p>
+<p>See <a href="configuration.html#linear-integration">Configuration</a> for Linear setup.</p>
 
     </main>
 

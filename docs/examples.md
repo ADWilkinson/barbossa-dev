@@ -279,44 +279,6 @@ Run when nobody's working:
 
 ---
 
-## Quality Tuning
-
-### Strict Mode
-
-Higher bar for PR quality:
-
-```json
-{
-  "settings": {
-    "tech_lead": {
-      "auto_merge": true,
-      "min_lines_for_tests_required": 20,
-      "max_files_per_pr": 8,
-      "stale_pr_threshold": 3
-    }
-  }
-}
-```
-
-### Relaxed Mode
-
-For rapid prototyping:
-
-```json
-{
-  "settings": {
-    "tech_lead": {
-      "auto_merge": true,
-      "min_lines_for_tests_required": 100,
-      "max_files_per_pr": 25,
-      "stale_pr_threshold": 7
-    }
-  }
-}
-```
-
----
-
 ## Notifications
 
 ### Discord Webhook
@@ -422,46 +384,4 @@ docker compose stop
 docker compose start
 ```
 
----
-
-## Troubleshooting Examples
-
-### No PRs Being Created
-
-Check for backlog issues:
-
-```bash
-# View pending issues
-gh issue list --label backlog --repo yourname/repo
-
-# Manual run with logs
-docker exec barbossa barbossa run engineer
-docker exec barbossa barbossa logs engineer
-```
-
-### PRs Keep Getting Rejected
-
-Review the criteria:
-
-```bash
-# Check recent Tech Lead feedback
-docker exec barbossa barbossa logs tech-lead
-```
-
-Common reasons:
-- Missing tests (configure `min_lines_for_tests_required`)
-- Too many files (configure `max_files_per_pr`)
-- CI failures (fix your CI pipeline)
-
-### Agents Not Running
-
-```bash
-# Check schedule
-docker exec barbossa cat /app/crontab
-
-# Check container logs
-docker compose logs -f
-
-# Validate configuration
-docker exec barbossa python scripts/validate.py
-```
+For troubleshooting, see [Troubleshooting](troubleshooting.html).

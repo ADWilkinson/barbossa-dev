@@ -385,20 +385,7 @@ docker compose start   # Resume</code></pre>
 
 <h3 id="authentication-fails">Authentication fails?</h3>
 
-<strong>Check tokens:</strong>
-<pre class="language-bash"><code class="language-bash">cat .env  # Verify GITHUB_TOKEN and CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY are set</code></pre>
-
-<strong>Update tokens:</strong>
-<pre class="language-bash"><code class="language-bash"># GitHub token
-gh auth token  # Add to .env
-
-# Claude Pro token (recommended)
-claude setup-token  # Follow prompts, then add to .env
-
-# Restart
-docker compose restart</code></pre>
-
-<p>See <a href="troubleshooting.html">Troubleshooting</a> for details.</p>
+<p>See <a href="troubleshooting.html">Troubleshooting</a>.</p>
 
 <h3 id="can-i-get-notifications">Can I get notifications?</h3>
 
