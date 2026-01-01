@@ -30,11 +30,11 @@ Discovery + Product Manager
 
 | Agent | Purpose |
 |-------|---------|
-| **Engineer** | Picks tasks from backlog, creates PRs |
-| **Tech Lead** | Reviews PRs, merges or requests changes |
-| **Discovery** | Finds TODOs, missing tests, issues |
-| **Product Manager** | Proposes high-value features |
-| **Auditor** | Monitors system health |
+| **Engineer** | Picks backlog tasks, creates PRs, addresses review feedback |
+| **Tech Lead** | 8-dimension quality review, auto-merge or request changes, 3-strikes close |
+| **Discovery** | Finds TODOs, missing tests, accessibility issues, tech debt |
+| **Product Manager** | Proposes features with acceptance criteria, semantic deduplication |
+| **Auditor** | Health scoring, creates issues for critical quality problems |
 
 ---
 
@@ -111,7 +111,9 @@ With options:
       "name": "my-app",
       "url": "https://github.com/your-github-username/my-app.git",
       "package_manager": "pnpm",
-      "do_not_touch": ["src/lib/auth.ts", "prisma/migrations/"]
+      "do_not_touch": ["src/lib/auth.ts", "prisma/migrations/"],
+      "focus": "Quality and resilience",
+      "known_gaps": ["Missing error boundaries", "Weak network handling"]
     }
   ],
   "settings": {
@@ -127,8 +129,10 @@ With options:
 |-------|-------------|
 | `package_manager` | `npm`, `yarn`, `pnpm`, or `bun` |
 | `do_not_touch` | Files agents should never modify |
+| `focus` | Development priority (e.g., "Quality and resilience") |
+| `known_gaps` | Priority issues for agents to address |
 | `telemetry` | `true` (default) or `false` to disable analytics |
-| `auto_merge` | `true` = merge automatically, `false` = manual review |
+| `auto_merge` | `true` = merge automatically, `false` = approval comment only |
 | `enabled` | Enable/disable individual agents |
 
 ### Scheduling
@@ -194,6 +198,39 @@ With Linear, agents:
 - Create issues in your Linear team
 - Fetch backlog items for the Engineer
 - Link branches to Linear issues automatically
+
+---
+
+## Notifications
+
+Get real-time Discord notifications for agent activity:
+
+```json
+{
+  "settings": {
+    "notifications": {
+      "enabled": true,
+      "discord_webhook": "https://discord.com/api/webhooks/...",
+      "notify_on": {
+        "run_complete": true,
+        "pr_created": true,
+        "pr_merged": true,
+        "error": true
+      }
+    }
+  }
+}
+```
+
+| Event | Description |
+|-------|-------------|
+| `run_complete` | Agent finished a run |
+| `pr_created` | Engineer created a PR |
+| `pr_merged` | Tech Lead merged a PR |
+| `pr_closed` | Tech Lead closed a PR |
+| `error` | Any agent error |
+
+Notifications are fire-and-forget—webhook failures never block agents.
 
 ---
 
