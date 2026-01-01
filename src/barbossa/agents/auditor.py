@@ -36,6 +36,10 @@ from barbossa.agents.firebase import (
     track_run_end
 )
 from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker
+from barbossa.utils.notifications import (
+    notify_agent_run_complete,
+    notify_error
+)
 
 
 class BarbossaAuditor:
@@ -44,7 +48,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "1.6.6"  # Fix label type handling in duplicate detection
+    VERSION = "1.7.0"  # Add Discord webhook notifications
     ROLE = "auditor"
 
     def __init__(self, work_dir: Optional[Path] = None):
@@ -1999,6 +2003,21 @@ class BarbossaAuditor:
 
         # Track run end (fire-and-forget)
         track_run_end("auditor", run_session_id, success=True, pr_created=False)
+
+        # Send audit summary notification
+        status_text = 'healthy' if health_score >= 80 else 'fair' if health_score >= 60 else 'needs attention'
+        high_severity_count = sum(1 for p in patterns if p['severity'] == 'high')
+        notify_agent_run_complete(
+            agent='auditor',
+            success=(health_score >= 60),
+            summary=f"System health: {health_score}/100 ({status_text})",
+            details={
+                'Health Score': f"{health_score}/100",
+                'Status': status_text.title(),
+                'Critical Issues': high_severity_count,
+                'Recommendations': len(recommendations)
+            }
+        )
 
         return audit
 

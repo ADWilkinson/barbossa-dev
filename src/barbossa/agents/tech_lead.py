@@ -31,6 +31,12 @@ from barbossa.agents.firebase import (
     track_run_start,
     track_run_end
 )
+from barbossa.utils.notifications import (
+    notify_agent_run_complete,
+    notify_pr_merged,
+    notify_pr_closed,
+    notify_error
+)
 
 
 class BarbossaTechLead:
@@ -40,7 +46,7 @@ class BarbossaTechLead:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "1.6.6"  # Fix label type handling in duplicate detection
+    VERSION = "1.7.0"  # Add Discord webhook notifications
     ROLE = "tech_lead"
 
     # Default review criteria (can be overridden in config)
@@ -595,6 +601,15 @@ _Auto-merge is disabled. Please merge manually when ready._"""
                         self.logger.error(f"Merge failed: {result.stderr}")
                 else:
                     self.logger.info(f"Successfully merged PR #{pr_number}")
+                    # Send merge notification
+                    notify_pr_merged(
+                        repo_name=repo_name,
+                        pr_number=pr_number,
+                        pr_title=pr.get('title', 'Unknown'),
+                        pr_url=pr.get('url', ''),
+                        value_score=decision.get('value_score'),
+                        quality_score=decision.get('quality_score')
+                    )
                 return success
 
             elif action == 'CLOSE':
@@ -604,6 +619,15 @@ _Auto-merge is disabled. Please merge manually when ready._"""
                 success = result.returncode == 0
                 if not success:
                     self.logger.error(f"Close failed: {result.stderr}")
+                else:
+                    # Send close notification
+                    notify_pr_closed(
+                        repo_name=repo_name,
+                        pr_number=pr_number,
+                        pr_title=pr.get('title', 'Unknown'),
+                        pr_url=pr.get('url', ''),
+                        reason=reason
+                    )
                 return success
 
             elif action == 'REQUEST_CHANGES':
@@ -958,6 +982,28 @@ _Senior Engineer: Please address the above feedback and push updates._"""
 
         # Track run end (fire-and-forget)
         track_run_end("tech_lead", run_session_id, success=True, pr_created=False)
+
+        # Send run summary notification (only if something happened)
+        if len(all_results) > 0:
+            summary_parts = []
+            if merged > 0:
+                summary_parts.append(f"{merged} merged")
+            if closed > 0:
+                summary_parts.append(f"{closed} closed")
+            if changes_requested > 0:
+                summary_parts.append(f"{changes_requested} need changes")
+
+            notify_agent_run_complete(
+                agent='tech_lead',
+                success=True,
+                summary=f"Reviewed {len(all_results)} PR(s): {', '.join(summary_parts) or 'no actions taken'}",
+                details={
+                    'PRs Reviewed': len(all_results),
+                    'Merged': merged,
+                    'Closed': closed,
+                    'Changes Requested': changes_requested
+                }
+            )
 
         return all_results
 

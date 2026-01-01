@@ -38,12 +38,16 @@ from barbossa.agents.firebase import (
     track_run_end
 )
 from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker
+from barbossa.utils.notifications import (
+    notify_agent_run_complete,
+    notify_error
+)
 
 
 class BarbossaProduct:
     """Product Manager agent that creates feature Issues for the pipeline."""
 
-    VERSION = "1.6.6"  # Fix label type handling in duplicate detection
+    VERSION = "1.7.0"  # Add Discord webhook notifications
     DEFAULT_MAX_ISSUES_PER_RUN = 3
     DEFAULT_FEATURE_BACKLOG_THRESHOLD = 20
 
@@ -598,12 +602,20 @@ KEY FILES:
         track_run_start("product_manager", run_session_id, len(self.repositories))
 
         total_issues = 0
+        errors = 0
         for repo in self.repositories:
             try:
                 issues = self.discover_for_repo(repo)
                 total_issues += issues
             except Exception as e:
                 self.logger.error(f"Error analyzing {repo['name']}: {e}")
+                errors += 1
+                notify_error(
+                    agent='product',
+                    error_message=str(e),
+                    context="Analyzing repository for feature opportunities",
+                    repo_name=repo['name']
+                )
 
         self.logger.info(f"\n{'#'*60}")
         self.logger.info(f"PRODUCT ANALYSIS COMPLETE: {total_issues} feature issues created")
@@ -611,6 +623,19 @@ KEY FILES:
 
         # Track run end (fire-and-forget)
         track_run_end("product_manager", run_session_id, success=True, pr_created=False)
+
+        # Send run summary notification (only if something happened)
+        if total_issues > 0 or errors > 0:
+            notify_agent_run_complete(
+                agent='product',
+                success=(errors == 0),
+                summary=f"Created {total_issues} feature suggestion(s) across {len(self.repositories)} repositories",
+                details={
+                    'Features Suggested': total_issues,
+                    'Repositories': len(self.repositories),
+                    'Errors': errors
+                }
+            )
 
         return total_issues
 

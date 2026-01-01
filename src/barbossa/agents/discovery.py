@@ -37,12 +37,16 @@ from barbossa.agents.firebase import (
     track_run_end
 )
 from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker
+from barbossa.utils.notifications import (
+    notify_agent_run_complete,
+    notify_error
+)
 
 
 class BarbossaDiscovery:
     """Autonomous discovery agent that creates issues for the pipeline."""
 
-    VERSION = "1.6.6"  # Fix label type handling in duplicate detection
+    VERSION = "1.7.0"  # Add Discord webhook notifications
     DEFAULT_BACKLOG_THRESHOLD = 20
 
     def __init__(self, work_dir: Optional[Path] = None):
@@ -501,12 +505,20 @@ Found console.log statements in production code that should be removed.
         track_run_start("discovery", run_session_id, len(self.repositories))
 
         total_issues = 0
+        errors = 0
         for repo in self.repositories:
             try:
                 issues = self.discover_for_repo(repo)
                 total_issues += issues
             except Exception as e:
                 self.logger.error(f"Error discovering for {repo['name']}: {e}")
+                errors += 1
+                notify_error(
+                    agent='discovery',
+                    error_message=str(e),
+                    context="Scanning repository for improvements",
+                    repo_name=repo['name']
+                )
 
         self.logger.info(f"\n{'#'*60}")
         self.logger.info(f"DISCOVERY COMPLETE: {total_issues} issues created")
@@ -514,6 +526,19 @@ Found console.log statements in production code that should be removed.
 
         # Track run end (fire-and-forget)
         track_run_end("discovery", run_session_id, success=True, pr_created=False)
+
+        # Send run summary notification (only if something happened)
+        if total_issues > 0 or errors > 0:
+            notify_agent_run_complete(
+                agent='discovery',
+                success=(errors == 0),
+                summary=f"Created {total_issues} backlog issue(s) across {len(self.repositories)} repositories",
+                details={
+                    'Issues Created': total_issues,
+                    'Repositories': len(self.repositories),
+                    'Errors': errors
+                }
+            )
 
         return total_issues
 

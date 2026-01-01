@@ -70,6 +70,22 @@
     "product_manager": {
       "enabled": true,
       "max_issues_per_run": 3         // Limit feature suggestions per run
+    },
+
+    // Webhook notifications (optional)
+    // Sends insightful updates about agent runs to Discord (Slack coming soon)
+    "notifications": {
+      "enabled": false,                // Set to true to enable notifications
+      "discord_webhook": "",           // Your Discord webhook URL
+
+      // Customize which events trigger notifications
+      "notify_on": {
+        "run_complete": true,          // Agent run summaries
+        "pr_created": true,            // New PR created
+        "pr_merged": true,             // PR merged by Tech Lead
+        "pr_closed": false,            // PR closed (off by default - less important)
+        "error": true                  // Agent errors (always recommended)
+      }
     }
   }
 }

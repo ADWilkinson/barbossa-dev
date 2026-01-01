@@ -1,7 +1,7 @@
 # Barbossa Engineer - Claude Context
 
 **Last Updated:** 2026-01-01
-**Version:** v1.6.6
+**Version:** v1.7.0
 
 ## Project Overview
 
@@ -23,7 +23,8 @@ barbossa-engineer/
 │       ├── utils/           # Shared utilities
 │       │   ├── prompts.py   # Prompt templates loader
 │       │   ├── issue_tracker.py  # GitHub/Linear abstraction
-│       │   └── linear_client.py  # Linear API client
+│       │   ├── linear_client.py  # Linear API client
+│       │   └── notifications.py  # Discord/Slack webhook notifications
 │       └── cli/
 │           └── barbossa     # CLI tool for manual operations
 ├── scripts/                 # Build and deployment scripts
@@ -329,6 +330,51 @@ When Linear is configured, `validate.py` checks:
 - ✅ API connectivity to `api.linear.app`
 - ✅ Team exists and user has access
 
+## Webhook Notifications
+
+### Overview
+Barbossa can send real-time notifications to Discord (Slack support coming soon) about agent activities. Notifications are fire-and-forget and never block agent execution.
+
+### Configuration
+Add to `config/repositories.json`:
+
+```json
+{
+  "settings": {
+    "notifications": {
+      "enabled": true,
+      "discord_webhook": "https://discord.com/api/webhooks/...",
+      "notify_on": {
+        "run_complete": true,
+        "pr_created": true,
+        "pr_merged": true,
+        "pr_closed": false,
+        "error": true
+      }
+    }
+  }
+}
+```
+
+### Notification Types
+- **run_complete**: Summary when any agent finishes a run
+- **pr_created**: When Engineer creates a new PR
+- **pr_merged**: When Tech Lead merges a PR
+- **pr_closed**: When Tech Lead closes a PR (off by default)
+- **error**: When any agent encounters an error (always recommended)
+
+### Getting a Discord Webhook URL
+1. Open Discord and go to the channel where you want notifications
+2. Click the gear icon (Edit Channel) → Integrations → Webhooks
+3. Click "New Webhook" and copy the webhook URL
+4. Paste the URL in your `repositories.json` config
+
+### Design Principles
+- **Never blocks**: Webhooks run in background threads
+- **Graceful degradation**: If Discord is down, agents continue working
+- **Not spammy**: Only sends meaningful insights, not every action
+- **Rich formatting**: Uses Discord embeds with colors and emojis per agent
+
 ## Security Model
 
 ### Non-Root Container Execution
@@ -468,6 +514,49 @@ On container startup, `validate.py` checks:
 **Critical failures block startup** to prevent silent failures.
 
 ## Development History
+
+### v1.7.0 - 2026-01-01 (Discord Webhook Notifications)
+- **FEATURE**: Added Discord webhook notification system for real-time agent insights
+- **Design**: Fire-and-forget notifications that never block agent execution
+- **Implementation:**
+  - Created `src/barbossa/utils/notifications.py` - extensible notification module
+  - Integrated notifications into all 5 agents (Engineer, Tech Lead, Discovery, Product, Auditor)
+  - Rich Discord embeds with agent-specific colors and emojis
+  - Configurable notification types (run_complete, pr_created, pr_merged, pr_closed, error)
+- **Configuration in `repositories.json`:**
+  ```json
+  "settings": {
+    "notifications": {
+      "enabled": true,
+      "discord_webhook": "https://discord.com/api/webhooks/...",
+      "notify_on": {
+        "run_complete": true,
+        "pr_created": true,
+        "pr_merged": true,
+        "pr_closed": false,
+        "error": true
+      }
+    }
+  }
+  ```
+- **Notification Types:**
+  - Agent run summaries (PRs created, merged, reviewed, issues created)
+  - PR lifecycle events (created, merged, closed)
+  - Error alerts with context
+  - Auditor health scores
+- **Files Created:**
+  - `src/barbossa/utils/notifications.py`: Full webhook notification implementation
+- **Files Modified:**
+  - All agent files: Import and call notification functions
+  - `config/repositories.json.example`: Added notifications config section
+  - `pyproject.toml`: Version bump to 1.7.0
+  - `docker-compose.prod.yml`: Updated image to v1.7.0
+
+**Impact:**
+- ✅ Real-time visibility into Barbossa operations via Discord
+- ✅ Immediate error alerts for faster debugging
+- ✅ Non-blocking design - webhook failures never affect agent execution
+- ✅ Extensible for future platforms (Slack, Teams, etc.)
 
 ### v1.6.6 - 2026-01-01 (Product Manager Fix)
 - **BUG FIX**: Product Manager label type handling in duplicate detection

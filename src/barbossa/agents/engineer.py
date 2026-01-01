@@ -33,6 +33,11 @@ from barbossa.agents.firebase import (
     track_run_end
 )
 from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker, LinearIssueTracker
+from barbossa.utils.notifications import (
+    notify_agent_run_complete,
+    notify_pr_created,
+    notify_error
+)
 
 
 class Barbossa:
@@ -42,7 +47,7 @@ class Barbossa:
     Supports both GitHub Issues and Linear for issue tracking.
     """
 
-    VERSION = "1.6.6"  # Fix label type handling in duplicate detection
+    VERSION = "1.7.0"  # Add Discord webhook notifications
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths
@@ -940,20 +945,47 @@ Begin your work now."""
                 self.logger.info(f"Claude completed for {repo_name}")
                 if pr_url:
                     self.logger.info(f"PR created: {pr_url}")
+                    # Extract PR number from URL for notification
+                    pr_number = int(pr_url.split('/')[-1]) if pr_url else None
+                    notify_pr_created(
+                        repo_name=repo_name,
+                        pr_number=pr_number,
+                        pr_title=summary or "New PR",
+                        pr_url=pr_url,
+                        description="Automatically created by Barbossa Engineer"
+                    )
                 self._update_session_status(session_id, 'completed', pr_url=pr_url, summary=summary)
                 return True
             else:
                 self.logger.error(f"Claude failed for {repo_name} with code {result.returncode}")
                 self._update_session_status(session_id, 'failed', summary=summary)
+                notify_error(
+                    agent='engineer',
+                    error_message=f"Claude exited with code {result.returncode}",
+                    context="Creating new PR",
+                    repo_name=repo_name
+                )
                 return False
 
         except subprocess.TimeoutExpired:
             self.logger.error(f"Claude timed out for {repo_name}")
             self._update_session_status(session_id, 'timeout')
+            notify_error(
+                agent='engineer',
+                error_message="Claude timed out after 30 minutes",
+                context="Creating new PR",
+                repo_name=repo_name
+            )
             return False
         except Exception as e:
             self.logger.error(f"Error executing Claude for {repo_name}: {e}")
             self._update_session_status(session_id, 'error')
+            notify_error(
+                agent='engineer',
+                error_message=str(e),
+                context="Creating new PR",
+                repo_name=repo_name
+            )
             return False
 
     def run(self, repo_name: Optional[str] = None):
@@ -1009,6 +1041,16 @@ Begin your work now."""
             # Track run end (fire-and-forget)
             any_success = any(s for _, _, s in results)
             track_run_end("engineer", run_session_id, any_success, pr_created=False)
+
+            # Send run summary notification
+            addressed = sum(1 for _, _, s in results if s)
+            failed = len(results) - addressed
+            notify_agent_run_complete(
+                agent='engineer',
+                success=any_success,
+                summary=f"Revision mode: addressed {addressed} PR(s), {failed} failed",
+                details={'PRs Addressed': addressed, 'Failed': failed, 'Mode': 'Revision'}
+            )
             return
 
         self.logger.info("No PRs need attention - all clear!")
@@ -1073,6 +1115,17 @@ Begin your work now."""
             # Track run end (fire-and-forget)
             any_success = any(s for _, s in results)
             track_run_end("engineer", run_session_id, any_success, pr_created=any_success)
+
+            # Send run summary notification
+            succeeded = sum(1 for _, s in results if s)
+            failed = len(results) - succeeded
+            if succeeded > 0 or failed > 0:
+                notify_agent_run_complete(
+                    agent='engineer',
+                    success=any_success,
+                    summary=f"Created {succeeded} PR(s) across {len(self.repositories)} repositories",
+                    details={'PRs Created': succeeded, 'Failed': failed, 'Repositories': len(self.repositories)}
+                )
 
     def status(self):
         """Show current status"""
