@@ -347,7 +347,7 @@
     </nav>
 
     <main>
-        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#basic-setup">Basic Setup</a></li><li><a href="#team-configurations">Team Configurations</a></li><li><a href="#framework-specific">Framework-Specific</a></li><li><a href="#issue-tracking">Issue Tracking</a></li><li><a href="#scheduling-patterns">Scheduling Patterns</a></li><li><a href="#quality-tuning">Quality Tuning</a></li><li><a href="#privacy-options">Privacy Options</a></li><li><a href="#common-workflows">Common Workflows</a></li><li><a href="#troubleshooting-examples">Troubleshooting Examples</a></li></ul></div>
+        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#basic-setup">Basic Setup</a></li><li><a href="#team-configurations">Team Configurations</a></li><li><a href="#framework-specific">Framework-Specific</a></li><li><a href="#issue-tracking">Issue Tracking</a></li><li><a href="#scheduling-patterns">Scheduling Patterns</a></li><li><a href="#quality-tuning">Quality Tuning</a></li><li><a href="#notifications">Notifications</a></li><li><a href="#privacy-options">Privacy Options</a></li><li><a href="#common-workflows">Common Workflows</a></li><li><a href="#troubleshooting-examples">Troubleshooting Examples</a></li></ul></div>
         <h1 id="examples">Examples</h1>
 
 <p>Real-world usage scenarios and configurations.</p>
@@ -636,6 +636,35 @@
     }
   }
 }</code></pre>
+
+<hr>
+
+<h2 id="notifications">Notifications</h2>
+
+<h3 id="discord-webhook">Discord Webhook</h3>
+
+<p>Get real-time updates in your Discord channel:</p>
+
+<pre class="language-json"><code class="language-json">{
+  "settings": {
+    "notifications": {
+      "enabled": true,
+      "discord_webhook": "https://discord.com/api/webhooks/your-webhook-url",
+      "notify_on": {
+        "run_complete": true,
+        "pr_created": true,
+        "pr_merged": true,
+        "error": true
+      }
+    }
+  }
+}</code></pre>
+
+<p>To get a Discord webhook URL:</p>
+<ol>
+<li>Discord channel → Edit Channel → Integrations → Webhooks</li>
+<li>Click "New Webhook" and copy the URL</li>
+</ol>
 
 <hr>
 

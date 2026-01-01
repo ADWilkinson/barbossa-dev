@@ -23,9 +23,9 @@ Barbossa's telemetry is built on two complementary systems:
 
 ---
 
-## Current Status (v1.6.3)
+## Current Status (v1.7.0)
 
-- **Latest Version:** v1.6.3
+- **Latest Version:** v1.7.0
 - **Minimum Supported:** v1.0.0
 - **Cloud Functions:** Deployed to `barbossa-dev` Firebase project
 - **GA4 Measurement ID:** `G-XNTRF7ZYQ5`
@@ -46,7 +46,7 @@ Barbossa's telemetry is built on two complementary systems:
 
 **Via Firebase Cloud Functions:**
 - **Anonymous installation ID**: Same SHA256 hash as GA4
-- **Version number**: e.g., "1.6.3"
+- **Version number**: e.g., "1.7.0"
 - **Agent run metadata**: Session IDs, start/end timestamps, success/failure
 - **Repository counts**: How many repos managed (number only)
 - **Success rates**: Whether runs completed successfully
@@ -222,8 +222,8 @@ Firebase Cloud Functions track the latest Barbossa version and warn you if updat
 
 **How it works:**
 1. On startup, Barbossa calls `checkVersion` Cloud Function
-2. Function compares your version to `LATEST_VERSION` (currently 1.6.3)
-3. If newer version exists, you see: `UPDATE AVAILABLE: v1.6.3 is available`
+2. Function compares your version to `LATEST_VERSION` (currently 1.7.0)
+3. If newer version exists, you see: `UPDATE AVAILABLE: v1.7.0 is available`
 4. This is a **soft warning** - never blocks execution
 5. If Firebase is unavailable, version check is silently skipped
 
@@ -233,8 +233,8 @@ Firebase Cloud Functions track the latest Barbossa version and warn you if updat
   "compatible": true,
   "latest": false,
   "minimumVersion": "1.0.0",
-  "latestVersion": "1.6.3",
-  "message": "A new version 1.6.3 is available."
+  "latestVersion": "1.7.0",
+  "message": "A new version 1.7.0 is available."
 }
 ```
 
@@ -253,7 +253,7 @@ Firebase Cloud Functions track the latest Barbossa version and warn you if updat
 ```javascript
 {
   installation_id: "sha256_hash",      // Anonymous ID
-  version: "1.6.3",                    // Client version
+  version: "1.7.0",                    // Client version
   last_seen: Timestamp,                 // Last activity
   last_agent: "engineer",               // Last agent run
   last_heartbeat: Timestamp            // Last heartbeat
@@ -267,7 +267,7 @@ Firebase Cloud Functions track the latest Barbossa version and warn you if updat
   installation_id: "sha256_hash",       // Anonymous installation
   agent: "engineer",                    // Agent type
   repo_count: 3,                        // Number of repos (count only)
-  version: "1.6.3",                     // Client version
+  version: "1.7.0",                     // Client version
   status: "completed",                  // running | completed | failed
   success: true,                        // Boolean success
   pr_created: true,                     // Boolean PR creation
@@ -369,7 +369,7 @@ Firebase state tracking enables future coordination features:
 
 **Constants:**
 ```python
-CLIENT_VERSION = "1.6.3"
+CLIENT_VERSION = "1.7.0"
 FIREBASE_TIMEOUT = 5  # seconds - short timeout, never blocks
 FIREBASE_BASE_URL = "https://us-central1-barbossa-450802.cloudfunctions.net"
 GA4_CONFIG = {
@@ -401,7 +401,7 @@ GA4_CONFIG = {
 **Version Configuration:**
 ```javascript
 const MINIMUM_VERSION = "1.0.0";
-const LATEST_VERSION = "1.6.3";
+const LATEST_VERSION = "1.7.0";
 ```
 
 **CORS Enabled:**
@@ -436,12 +436,12 @@ When releasing a new version:
 
 1. **Update Cloud Functions** (`functions/index.js`):
 ```javascript
-const LATEST_VERSION = "1.6.3";  // Update this
+const LATEST_VERSION = "1.7.0";  // Update this
 ```
 
 2. **Update Python Client** (`src/barbossa/agents/firebase.py`):
 ```python
-CLIENT_VERSION = "1.6.3"  # Update this
+CLIENT_VERSION = "1.7.0"  # Update this
 ```
 
 3. **Redeploy:**
@@ -567,4 +567,4 @@ No. All telemetry calls are:
 
 ---
 
-**Last Updated:** 2025-12-30 (v1.6.3)
+**Last Updated:** 2026-01-01 (v1.7.0)

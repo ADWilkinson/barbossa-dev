@@ -404,6 +404,15 @@ docker compose restart</code></pre>
 docker exec barbossa barbossa logs
 docker exec barbossa barbossa logs engineer</code></pre>
 
+<h3 id="webhook-notifications-not-working">Webhook notifications not working</h3>
+
+<ol>
+<li>Verify <code>notifications.enabled: true</code> in config</li>
+<li>Check webhook URL is correct</li>
+<li>Test manually:</li>
+</ol>
+<pre class="language-bash"><code class="language-bash">docker exec barbossa python3 -c "from barbossa.utils.notifications import test_webhook; test_webhook()"</code></pre>
+
 <h3 id="still-stuck">Still stuck?</h3>
 
 <a href="https://github.com/ADWilkinson/barbossa-dev/issues">Open an issue</a>

@@ -70,6 +70,19 @@ Monitors system health and identifies patterns.
 
 ---
 
+## Notifications
+
+All agents send Discord webhook notifications when enabled. Get real-time updates on:
+
+- **Run complete** - Summary when agents finish
+- **PR created** - When Engineer creates PRs
+- **PR merged** - When Tech Lead merges (with scores)
+- **Errors** - When something goes wrong
+
+See [Configuration](configuration.html#webhook-notifications) for setup.
+
+---
+
 ## Run Manually
 
 ```bash

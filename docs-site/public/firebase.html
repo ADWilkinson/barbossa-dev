@@ -347,7 +347,7 @@
     </nav>
 
     <main>
-        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#overview">Overview</a></li><li><a href="#current-status-v163">Current Status (v1.6.3)</a></li><li><a href="#what-gets-collected-privacy-first">What Gets Collected (Privacy-First)</a></li><li><a href="#hybrid-architecture">Hybrid Architecture</a></li><li><a href="#how-telemetry-works">How Telemetry Works</a></li><li><a href="#data-retention">Data Retention</a></li><li><a href="#opting-out">Opting Out</a></li><li><a href="#version-checking">Version Checking</a></li><li><a href="#firestore-schema">Firestore Schema</a></li><li><a href="#aggregate-stats-public">Aggregate Stats (Public)</a></li><li><a href="#future-features-planned">Future Features (Planned)</a></li><li><a href="#technical-implementation">Technical Implementation</a></li><li><a href="#deploying-functions-maintainers-only">Deploying Functions (Maintainers Only)</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#faq">FAQ</a></li><li><a href="#contact-support">Contact & Support</a></li></ul></div>
+        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#overview">Overview</a></li><li><a href="#current-status-v170">Current Status (v1.7.0)</a></li><li><a href="#what-gets-collected-privacy-first">What Gets Collected (Privacy-First)</a></li><li><a href="#hybrid-architecture">Hybrid Architecture</a></li><li><a href="#how-telemetry-works">How Telemetry Works</a></li><li><a href="#data-retention">Data Retention</a></li><li><a href="#opting-out">Opting Out</a></li><li><a href="#version-checking">Version Checking</a></li><li><a href="#firestore-schema">Firestore Schema</a></li><li><a href="#aggregate-stats-public">Aggregate Stats (Public)</a></li><li><a href="#future-features-planned">Future Features (Planned)</a></li><li><a href="#technical-implementation">Technical Implementation</a></li><li><a href="#deploying-functions-maintainers-only">Deploying Functions (Maintainers Only)</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#faq">FAQ</a></li><li><a href="#contact-support">Contact & Support</a></li></ul></div>
         <h1 id="firebase-analytics">Firebase & Analytics</h1>
 
 <p>Barbossa uses a hybrid telemetry architecture combining Google Analytics 4 and Firebase Cloud Functions to provide optional enhancements without ever blocking or requiring external services.</p>
@@ -377,10 +377,10 @@
 
 <hr>
 
-<h2 id="current-status-v163">Current Status (v1.6.3)</h2>
+<h2 id="current-status-v170">Current Status (v1.7.0)</h2>
 
 <ul>
-<li><strong>Latest Version:</strong> v1.6.3</li>
+<li><strong>Latest Version:</strong> v1.7.0</li>
 <li><strong>Minimum Supported:</strong> v1.0.0</li>
 <li><strong>Cloud Functions:</strong> Deployed to <code>barbossa-dev</code> Firebase project</li>
 <li><strong>GA4 Measurement ID:</strong> <code>G-XNTRF7ZYQ5</code></li>
@@ -405,7 +405,7 @@
 <strong>Via Firebase Cloud Functions:</strong>
 <ul>
 <li><strong>Anonymous installation ID</strong>: Same SHA256 hash as GA4</li>
-<li><strong>Version number</strong>: e.g., "1.6.3"</li>
+<li><strong>Version number</strong>: e.g., "1.7.0"</li>
 <li><strong>Agent run metadata</strong>: Session IDs, start/end timestamps, success/failure</li>
 <li><strong>Repository counts</strong>: How many repos managed (number only)</li>
 <li><strong>Success rates</strong>: Whether runs completed successfully</li>
@@ -575,8 +575,8 @@ track_run_end(agent="engineer", session_id="eng-20251230-123456", success=True, 
 <strong>How it works:</strong>
 <ol>
 <li>On startup, Barbossa calls <code>checkVersion</code> Cloud Function</li>
-<li>Function compares your version to <code>LATEST_VERSION</code> (currently 1.6.3)</li>
-<li>If newer version exists, you see: <code>UPDATE AVAILABLE: v1.6.3 is available</code></li>
+<li>Function compares your version to <code>LATEST_VERSION</code> (currently 1.7.0)</li>
+<li>If newer version exists, you see: <code>UPDATE AVAILABLE: v1.7.0 is available</code></li>
 <li>This is a <strong>soft warning</strong> - never blocks execution</li>
 <li>If Firebase is unavailable, version check is silently skipped</li>
 </ol>
@@ -586,8 +586,8 @@ track_run_end(agent="engineer", session_id="eng-20251230-123456", success=True, 
   "compatible": true,
   "latest": false,
   "minimumVersion": "1.0.0",
-  "latestVersion": "1.6.3",
-  "message": "A new version 1.6.3 is available."
+  "latestVersion": "1.7.0",
+  "message": "A new version 1.7.0 is available."
 }</code></pre>
 
 <strong>Benefits:</strong>
@@ -606,7 +606,7 @@ track_run_end(agent="engineer", session_id="eng-20251230-123456", success=True, 
 <strong>installations</strong>
 <pre class="language-javascript"><code class="language-javascript">{
   installation_id: "sha256_hash",      // Anonymous ID
-  version: "1.6.3",                    // Client version
+  version: "1.7.0",                    // Client version
   last_seen: Timestamp,                 // Last activity
   last_agent: "engineer",               // Last agent run
   last_heartbeat: Timestamp            // Last heartbeat
@@ -618,7 +618,7 @@ track_run_end(agent="engineer", session_id="eng-20251230-123456", success=True, 
   installation_id: "sha256_hash",       // Anonymous installation
   agent: "engineer",                    // Agent type
   repo_count: 3,                        // Number of repos (count only)
-  version: "1.6.3",                     // Client version
+  version: "1.7.0",                     // Client version
   status: "completed",                  // running | completed | failed
   success: true,                        // Boolean success
   pr_created: true,                     // Boolean PR creation
@@ -718,7 +718,7 @@ track_run_end(agent="engineer", session_id="eng-20251230-123456", success=True, 
 <h3 id="client-side-codesrcbarbossaagentsfirebasepycode">Client Side (<code>src/barbossa/agents/firebase.py</code>)</h3>
 
 <strong>Constants:</strong>
-<pre class="language-python"><code class="language-python">CLIENT_VERSION = "1.6.3"
+<pre class="language-python"><code class="language-python">CLIENT_VERSION = "1.7.0"
 FIREBASE_TIMEOUT = 5  # seconds - short timeout, never blocks
 FIREBASE_BASE_URL = "https://us-central1-barbossa-450802.cloudfunctions.net"
 GA4_CONFIG = {
@@ -752,7 +752,7 @@ GA4_CONFIG = {
 
 <strong>Version Configuration:</strong>
 <pre class="language-javascript"><code class="language-javascript">const MINIMUM_VERSION = "1.0.0";
-const LATEST_VERSION = "1.6.3";</code></pre>
+const LATEST_VERSION = "1.7.0";</code></pre>
 
 <strong>CORS Enabled:</strong>
 <p>All endpoints support CORS for future web dashboard at barbossa.dev.</p>
@@ -781,12 +781,12 @@ firebase deploy --only functions</code></pre>
 <ol>
 <li><strong>Update Cloud Functions</strong> (<code>functions/index.js</code>):</li>
 </ol>
-<pre class="language-javascript"><code class="language-javascript">const LATEST_VERSION = "1.6.3";  // Update this</code></pre>
+<pre class="language-javascript"><code class="language-javascript">const LATEST_VERSION = "1.7.0";  // Update this</code></pre>
 
 <ol>
 <li><strong>Update Python Client</strong> (<code>src/barbossa/agents/firebase.py</code>):</li>
 </ol>
-<pre class="language-python"><code class="language-python">CLIENT_VERSION = "1.6.3"  # Update this</code></pre>
+<pre class="language-python"><code class="language-python">CLIENT_VERSION = "1.7.0"  # Update this</code></pre>
 
 <ol>
 <li><strong>Redeploy:</strong></li>
@@ -935,7 +935,7 @@ firebase deploy --only functions</code></pre>
 
 <hr>
 
-<strong>Last Updated:</strong> 2025-12-30 (v1.6.3)
+<strong>Last Updated:</strong> 2026-01-01 (v1.7.0)
 
     </main>
 

@@ -54,6 +54,23 @@ docker compose restart
 
 See [Troubleshooting](troubleshooting.html) for details.
 
+### Can I get notifications?
+
+Yes. Configure Discord webhooks in `config/repositories.json`:
+
+```json
+{
+  "settings": {
+    "notifications": {
+      "enabled": true,
+      "discord_webhook": "https://discord.com/api/webhooks/..."
+    }
+  }
+}
+```
+
+See [Configuration](configuration.html#webhook-notifications) for details.
+
 ### No PRs being created?
 
 1. Check for issues with `backlog` label

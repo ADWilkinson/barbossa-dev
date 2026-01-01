@@ -62,6 +62,15 @@ docker exec barbossa barbossa logs
 docker exec barbossa barbossa logs engineer
 ```
 
+### Webhook notifications not working
+
+1. Verify `notifications.enabled: true` in config
+2. Check webhook URL is correct
+3. Test manually:
+```bash
+docker exec barbossa python3 -c "from barbossa.utils.notifications import test_webhook; test_webhook()"
+```
+
 ### Still stuck?
 
 [Open an issue](https://github.com/ADWilkinson/barbossa-dev/issues)

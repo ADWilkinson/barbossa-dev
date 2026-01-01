@@ -387,7 +387,13 @@
    +--------+      +--------+      +--------+
    | GitHub |      | Claude |      | Linear |
    |  API   |      |  API   |      |  API   |
-   +--------+      +--------+      +--------+</code></pre>
+   +--------+      +--------+      +--------+
+                        |
+                        v
+                   +--------+
+                   |Discord |
+                   |Webhook |
+                   +--------+</code></pre>
 
 <hr>
 
@@ -562,7 +568,8 @@
 │   ├── utils/
 │   │   ├── prompts.py       # Prompt template loader
 │   │   ├── issue_tracker.py # GitHub/Linear abstraction
-│   │   └── linear_client.py # Linear API wrapper
+│   │   ├── linear_client.py # Linear API wrapper
+│   │   └── notifications.py # Discord webhook notifications
 │   └── cli/
 │       └── barbossa         # CLI entrypoint
 ├── prompts/                  # Prompt templates

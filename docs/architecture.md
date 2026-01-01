@@ -39,6 +39,12 @@ Barbossa is a team of five AI agents running in a Docker container. Each agent h
    | GitHub |      | Claude |      | Linear |
    |  API   |      |  API   |      |  API   |
    +--------+      +--------+      +--------+
+                        |
+                        v
+                   +--------+
+                   |Discord |
+                   |Webhook |
+                   +--------+
 ```
 
 ---
@@ -197,7 +203,8 @@ barbossa-engineer/
 │   ├── utils/
 │   │   ├── prompts.py       # Prompt template loader
 │   │   ├── issue_tracker.py # GitHub/Linear abstraction
-│   │   └── linear_client.py # Linear API wrapper
+│   │   ├── linear_client.py # Linear API wrapper
+│   │   └── notifications.py # Discord webhook notifications
 │   └── cli/
 │       └── barbossa         # CLI entrypoint
 ├── prompts/                  # Prompt templates

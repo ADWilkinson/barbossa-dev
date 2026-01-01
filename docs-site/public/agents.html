@@ -347,7 +347,7 @@
     </nav>
 
     <main>
-        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#overview">Overview</a></li><li><a href="#pipeline">Pipeline</a></li><li><a href="#how-each-agent-works">How Each Agent Works</a></li><li><a href="#run-manually">Run Manually</a></li></ul></div>
+        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#overview">Overview</a></li><li><a href="#pipeline">Pipeline</a></li><li><a href="#how-each-agent-works">How Each Agent Works</a></li><li><a href="#notifications">Notifications</a></li><li><a href="#run-manually">Run Manually</a></li></ul></div>
         <h1 id="agents">Agents</h1>
 
 <p>Five autonomous agents work on your codebase.</p>
@@ -418,6 +418,21 @@
 <li>Validates architecture consistency</li>
 <li>Provides actionable recommendations for quality improvements</li>
 </ul>
+
+<hr>
+
+<h2 id="notifications">Notifications</h2>
+
+<p>All agents send Discord webhook notifications when enabled. Get real-time updates on:</p>
+
+<ul>
+<li><strong>Run complete</strong> - Summary when agents finish</li>
+<li><strong>PR created</strong> - When Engineer creates PRs</li>
+<li><strong>PR merged</strong> - When Tech Lead merges (with scores)</li>
+<li><strong>Errors</strong> - When something goes wrong</li>
+</ul>
+
+<p>See <a href="configuration.html#webhook-notifications">Configuration</a> for setup.</p>
 
 <hr>
 

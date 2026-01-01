@@ -78,5 +78,6 @@ You wake up to PRs already merged. Set `auto_merge: false` in config if you pref
 ## Next Steps
 
 - [Configuration](configuration.html) - All config options
+- [Webhook Notifications](configuration.html#webhook-notifications) - Discord alerts
 - [Agents](agents.html) - How agents work
 - [Troubleshooting](troubleshooting.html) - Common issues

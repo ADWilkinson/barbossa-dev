@@ -317,6 +317,35 @@ For rapid prototyping:
 
 ---
 
+## Notifications
+
+### Discord Webhook
+
+Get real-time updates in your Discord channel:
+
+```json
+{
+  "settings": {
+    "notifications": {
+      "enabled": true,
+      "discord_webhook": "https://discord.com/api/webhooks/your-webhook-url",
+      "notify_on": {
+        "run_complete": true,
+        "pr_created": true,
+        "pr_merged": true,
+        "error": true
+      }
+    }
+  }
+}
+```
+
+To get a Discord webhook URL:
+1. Discord channel → Edit Channel → Integrations → Webhooks
+2. Click "New Webhook" and copy the URL
+
+---
+
 ## Privacy Options
 
 ### Telemetry Disabled

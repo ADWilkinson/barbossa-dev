@@ -400,6 +400,21 @@ docker compose restart</code></pre>
 
 <p>See <a href="troubleshooting.html">Troubleshooting</a> for details.</p>
 
+<h3 id="can-i-get-notifications">Can I get notifications?</h3>
+
+<p>Yes. Configure Discord webhooks in <code>config/repositories.json</code>:</p>
+
+<pre class="language-json"><code class="language-json">{
+  "settings": {
+    "notifications": {
+      "enabled": true,
+      "discord_webhook": "https://discord.com/api/webhooks/..."
+    }
+  }
+}</code></pre>
+
+<p>See <a href="configuration.html#webhook-notifications">Configuration</a> for details.</p>
+
 <h3 id="no-prs-being-created">No PRs being created?</h3>
 
 <ol>
