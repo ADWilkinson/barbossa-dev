@@ -110,7 +110,7 @@ def configure_telemetry(enabled: bool):
 
 
 # Current client version
-CLIENT_VERSION = "1.6.5"
+CLIENT_VERSION = "1.6.6"
 
 # Timeout for Firebase calls (short - we never want to block)
 FIREBASE_TIMEOUT = 5

@@ -42,7 +42,7 @@ from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker
 class BarbossaDiscovery:
     """Autonomous discovery agent that creates issues for the pipeline."""
 
-    VERSION = "1.6.5"  # Skip re-reviewing already-approved PRs when auto_merge is off
+    VERSION = "1.6.6"  # Fix label type handling in duplicate detection
     DEFAULT_BACKLOG_THRESHOLD = 20
 
     def __init__(self, work_dir: Optional[Path] = None):

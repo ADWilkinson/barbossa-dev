@@ -44,7 +44,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "1.6.5"  # Skip re-reviewing already-approved PRs when auto_merge is off
+    VERSION = "1.6.6"  # Fix label type handling in duplicate detection
     ROLE = "auditor"
 
     def __init__(self, work_dir: Optional[Path] = None):

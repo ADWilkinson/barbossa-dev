@@ -1,7 +1,7 @@
 # Barbossa Engineer - Claude Context
 
-**Last Updated:** 2025-12-31
-**Version:** v1.6.5
+**Last Updated:** 2026-01-01
+**Version:** v1.6.6
 
 ## Project Overview
 
@@ -468,6 +468,25 @@ On container startup, `validate.py` checks:
 **Critical failures block startup** to prevent silent failures.
 
 ## Development History
+
+### v1.6.6 - 2026-01-01 (Product Manager Fix)
+- **BUG FIX**: Product Manager label type handling in duplicate detection
+- **Issue:** `_is_semantically_similar()` crashed with `'str' object has no attribute 'get'`
+- **Root Cause:** Labels stored as `List[str]` but code expected `List[Dict]` with `name` keys
+- **Fix:** Handle both label formats with type checking:
+  ```python
+  labels = [l if isinstance(l, str) else l.get('name', '') for l in raw_labels]
+  ```
+- **Files Modified:**
+  - `src/barbossa/agents/product.py:450-452`: Fixed label type handling
+  - All agent versions bumped to v1.6.6
+  - Package version bumped to v1.6.6
+  - Docker image tag updated to v1.6.6
+
+**Impact:**
+- ✅ Product Manager now correctly detects duplicate features
+- ✅ Discovery agent continues working (labels already existed)
+- ✅ Both agents now creating issues successfully
 
 ### v1.6.5 - 2025-12-31 (Approval Detection Fix)
 - **BUG FIX**: Tech Lead no longer re-reviews PRs it has already approved

@@ -40,7 +40,7 @@ class BarbossaTechLead:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "1.6.5"  # Skip re-reviewing already-approved PRs when auto_merge is off
+    VERSION = "1.6.6"  # Fix label type handling in duplicate detection
     ROLE = "tech_lead"
 
     # Default review criteria (can be overridden in config)

@@ -42,7 +42,7 @@ class Barbossa:
     Supports both GitHub Issues and Linear for issue tracking.
     """
 
-    VERSION = "1.6.5"  # Skip re-reviewing already-approved PRs when auto_merge is off
+    VERSION = "1.6.6"  # Fix label type handling in duplicate detection
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths
