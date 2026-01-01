@@ -347,7 +347,7 @@
     </nav>
 
     <main>
-        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#minimal-config">Minimal Config</a></li><li><a href="#common-options">Common Options</a></li><li><a href="#protected-files">Protected Files</a></li><li><a href="#scheduling">Scheduling</a></li><li><a href="#issue-tracking">Issue Tracking</a></li><li><a href="#multiple-repos">Multiple Repos</a></li><li><a href="#timezone">Timezone</a></li><li><a href="#privacy-telemetry">Privacy & Telemetry</a></li></ul></div>
+        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#minimal-config">Minimal Config</a></li><li><a href="#common-options">Common Options</a></li><li><a href="#repository-specific-guidance">Repository-Specific Guidance</a></li><li><a href="#protected-files">Protected Files</a></li><li><a href="#scheduling">Scheduling</a></li><li><a href="#issue-tracking">Issue Tracking</a></li><li><a href="#webhook-notifications">Webhook Notifications</a></li><li><a href="#multiple-repos">Multiple Repos</a></li><li><a href="#timezone">Timezone</a></li><li><a href="#privacy-telemetry">Privacy & Telemetry</a></li></ul></div>
         <h1 id="configuration">Configuration</h1>
 
 <p>All configuration is in <code>config/repositories.json</code>.</p>
@@ -396,6 +396,95 @@
 }</code></pre>
 
 <table><tr><th>Field</th><th>Description</th></tr><tr><td><code>package_manager</code></td><td><code>npm</code>, <code>yarn</code>, <code>pnpm</code>, or <code>bun</code> (auto-detected if omitted)</td></tr><tr><td><code>do_not_touch</code></td><td>Files/directories agents should never modify</td></tr><tr><td><code>telemetry</code></td><td><code>true</code> (default) or <code>false</code> to disable anonymous usage tracking</td></tr><tr><td><code>auto_merge</code></td><td>Enabled by default. Set to <code>false</code> for manual merge control</td></tr><tr><td><code>min_lines_for_tests_required</code></td><td>Minimum lines changed to require tests (default: 50)</td></tr><tr><td><code>max_files_per_pr</code></td><td>Maximum files allowed in a PR (default: 15)</td></tr><tr><td><code>stale_pr_threshold</code></td><td>Days before PR considered stale (default: 5)</td></tr><tr><td><code>enabled</code></td><td>Enable/disable individual agents</td></tr></table>
+<hr>
+
+<h2 id="repository-specific-guidance">Repository-Specific Guidance</h2>
+
+<strong>New in v1.6.4:</strong> Steer agent behavior per-repository using <code>focus</code> and <code>known_gaps</code> fields.
+
+<h3 id="quality-vs-feature-focus">Quality vs Feature Focus</h3>
+
+<p>Use the <code>focus</code> field to define the development philosophy for a repository:</p>
+
+<pre class="language-json"><code class="language-json">{
+  "repositories": [
+    {
+      "name": "my-production-app",
+      "url": "https://github.com/you/my-production-app.git",
+      "focus": "QUALITY &amp; RESILIENCE ONLY - Focus exclusively on: (1) Bug fixes and edge case handling, (2) Error handling and resilience, (3) Test coverage expansion, (4) Security improvements, (5) UI/UX polish, (6) Performance optimization. DO NOT implement large new features or major architectural changes.",
+      "known_gaps": [
+        "Missing error boundaries in React components - app crashes on unhandled errors",
+        "Insufficient loading states - users see blank screens during data fetching",
+        "Weak network error handling - transactions fail silently without retry logic",
+        "Limited test coverage - critical payment flows lack E2E tests",
+        "Accessibility issues - missing ARIA labels, poor keyboard navigation"
+      ]
+    }
+  ]
+}</code></pre>
+
+<h3 id="how-it-works">How It Works</h3>
+
+<strong><code>focus</code> (string):</strong>
+<ul>
+<li>Injected into Engineer and Product Manager prompts</li>
+<li>Guides agents toward quality/polish vs new features</li>
+<li>Product Manager respects focus and may decline feature suggestions</li>
+<li>Engineer prioritizes work aligned with focus</li>
+</ul>
+
+<strong><code>known_gaps</code> (array):</strong>
+<ul>
+<li>List of specific known issues and priority areas</li>
+<li>Shown to Engineer as high-priority opportunities</li>
+<li>Product Manager uses these to inform feature suggestions</li>
+<li>Discovery agent may also reference these areas</li>
+</ul>
+
+<h3 id="examples">Examples</h3>
+
+<strong>Production hardening:</strong>
+<pre class="language-json"><code class="language-json">{
+  "focus": "QUALITY &amp; RESILIENCE ONLY - bug fixes, testing, security, polish",
+  "known_gaps": [
+    "Missing error boundaries",
+    "No retry logic for network failures",
+    "Insufficient test coverage"
+  ]
+}</code></pre>
+
+<strong>Exploration phase:</strong>
+<pre class="language-json"><code class="language-json">{
+  "focus": "FEATURE EXPLORATION - Rapidly experiment with new features and UX improvements. Focus on shipping MVPs quickly.",
+  "known_gaps": [
+    "No analytics dashboard",
+    "Missing admin panel",
+    "No user preferences system"
+  ]
+}</code></pre>
+
+<strong>Balanced approach:</strong>
+<pre class="language-json"><code class="language-json">{
+  "focus": "Small incremental improvements - Focus on polish, bug fixes, and minor features. Keep PRs focused and well-tested.",
+  "known_gaps": [
+    "Export functionality incomplete",
+    "Mobile responsiveness issues on tablets",
+    "Performance bottlenecks on large datasets"
+  ]
+}</code></pre>
+
+<h3 id="when-to-use">When to Use</h3>
+
+<ul>
+<li><strong>Quality focus:</strong> Production apps needing stability and polish</li>
+<li><strong>Feature focus:</strong> New projects or prototypes in exploration phase</li>
+<li><strong>Known gaps:</strong> Clear list of issues you want agents to prioritize</li>
+</ul>
+
+<h3 id="backward-compatibility">Backward Compatibility</h3>
+
+<p>Both fields are <strong>optional</strong>. Repositories without <code>focus</code> or <code>known_gaps</code> work normally with default agent behavior.</p>
+
 <hr>
 
 <h2 id="protected-files">Protected Files</h2>
@@ -528,6 +617,99 @@
 <li><code>LINEAR_API_KEY</code> is not set</li>
 <li>Team doesn't exist</li>
 <li>API is unreachable</li>
+</ul>
+
+<hr>
+
+<h2 id="webhook-notifications">Webhook Notifications</h2>
+
+<strong>New in v1.7.0:</strong> Get real-time insights into Barbossa's operations via Discord webhooks (Slack support coming soon).
+
+<h3 id="basic-setup">Basic Setup</h3>
+
+<pre class="language-json"><code class="language-json">{
+  "settings": {
+    "notifications": {
+      "enabled": true,
+      "discord_webhook": "https://discord.com/api/webhooks/your-webhook-url"
+    }
+  }
+}</code></pre>
+
+<h3 id="getting-a-discord-webhook-url">Getting a Discord Webhook URL</h3>
+
+<ol>
+<li>Open Discord and go to the channel where you want notifications</li>
+<li>Click the gear icon (Edit Channel) → <strong>Integrations</strong> → <strong>Webhooks</strong></li>
+<li>Click <strong>New Webhook</strong> and copy the webhook URL</li>
+<li>Paste the URL in your <code>repositories.json</code> config</li>
+</ol>
+
+<h3 id="customizing-notifications">Customizing Notifications</h3>
+
+<p>Control which events trigger notifications:</p>
+
+<pre class="language-json"><code class="language-json">{
+  "settings": {
+    "notifications": {
+      "enabled": true,
+      "discord_webhook": "https://discord.com/api/webhooks/...",
+      "notify_on": {
+        "run_complete": true,
+        "pr_created": true,
+        "pr_merged": true,
+        "pr_closed": false,
+        "error": true
+      }
+    }
+  }
+}</code></pre>
+
+<h3 id="notification-types">Notification Types</h3>
+
+<table><tr><th>Event</th><th>Default</th><th>Description</th></tr><tr><td><code>run_complete</code></td><td><code>true</code></td><td>Summary when any agent finishes a run</td></tr><tr><td><code>pr_created</code></td><td><code>true</code></td><td>When Engineer creates a new PR</td></tr><tr><td><code>pr_merged</code></td><td><code>true</code></td><td>When Tech Lead merges a PR (includes scores)</td></tr><tr><td><code>pr_closed</code></td><td><code>false</code></td><td>When Tech Lead closes a PR</td></tr><tr><td><code>error</code></td><td><code>true</code></td><td>When any agent encounters an error</td></tr></table>
+<h3 id="what-youll-see">What You'll See</h3>
+
+<strong>Agent Run Summaries:</strong>
+<ul>
+<li>Engineer: "Created 2 PR(s) across 3 repositories"</li>
+<li>Tech Lead: "Reviewed 4 PR(s): 2 merged, 1 needs changes"</li>
+<li>Discovery: "Created 5 backlog issue(s)"</li>
+<li>Auditor: "System health: 85/100 (healthy)"</li>
+</ul>
+
+<strong>PR Events:</strong>
+<ul>
+<li>New PR created with link and title</li>
+<li>PR merged with value/quality scores</li>
+<li>PR closed with reason</li>
+</ul>
+
+<strong>Error Alerts:</strong>
+<ul>
+<li>Agent name and error context</li>
+<li>Repository name</li>
+<li>Error message</li>
+</ul>
+
+<h3 id="design-principles">Design Principles</h3>
+
+<ul>
+<li><strong>Never blocks:</strong> Notifications run in background threads and never slow down agents</li>
+<li><strong>Graceful degradation:</strong> If Discord is unreachable, agents continue working</li>
+<li><strong>Not spammy:</strong> Only meaningful events are sent (not every action)</li>
+<li><strong>Rich formatting:</strong> Discord embeds with agent-specific colors and emojis</li>
+</ul>
+
+<h3 id="agent-colors">Agent Colors</h3>
+
+<p>Each agent has a distinctive color in Discord embeds:</p>
+<ul>
+<li><strong>Engineer:</strong> Blue</li>
+<li><strong>Tech Lead:</strong> Purple</li>
+<li><strong>Discovery:</strong> Orange</li>
+<li><strong>Product Manager:</strong> Pink</li>
+<li><strong>Auditor:</strong> Yellow</li>
 </ul>
 
 <hr>

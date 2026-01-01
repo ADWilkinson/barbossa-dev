@@ -304,6 +304,98 @@ Get your API key from [Linear Settings → API](https://linear.app/settings/api)
 
 ---
 
+## Webhook Notifications
+
+**New in v1.7.0:** Get real-time insights into Barbossa's operations via Discord webhooks (Slack support coming soon).
+
+### Basic Setup
+
+```json
+{
+  "settings": {
+    "notifications": {
+      "enabled": true,
+      "discord_webhook": "https://discord.com/api/webhooks/your-webhook-url"
+    }
+  }
+}
+```
+
+### Getting a Discord Webhook URL
+
+1. Open Discord and go to the channel where you want notifications
+2. Click the gear icon (Edit Channel) → **Integrations** → **Webhooks**
+3. Click **New Webhook** and copy the webhook URL
+4. Paste the URL in your `repositories.json` config
+
+### Customizing Notifications
+
+Control which events trigger notifications:
+
+```json
+{
+  "settings": {
+    "notifications": {
+      "enabled": true,
+      "discord_webhook": "https://discord.com/api/webhooks/...",
+      "notify_on": {
+        "run_complete": true,
+        "pr_created": true,
+        "pr_merged": true,
+        "pr_closed": false,
+        "error": true
+      }
+    }
+  }
+}
+```
+
+### Notification Types
+
+| Event | Default | Description |
+|-------|---------|-------------|
+| `run_complete` | `true` | Summary when any agent finishes a run |
+| `pr_created` | `true` | When Engineer creates a new PR |
+| `pr_merged` | `true` | When Tech Lead merges a PR (includes scores) |
+| `pr_closed` | `false` | When Tech Lead closes a PR |
+| `error` | `true` | When any agent encounters an error |
+
+### What You'll See
+
+**Agent Run Summaries:**
+- Engineer: "Created 2 PR(s) across 3 repositories"
+- Tech Lead: "Reviewed 4 PR(s): 2 merged, 1 needs changes"
+- Discovery: "Created 5 backlog issue(s)"
+- Auditor: "System health: 85/100 (healthy)"
+
+**PR Events:**
+- New PR created with link and title
+- PR merged with value/quality scores
+- PR closed with reason
+
+**Error Alerts:**
+- Agent name and error context
+- Repository name
+- Error message
+
+### Design Principles
+
+- **Never blocks:** Notifications run in background threads and never slow down agents
+- **Graceful degradation:** If Discord is unreachable, agents continue working
+- **Not spammy:** Only meaningful events are sent (not every action)
+- **Rich formatting:** Discord embeds with agent-specific colors and emojis
+
+### Agent Colors
+
+Each agent has a distinctive color in Discord embeds:
+- **Engineer:** Blue
+- **Tech Lead:** Purple
+- **Discovery:** Orange
+- **Product Manager:** Pink
+- **Auditor:** Yellow
+
+---
+
 ## Multiple Repos
 
 ```json
