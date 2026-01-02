@@ -39,7 +39,7 @@ from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
 # Current version
-VERSION = "1.7.0"
+VERSION = "1.7.2"
 
 # Timeout for webhook calls (short - we never want to block)
 WEBHOOK_TIMEOUT = 10
@@ -49,6 +49,10 @@ logger = logging.getLogger('barbossa.notifications')
 # Global configuration state
 _config: Optional[Dict] = None
 _config_loaded = False
+
+# Track pending notification threads so we can wait for them before process exit
+_pending_threads: List[threading.Thread] = []
+_threads_lock = threading.Lock()
 
 
 def _load_notification_config() -> Dict:
@@ -113,11 +117,48 @@ def _get_discord_webhook() -> Optional[str]:
 
 
 def _fire_and_forget(func):
-    """Decorator to run function in background thread. Never blocks."""
+    """Decorator to run function in background thread. Never blocks.
+
+    Threads are tracked so wait_for_pending() can ensure they complete
+    before the main process exits.
+    """
     def wrapper(*args, **kwargs):
         thread = threading.Thread(target=func, args=args, kwargs=kwargs, daemon=True)
+        with _threads_lock:
+            # Clean up completed threads
+            _pending_threads[:] = [t for t in _pending_threads if t.is_alive()]
+            _pending_threads.append(thread)
         thread.start()
     return wrapper
+
+
+def wait_for_pending(timeout: float = 5.0):
+    """Wait for all pending notification threads to complete.
+
+    Call this at the end of agent runs to ensure notifications are sent
+    before the process exits.
+
+    Args:
+        timeout: Maximum seconds to wait (default 5s, enough for webhook calls)
+    """
+    with _threads_lock:
+        threads = list(_pending_threads)
+
+    if not threads:
+        return
+
+    logger.debug(f"Waiting for {len(threads)} pending notification(s)...")
+
+    for thread in threads:
+        thread.join(timeout=timeout / len(threads) if threads else timeout)
+
+    # Clean up
+    with _threads_lock:
+        _pending_threads[:] = [t for t in _pending_threads if t.is_alive()]
+
+    remaining = len(_pending_threads)
+    if remaining > 0:
+        logger.debug(f"{remaining} notification(s) did not complete in time")
 
 
 # =============================================================================

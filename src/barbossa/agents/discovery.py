@@ -39,14 +39,15 @@ from barbossa.agents.firebase import (
 from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker
 from barbossa.utils.notifications import (
     notify_agent_run_complete,
-    notify_error
+    notify_error,
+    wait_for_pending
 )
 
 
 class BarbossaDiscovery:
     """Autonomous discovery agent that creates issues for the pipeline."""
 
-    VERSION = "1.7.1"  # Only work on Barbossa-created PRs
+    VERSION = "1.7.2"  # Fix: wait for webhook notifications before process exit
     DEFAULT_BACKLOG_THRESHOLD = 20
 
     def __init__(self, work_dir: Optional[Path] = None):
@@ -540,6 +541,8 @@ Found console.log statements in production code that should be removed.
                 }
             )
 
+        # Ensure all notifications complete before process exits
+        wait_for_pending()
         return total_issues
 
 

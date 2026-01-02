@@ -36,7 +36,8 @@ from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker, Linear
 from barbossa.utils.notifications import (
     notify_agent_run_complete,
     notify_pr_created,
-    notify_error
+    notify_error,
+    wait_for_pending
 )
 
 
@@ -47,7 +48,7 @@ class Barbossa:
     Supports both GitHub Issues and Linear for issue tracking.
     """
 
-    VERSION = "1.7.1"  # Only work on Barbossa-created PRs (prevent modifying human contributor PRs)
+    VERSION = "1.7.2"  # Fix: wait for webhook notifications before process exit
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths
@@ -1061,6 +1062,7 @@ Begin your work now."""
                 summary=f"Revision mode: addressed {addressed} PR(s), {failed} failed",
                 details={'PRs Addressed': addressed, 'Failed': failed, 'Mode': 'Revision'}
             )
+            wait_for_pending()  # Ensure notifications complete before exit
             return
 
         self.logger.info("No PRs need attention - all clear!")
@@ -1136,6 +1138,9 @@ Begin your work now."""
                     summary=f"Created {succeeded} PR(s) across {len(self.repositories)} repositories",
                     details={'PRs Created': succeeded, 'Failed': failed, 'Repositories': len(self.repositories)}
                 )
+
+        # Ensure all notifications complete before process exits
+        wait_for_pending()
 
     def status(self):
         """Show current status"""

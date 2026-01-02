@@ -40,14 +40,15 @@ from barbossa.agents.firebase import (
 from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker
 from barbossa.utils.notifications import (
     notify_agent_run_complete,
-    notify_error
+    notify_error,
+    wait_for_pending
 )
 
 
 class BarbossaProduct:
     """Product Manager agent that creates feature Issues for the pipeline."""
 
-    VERSION = "1.7.1"  # Only work on Barbossa-created PRs
+    VERSION = "1.7.2"  # Fix: wait for webhook notifications before process exit
     DEFAULT_MAX_ISSUES_PER_RUN = 3
     DEFAULT_FEATURE_BACKLOG_THRESHOLD = 20
 
@@ -637,6 +638,8 @@ KEY FILES:
                 }
             )
 
+        # Ensure all notifications complete before process exits
+        wait_for_pending()
         return total_issues
 
 

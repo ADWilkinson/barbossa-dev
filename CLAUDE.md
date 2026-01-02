@@ -1,7 +1,7 @@
 # Barbossa Engineer - Claude Context
 
 **Last Updated:** 2026-01-02
-**Version:** v1.7.1
+**Version:** v1.7.2
 
 ## Project Overview
 
@@ -514,6 +514,26 @@ On container startup, `validate.py` checks:
 **Critical failures block startup** to prevent silent failures.
 
 ## Development History
+
+### v1.7.2 - 2026-01-02 (Discord Webhook Fix)
+- **BUG FIX**: Discord webhook notifications now reliably sent before process exits
+- **Issue:** Notifications used daemon threads that were killed when main process exited
+- **Root Cause:** Python daemon threads (`daemon=True`) terminate when main thread exits - agent run completed before HTTP request finished
+- **Fix:**
+  - ✅ Added thread tracking in `notifications.py` to monitor pending notifications
+  - ✅ Added `wait_for_pending()` function that blocks until all webhook calls complete
+  - ✅ All agents now call `wait_for_pending()` before returning from `run()` method
+  - ✅ 5-second timeout ensures process never hangs on webhook failures
+- **Files Modified:**
+  - `src/barbossa/utils/notifications.py`: Added thread tracking and `wait_for_pending()`
+  - All agent files: Import and call `wait_for_pending()` at end of run
+  - All versions bumped to v1.7.2
+
+**Impact:**
+- ✅ Discord notifications now reliably appear for all agent runs
+- ✅ PR created/merged/closed notifications work correctly
+- ✅ Error notifications work correctly
+- ✅ No impact on agent execution time (max 5s wait for webhooks)
 
 ### v1.7.1 - 2026-01-02 (Critical: Ownership Filter for PRs)
 - **CRITICAL BUG FIX**: Barbossa now only works on its own PRs (not human contributor PRs)

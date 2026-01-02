@@ -35,7 +35,8 @@ from barbossa.utils.notifications import (
     notify_agent_run_complete,
     notify_pr_merged,
     notify_pr_closed,
-    notify_error
+    notify_error,
+    wait_for_pending
 )
 
 
@@ -46,7 +47,7 @@ class BarbossaTechLead:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "1.7.1"  # Only review Barbossa-created PRs (prevent modifying human contributor PRs)
+    VERSION = "1.7.2"  # Fix: wait for webhook notifications before process exit
     ROLE = "tech_lead"
 
     # Default review criteria (can be overridden in config)
@@ -1017,6 +1018,8 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                 }
             )
 
+        # Ensure all notifications complete before process exits
+        wait_for_pending()
         return all_results
 
     def status(self):

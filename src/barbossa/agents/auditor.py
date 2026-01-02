@@ -38,7 +38,8 @@ from barbossa.agents.firebase import (
 from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker
 from barbossa.utils.notifications import (
     notify_agent_run_complete,
-    notify_error
+    notify_error,
+    wait_for_pending
 )
 
 
@@ -48,7 +49,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "1.7.1"  # Only work on Barbossa-created PRs
+    VERSION = "1.7.2"  # Fix: wait for webhook notifications before process exit
     ROLE = "auditor"
 
     def __init__(self, work_dir: Optional[Path] = None):
@@ -2019,6 +2020,8 @@ class BarbossaAuditor:
             }
         )
 
+        # Ensure all notifications complete before process exits
+        wait_for_pending()
         return audit
 
 
