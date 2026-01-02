@@ -41,6 +41,7 @@ from barbossa.utils.notifications import (
     notify_error,
     wait_for_pending
 )
+from barbossa.utils.log_rotation import LogRotationManager
 
 
 class BarbossaAuditor:
@@ -49,7 +50,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "1.7.3"  # Fix: wait for webhook notifications before process exit
+    VERSION = "1.7.3"  # Fix: wait for webhook notifications + Feature: enhanced log rotation
     ROLE = "auditor"
 
     def __init__(self, work_dir: Optional[Path] = None):
@@ -1359,33 +1360,50 @@ class BarbossaAuditor:
 
         return result
 
-    def _cleanup_old_logs(self, days: int = 14) -> Dict:
-        """Clean up old log files to prevent disk fill"""
-        result = {'action': 'log_cleanup', 'deleted': 0, 'freed_mb': 0, 'message': ''}
+    def _run_log_maintenance(self) -> Dict:
+        """Run full log maintenance: rotation, compression, and cleanup.
 
-        cutoff = datetime.now() - timedelta(days=days)
-        deleted = 0
-        freed_bytes = 0
+        Uses LogRotationManager to:
+        - Rotate oversized logs (>50MB)
+        - Compress logs older than 3 days
+        - Delete logs older than 14 days
+        - Monitor disk usage and perform emergency cleanup if critical
+        """
+        log_manager = LogRotationManager(
+            logs_dir=self.logs_dir,
+            max_log_size_mb=50,
+            compress_after_days=3,
+            delete_after_days=14,
+            disk_warning_threshold=85,
+            disk_critical_threshold=95,
+        )
 
-        for log_file in self.logs_dir.glob("*.log"):
-            try:
-                mtime = datetime.fromtimestamp(log_file.stat().st_mtime)
-                if mtime < cutoff:
-                    size = log_file.stat().st_size
-                    log_file.unlink()
-                    deleted += 1
-                    freed_bytes += size
-            except Exception as e:
-                self.logger.warning(f"Could not delete {log_file}: {e}")
+        result = log_manager.run_maintenance()
 
-        if deleted > 0:
-            freed_mb = round(freed_bytes / 1024 / 1024, 2)
-            self.logger.info(f"🧹 Deleted {deleted} old logs, freed {freed_mb}MB")
-            result['deleted'] = deleted
-            result['freed_mb'] = freed_mb
+        # Log a summary of actions taken
+        if result.get('emergency'):
+            self.logger.warning(f"Log maintenance (EMERGENCY): {result['summary']}")
+        elif result['rotation'].get('rotated', 0) > 0 or \
+             result['compression'].get('compressed', 0) > 0 or \
+             result['cleanup'].get('deleted', 0) > 0:
+            self.logger.info(f"Log maintenance: {result['summary']}")
 
-        result['message'] = f'Deleted {deleted} logs older than {days} days'
-        return result
+        # Add disk health warning if present
+        if result['disk_health'].get('warning'):
+            self.logger.warning(result['disk_health']['warning'])
+
+        # Convert to the expected action result format
+        return {
+            'action': 'log_maintenance',
+            'rotated': result['rotation'].get('rotated', 0),
+            'compressed': result['compression'].get('compressed', 0),
+            'deleted': result['cleanup'].get('deleted', 0),
+            'freed_mb': result['compression'].get('saved_mb', 0) + result['cleanup'].get('freed_mb', 0),
+            'disk_percent': result['disk_health'].get('percent_used', 0),
+            'disk_status': result['disk_health'].get('status', 'unknown'),
+            'emergency_triggered': result.get('emergency') is not None,
+            'message': result['summary'],
+        }
 
     def _reset_pending_feedback(self) -> Dict:
         """Reset broken pending feedback file"""
@@ -1450,9 +1468,9 @@ class BarbossaAuditor:
         session_result = self._cleanup_stale_sessions()
         actions.append(session_result)
 
-        # 3. Clean old logs (keep 14 days)
-        self.logger.info("Cleaning old log files...")
-        log_result = self._cleanup_old_logs(days=14)
+        # 3. Run log maintenance (rotation, compression, cleanup)
+        self.logger.info("Running log maintenance...")
+        log_result = self._run_log_maintenance()
         actions.append(log_result)
 
         # 4. Reset broken feedback loop
