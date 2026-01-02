@@ -1,7 +1,7 @@
 # Barbossa Engineer - Claude Context
 
-**Last Updated:** 2026-01-01
-**Version:** v1.7.0
+**Last Updated:** 2026-01-02
+**Version:** v1.7.1
 
 ## Project Overview
 
@@ -514,6 +514,32 @@ On container startup, `validate.py` checks:
 **Critical failures block startup** to prevent silent failures.
 
 ## Development History
+
+### v1.7.1 - 2026-01-02 (Critical: Ownership Filter for PRs)
+- **CRITICAL BUG FIX**: Barbossa now only works on its own PRs (not human contributor PRs)
+- **Issue:** Engineer and Tech Lead agents were modifying PRs created by human developers
+- **Root Cause:** Both agents fetched ALL open PRs without filtering by ownership
+- **Example:** Richard's feature branch had failing CI, Barbossa "fixed" it automatically, breaking the build
+- **Fix:**
+  - ✅ Engineer: Added filter in `_get_prs_needing_attention()` to only process PRs with `barbossa/` branch prefix
+  - ✅ Tech Lead: Added filter in `run()` to only review PRs with `barbossa/` branch prefix
+  - ✅ Clear logging when skipping non-Barbossa PRs
+- **Files Modified:**
+  - `src/barbossa/agents/engineer.py:559-576`: Added ownership check at start of PR loop
+  - `src/barbossa/agents/tech_lead.py:951-963`: Added ownership filter before review loop
+  - All agent versions bumped to v1.7.1
+  - Package version bumped to v1.7.1
+  - Docker image tag updated to v1.7.1
+
+**Impact:**
+- ✅ Human contributor PRs are now completely untouched by Barbossa
+- ✅ Clear separation between autonomous and human-driven development
+- ✅ Prevents accidental "fixes" that break builds
+- ✅ Safe for teams with mixed human + Barbossa contributions
+
+**Behavior:**
+- PRs with branch `barbossa/*`: Processed normally (review, fix, merge)
+- PRs with any other branch: Skipped with log message "Skipping - not a Barbossa PR"
 
 ### v1.7.0 - 2026-01-01 (Discord Webhook Notifications)
 - **FEATURE**: Added Discord webhook notification system for real-time agent insights

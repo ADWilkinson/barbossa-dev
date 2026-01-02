@@ -46,7 +46,7 @@ class BarbossaTechLead:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "1.7.0"  # Add Discord webhook notifications
+    VERSION = "1.7.1"  # Only review Barbossa-created PRs (prevent modifying human contributor PRs)
     ROLE = "tech_lead"
 
     # Default review criteria (can be overridden in config)
@@ -948,10 +948,22 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                 self.logger.info(f"No remaining open PRs in {repo_name} after cleanup")
                 continue
 
-            self.logger.info(f"Found {len(open_prs)} open PRs - reviewing with full context")
+            # Filter to only Barbossa-created PRs (branch starts with 'barbossa/')
+            # This prevents reviewing/modifying human contributor PRs
+            barbossa_prs = [pr for pr in open_prs if pr.get('headRefName', '').startswith('barbossa/')]
+            skipped_count = len(open_prs) - len(barbossa_prs)
+
+            if skipped_count > 0:
+                self.logger.info(f"Skipping {skipped_count} non-Barbossa PR(s) (human contributor PRs)")
+
+            if not barbossa_prs:
+                self.logger.info(f"No Barbossa PRs to review in {repo_name}")
+                continue
+
+            self.logger.info(f"Found {len(barbossa_prs)} Barbossa PR(s) - reviewing with full context")
 
             # Review PRs - but skip ones that already have Tech Lead approval (when auto_merge=false)
-            for pr in open_prs:
+            for pr in barbossa_prs:
                 pr_number = pr['number']
 
                 # Check if already approved (only matters when auto_merge is off)

@@ -47,7 +47,7 @@ class Barbossa:
     Supports both GitHub Issues and Linear for issue tracking.
     """
 
-    VERSION = "1.7.0"  # Add Discord webhook notifications
+    VERSION = "1.7.1"  # Only work on Barbossa-created PRs (prevent modifying human contributor PRs)
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths
@@ -557,13 +557,23 @@ See: {output_file}
         return total
 
     def _get_prs_needing_attention(self, repo: Dict) -> List[Dict]:
-        """Get PRs that need attention - uses GitHub as source of truth"""
+        """Get PRs that need attention - uses GitHub as source of truth.
+
+        IMPORTANT: Only considers PRs created by Barbossa (branch starts with 'barbossa/').
+        This prevents Barbossa from modifying PRs created by human contributors.
+        """
         prs = self._get_open_prs(repo)
         needs_attention = []
         repo_name = repo['name']
         owner = self.owner
 
         for pr in prs:
+            # CRITICAL: Only work on Barbossa-created PRs
+            # This prevents modifying human contributor PRs
+            branch = pr.get('headRefName', '')
+            if not branch.startswith('barbossa/'):
+                self.logger.debug(f"  PR #{pr.get('number')}: Skipping - not a Barbossa PR (branch: {branch})")
+                continue
             pr_number = pr.get('number')
 
             # Fetch comments to understand conversation context

@@ -46,7 +46,7 @@ from barbossa.utils.notifications import (
 class BarbossaDiscovery:
     """Autonomous discovery agent that creates issues for the pipeline."""
 
-    VERSION = "1.7.0"  # Add Discord webhook notifications
+    VERSION = "1.7.1"  # Only work on Barbossa-created PRs
     DEFAULT_BACKLOG_THRESHOLD = 20
 
     def __init__(self, work_dir: Optional[Path] = None):

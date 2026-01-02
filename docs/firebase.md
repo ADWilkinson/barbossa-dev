@@ -77,10 +77,10 @@ Update version when releasing:
 
 ```bash
 # In functions/index.js
-const LATEST_VERSION = "1.7.0";
+const LATEST_VERSION = "1.7.1";
 
 # In src/barbossa/agents/firebase.py
-CLIENT_VERSION = "1.7.0"
+CLIENT_VERSION = "1.7.1"
 
 # Deploy
 firebase deploy --only functions

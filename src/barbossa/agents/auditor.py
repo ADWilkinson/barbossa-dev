@@ -48,7 +48,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "1.7.0"  # Add Discord webhook notifications
+    VERSION = "1.7.1"  # Only work on Barbossa-created PRs
     ROLE = "auditor"
 
     def __init__(self, work_dir: Optional[Path] = None):
