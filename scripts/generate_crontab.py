@@ -14,8 +14,107 @@ fresh work is reviewed/processed in the next cycle.
 """
 
 import json
+import re
 import sys
 from pathlib import Path
+from typing import Optional, Tuple
+
+
+def validate_cron_field(value: str, min_val: int, max_val: int, field_name: str) -> Tuple[bool, Optional[str]]:
+    """
+    Validate a single cron field value.
+
+    Supports:
+    - Single values: "5", "10"
+    - Wildcards: "*"
+    - Step values: "*/5", "0-23/2"
+    - Ranges: "1-5", "0-23"
+    - Lists: "1,3,5", "0,6,12,18"
+
+    Returns (is_valid, error_message)
+    """
+    if value == '*':
+        return True, None
+
+    # Step value: */N or range/N
+    if '/' in value:
+        base, step = value.split('/', 1)
+        if not step.isdigit() or int(step) < 1:
+            return False, f"{field_name}: invalid step value '{step}'"
+        if base == '*':
+            return True, None
+        # Validate the base (it's a range like 0-23)
+        value = base
+
+    # List value: comma-separated
+    if ',' in value:
+        parts = value.split(',')
+        for part in parts:
+            is_valid, err = validate_cron_field(part.strip(), min_val, max_val, field_name)
+            if not is_valid:
+                return False, err
+        return True, None
+
+    # Range value: min-max
+    if '-' in value:
+        parts = value.split('-', 1)
+        if len(parts) != 2:
+            return False, f"{field_name}: invalid range '{value}'"
+        try:
+            start, end = int(parts[0]), int(parts[1])
+            if start < min_val or start > max_val:
+                return False, f"{field_name}: range start {start} out of bounds ({min_val}-{max_val})"
+            if end < min_val or end > max_val:
+                return False, f"{field_name}: range end {end} out of bounds ({min_val}-{max_val})"
+            if start > end:
+                return False, f"{field_name}: range start {start} greater than end {end}"
+            return True, None
+        except ValueError:
+            return False, f"{field_name}: invalid range '{value}'"
+
+    # Single numeric value
+    if not value.isdigit():
+        return False, f"{field_name}: invalid value '{value}'"
+
+    num = int(value)
+    if num < min_val or num > max_val:
+        return False, f"{field_name}: value {num} out of bounds ({min_val}-{max_val})"
+
+    return True, None
+
+
+def validate_cron_expression(cron_expr: str) -> Tuple[bool, Optional[str]]:
+    """
+    Validate a cron expression for semantic correctness.
+
+    Validates:
+    - Correct number of fields (5)
+    - Minute: 0-59
+    - Hour: 0-23
+    - Day of month: 1-31
+    - Month: 1-12
+    - Day of week: 0-7 (0 and 7 both mean Sunday)
+
+    Returns (is_valid, error_message)
+    """
+    parts = cron_expr.split()
+    if len(parts) != 5:
+        return False, f"expected 5 fields, got {len(parts)}"
+
+    field_specs = [
+        (parts[0], 0, 59, 'minute'),
+        (parts[1], 0, 23, 'hour'),
+        (parts[2], 1, 31, 'day-of-month'),
+        (parts[3], 1, 12, 'month'),
+        (parts[4], 0, 7, 'day-of-week'),
+    ]
+
+    for value, min_val, max_val, field_name in field_specs:
+        is_valid, err = validate_cron_field(value, min_val, max_val, field_name)
+        if not is_valid:
+            return False, err
+
+    return True, None
 
 
 # Default schedules (cron format)
@@ -77,13 +176,12 @@ def resolve_schedule(schedule_value: str) -> str:
     if schedule_value.lower() in PRESETS:
         return PRESETS[schedule_value.lower()]
 
-    # Assume it's a cron expression
-    # Basic validation: should have 5 space-separated parts
-    parts = schedule_value.split()
-    if len(parts) == 5:
+    # Validate as a cron expression with semantic checking
+    is_valid, error = validate_cron_expression(schedule_value)
+    if is_valid:
         return schedule_value
 
-    print(f"Warning: Invalid schedule '{schedule_value}', using default", file=sys.stderr)
+    print(f"Warning: Invalid schedule '{schedule_value}': {error}. Using default.", file=sys.stderr)
     return None
 
 
