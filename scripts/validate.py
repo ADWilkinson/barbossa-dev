@@ -228,6 +228,58 @@ def validate_linear():
         return False
 
 
+def validate_notifications():
+    """Validate notification configuration if enabled."""
+    config_file = Path('/app/config/repositories.json')
+
+    if not config_file.exists():
+        return True  # Config validation will catch this
+
+    try:
+        with open(config_file) as f:
+            config = json.load(f)
+    except:
+        return True  # Config validation will catch this
+
+    # Check if notifications are configured
+    notifications = config.get('settings', {}).get('notifications', {})
+    if not notifications.get('enabled'):
+        # Not using notifications - no validation needed
+        return True
+
+    # Validate Discord webhook URL format if configured
+    webhook_url = notifications.get('discord_webhook')
+    if webhook_url:
+        # Discord webhook URLs follow a specific pattern
+        import re
+        discord_pattern = r'^https://discord\.com/api/webhooks/\d+/[\w-]+$'
+        discordapp_pattern = r'^https://discordapp\.com/api/webhooks/\d+/[\w-]+$'
+
+        if not (re.match(discord_pattern, webhook_url) or re.match(discordapp_pattern, webhook_url)):
+            warn("Discord webhook URL format looks incorrect")
+            print("  Expected format: https://discord.com/api/webhooks/<id>/<token>")
+            print("  Current value starts with:", webhook_url[:50] + "..." if len(webhook_url) > 50 else webhook_url)
+            return True  # Non-critical - just a warning
+
+        ok("Discord webhook URL format valid")
+    else:
+        warn("Notifications enabled but no discord_webhook URL configured")
+        print("  Add 'discord_webhook' URL to settings.notifications")
+        return True  # Non-critical
+
+    # Validate notify_on event types
+    notify_on = notifications.get('notify_on', {})
+    valid_events = {'run_complete', 'pr_created', 'pr_merged', 'pr_closed', 'error'}
+    invalid_events = set(notify_on.keys()) - valid_events
+
+    if invalid_events:
+        warn(f"Unknown notification events: {', '.join(invalid_events)}")
+        print(f"  Valid events: {', '.join(valid_events)}")
+        return True  # Non-critical
+
+    return True
+
+
 def validate_ssh():
     """Validate SSH keys exist only if SSH URLs are configured."""
     # Check if any repos use SSH URLs
@@ -301,6 +353,7 @@ def main():
     # Non-critical checks (warnings only)
     validate_git()
     validate_ssh()
+    validate_notifications()
 
     print()
     print("=" * 40)

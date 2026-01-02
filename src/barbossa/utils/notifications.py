@@ -32,19 +32,101 @@ import json
 import logging
 import os
 import threading
+import time
 from datetime import datetime
+from functools import wraps
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
 # Current version
-VERSION = "1.7.2"
+VERSION = "1.7.3"
 
 # Timeout for webhook calls (short - we never want to block)
 WEBHOOK_TIMEOUT = 10
 
+# Retry configuration for transient failures
+MAX_RETRIES = 3
+BASE_DELAY = 1.0  # seconds
+
 logger = logging.getLogger('barbossa.notifications')
+
+
+def _retry_on_transient_failure(max_retries: int = MAX_RETRIES, base_delay: float = BASE_DELAY):
+    """
+    Decorator to retry webhook calls on transient failures.
+    Uses exponential backoff with jitter for rate limits and network errors.
+
+    Retries on:
+    - HTTP 429 (rate limit)
+    - HTTP 500-599 (server errors)
+    - Network connection errors
+    - Timeouts
+
+    Does NOT retry on:
+    - HTTP 400-499 (client errors except 429) - these are configuration issues
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exception = None
+
+            for attempt in range(max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except HTTPError as e:
+                    last_exception = e
+                    # Retry on rate limit (429) or server errors (5xx)
+                    if e.code == 429 or (500 <= e.code < 600):
+                        if attempt < max_retries:
+                            delay = _calculate_backoff(attempt, base_delay)
+                            logger.debug(f"Webhook HTTP {e.code}, retry {attempt + 1}/{max_retries} after {delay:.2f}s")
+                            time.sleep(delay)
+                            continue
+                    # Don't retry client errors (4xx except 429)
+                    logger.warning(f"Discord webhook HTTP error: {e.code} - {e.reason}")
+                    return False
+                except URLError as e:
+                    last_exception = e
+                    # Retry on network errors
+                    if attempt < max_retries:
+                        delay = _calculate_backoff(attempt, base_delay)
+                        logger.debug(f"Webhook network error, retry {attempt + 1}/{max_retries} after {delay:.2f}s")
+                        time.sleep(delay)
+                        continue
+                    logger.warning(f"Discord webhook URL error: {e.reason}")
+                    return False
+                except Exception as e:
+                    last_exception = e
+                    # Retry on timeout or other transient errors
+                    if attempt < max_retries:
+                        delay = _calculate_backoff(attempt, base_delay)
+                        logger.debug(f"Webhook error, retry {attempt + 1}/{max_retries} after {delay:.2f}s")
+                        time.sleep(delay)
+                        continue
+                    logger.warning(f"Discord webhook error: {e}")
+                    return False
+
+            # All retries exhausted
+            if last_exception:
+                logger.warning(f"Discord webhook failed after {max_retries} retries: {last_exception}")
+            return False
+        return wrapper
+    return decorator
+
+
+def _calculate_backoff(attempt: int, base_delay: float) -> float:
+    """
+    Calculate exponential backoff delay with jitter.
+
+    Uses exponential backoff (1s, 2s, 4s) with ±10% jitter to prevent
+    thundering herd when multiple notifications fail simultaneously.
+    """
+    delay = base_delay * (2 ** attempt)
+    # Add jitter: ±10% of delay
+    jitter = delay * 0.1 * (2 * (hash(time.time()) % 100) / 100 - 1)
+    return max(0.1, delay + jitter)  # Minimum 100ms delay
 
 # Global configuration state
 _config: Optional[Dict] = None
@@ -188,45 +270,49 @@ AGENT_STYLES = {
 
 def _send_discord_webhook(payload: Dict) -> bool:
     """
-    Send a payload to Discord webhook.
+    Send a payload to Discord webhook with automatic retry on transient failures.
 
-    NEVER raises exceptions - all errors are logged and swallowed.
+    NEVER raises exceptions to callers - all errors are logged and swallowed.
     This ensures webhook issues never break agent execution.
+
+    Retry behavior (handled by decorator):
+    - Retries on HTTP 429 (rate limit), 5xx (server errors), network errors
+    - Uses exponential backoff: 1s, 2s, 4s delays between retries
+    - Max 3 retries before giving up
+    - Does NOT retry on 4xx client errors (configuration issues)
     """
     webhook_url = _get_discord_webhook()
     if not webhook_url:
         logger.debug("No Discord webhook configured - skipping notification")
         return False
 
-    try:
-        data = json.dumps(payload).encode('utf-8')
-        request = Request(
-            webhook_url,
-            data=data,
-            headers={
-                'Content-Type': 'application/json',
-                'User-Agent': f'Barbossa/{VERSION}'
-            },
-            method='POST'
-        )
+    return _send_webhook_request(webhook_url, payload)
 
-        with urlopen(request, timeout=WEBHOOK_TIMEOUT) as response:
-            if response.status in (200, 204):
-                logger.debug("Discord notification sent successfully")
-                return True
-            else:
-                logger.warning(f"Discord webhook returned status {response.status}")
-                return False
 
-    except HTTPError as e:
-        logger.warning(f"Discord webhook HTTP error: {e.code} - {e.reason}")
-        return False
-    except URLError as e:
-        logger.warning(f"Discord webhook URL error: {e.reason}")
-        return False
-    except Exception as e:
-        logger.warning(f"Discord webhook error: {e}")
-        return False
+@_retry_on_transient_failure()
+def _send_webhook_request(webhook_url: str, payload: Dict) -> bool:
+    """
+    Internal function to send the actual webhook request.
+    Decorated with retry logic - raises exceptions for retry handling.
+    """
+    data = json.dumps(payload).encode('utf-8')
+    request = Request(
+        webhook_url,
+        data=data,
+        headers={
+            'Content-Type': 'application/json',
+            'User-Agent': f'Barbossa/{VERSION}'
+        },
+        method='POST'
+    )
+
+    with urlopen(request, timeout=WEBHOOK_TIMEOUT) as response:
+        if response.status in (200, 204):
+            logger.debug("Discord notification sent successfully")
+            return True
+        else:
+            logger.warning(f"Discord webhook returned status {response.status}")
+            return False
 
 
 def _build_discord_embed(
