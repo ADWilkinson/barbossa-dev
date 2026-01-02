@@ -39,11 +39,14 @@ That's it. Barbossa auto-detects everything else.
     "telemetry": true,
     "tech_lead": {
       "auto_merge": true,
-      "min_lines_for_tests_required": 50,
-      "max_files_per_pr": 15,
-      "stale_pr_threshold": 5
+      "min_lines_for_tests": 50,
+      "max_files_for_auto_review": 30,
+      "stale_days": 5,
+      "block_on_pending_checks": true,
+      "require_evidence": true,
+      "require_lockfile_disclosure": true
     },
-    "discovery": { "enabled": true },
+    "discovery": { "enabled": true, "precision_mode": "high" },
     "product_manager": { "enabled": true }
   }
 }
@@ -55,12 +58,18 @@ That's it. Barbossa auto-detects everything else.
 | `do_not_touch` | Files/directories agents should never modify |
 | `telemetry` | `true` (default) or `false` to disable anonymous usage tracking |
 | `auto_merge` | Enabled by default. Set to `false` for manual merge control |
-| `min_lines_for_tests_required` | Minimum lines changed to require tests (default: 50) |
-| `max_files_per_pr` | Maximum files allowed in a PR (default: 15) |
-| `stale_pr_threshold` | Days before PR considered stale (default: 5) |
+| `min_lines_for_tests` | Minimum lines changed to require tests (default: 50) |
+| `max_files_for_auto_review` | Maximum files for automated review (default: 30) |
+| `stale_days` | Days before PR considered stale (default: 5) |
+| `block_on_pending_checks` | Defer review while CI is pending (default: true) |
+| `require_evidence` | Require evidence in PR description (default: true) |
+| `require_lockfile_disclosure` | Require lockfile disclosure in PR body (default: true) |
+| `precision_mode` | Discovery signal quality: `high`, `balanced`, `experimental` (default: high) |
 | `enabled` | Enable/disable individual agents |
 
 ---
+
+Legacy keys (still supported): `min_lines_for_tests_required`, `max_files_per_pr`, `stale_pr_threshold`
 
 ## Repository-Specific Guidance
 

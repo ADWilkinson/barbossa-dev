@@ -47,13 +47,18 @@ class BarbossaTechLead:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "1.7.2"  # Fix: wait for webhook notifications before process exit
+    VERSION = "1.7.3"  # Fix: wait for webhook notifications before process exit
     ROLE = "tech_lead"
 
     # Default review criteria (can be overridden in config)
     DEFAULT_MIN_LINES_FOR_TESTS = 50
     DEFAULT_AUTO_MERGE = True
     DEFAULT_STALE_DAYS = 5
+    DEFAULT_BLOCK_ON_PENDING_CHECKS = True
+    DEFAULT_REQUIRE_EVIDENCE = True
+    DEFAULT_REQUIRE_LOCKFILE_DISCLOSURE = True
+    DEFAULT_MAX_DIFF_CHARS = 50000
+    DEFAULT_MAX_FILES_FOR_AUTO_REVIEW = 30
 
     def __init__(self, work_dir: Optional[Path] = None):
         default_dir = Path(os.environ.get('BARBOSSA_DIR', '/app'))
@@ -86,8 +91,22 @@ class BarbossaTechLead:
         settings = self.config.get('settings', {}).get('tech_lead', {})
         self.enabled = settings.get('enabled', True)
         self.auto_merge = settings.get('auto_merge', self.DEFAULT_AUTO_MERGE)
-        self.MIN_LINES_FOR_TESTS = settings.get('min_lines_for_tests', self.DEFAULT_MIN_LINES_FOR_TESTS)
-        self.STALE_DAYS = settings.get('stale_days', self.DEFAULT_STALE_DAYS)
+        self.MIN_LINES_FOR_TESTS = settings.get(
+            'min_lines_for_tests',
+            settings.get('min_lines_for_tests_required', self.DEFAULT_MIN_LINES_FOR_TESTS)
+        )
+        self.STALE_DAYS = settings.get(
+            'stale_days',
+            settings.get('stale_pr_days', settings.get('stale_pr_threshold', self.DEFAULT_STALE_DAYS))
+        )
+        self.block_on_pending_checks = settings.get('block_on_pending_checks', self.DEFAULT_BLOCK_ON_PENDING_CHECKS)
+        self.require_evidence = settings.get('require_evidence', self.DEFAULT_REQUIRE_EVIDENCE)
+        self.require_lockfile_disclosure = settings.get('require_lockfile_disclosure', self.DEFAULT_REQUIRE_LOCKFILE_DISCLOSURE)
+        self.max_diff_chars = settings.get('max_diff_chars', self.DEFAULT_MAX_DIFF_CHARS)
+        self.max_files_for_auto_review = settings.get(
+            'max_files_for_auto_review',
+            settings.get('max_files_per_pr', self.DEFAULT_MAX_FILES_FOR_AUTO_REVIEW)
+        )
 
         self.logger.info("=" * 70)
         self.logger.info(f"BARBOSSA TECH LEAD v{self.VERSION}")
@@ -95,7 +114,17 @@ class BarbossaTechLead:
         self.logger.info("Authority: MERGE / CLOSE / REQUEST CHANGES")
         self.logger.info(f"Repositories: {len(self.repositories)}")
         self.logger.info("Mode: GitHub as single source of truth")
-        self.logger.info(f"Settings: min_lines_for_tests={self.MIN_LINES_FOR_TESTS}, stale_days={self.STALE_DAYS}")
+        self.logger.info(
+            "Settings: min_lines_for_tests=%s, stale_days=%s, block_on_pending_checks=%s, "
+            "require_evidence=%s, require_lockfile_disclosure=%s, max_diff_chars=%s, max_files_for_auto_review=%s",
+            self.MIN_LINES_FOR_TESTS,
+            self.STALE_DAYS,
+            self.block_on_pending_checks,
+            self.require_evidence,
+            self.require_lockfile_disclosure,
+            self.max_diff_chars,
+            self.max_files_for_auto_review
+        )
         self.logger.info("=" * 70)
 
     def _setup_logging(self):
@@ -330,6 +359,177 @@ class BarbossaTechLead:
 
         return "\n---\n".join(formatted) if formatted else "(No relevant comments)"
 
+    def _extract_section(self, body: str, heading: str) -> str:
+        """Extract a markdown section by heading (e.g., 'Evidence')."""
+        import re
+        if not body:
+            return ""
+        pattern = rf"##\s*{re.escape(heading)}\s*(.*?)(?:\n##\s|\Z)"
+        match = re.search(pattern, body, re.IGNORECASE | re.DOTALL)
+        return match.group(1).strip() if match else ""
+
+    def _has_evidence(self, pr_body: str) -> bool:
+        """Check if PR body includes concrete evidence (issue, repro, log, or file/line)."""
+        import re
+        if not pr_body:
+            return False
+        evidence_section = self._extract_section(pr_body, "Evidence") or pr_body
+        patterns = [
+            r'(closes|fixes|resolves)\s+#\d+',
+            r'https?://\S+',
+            r'\b[\w./-]+:\d+\b',
+            r'\b(repro|reproduction|log|trace|stack)\b'
+        ]
+        return any(re.search(p, evidence_section, re.IGNORECASE) for p in patterns)
+
+    def _changed_file_names(self, files: List[Dict]) -> List[str]:
+        """Return list of changed file basenames."""
+        names = []
+        for f in files:
+            path = f.get('path', '')
+            if path:
+                names.append(Path(path).name)
+        return names
+
+    def _lockfiles_changed(self, files: List[Dict]) -> List[str]:
+        """Detect lockfile changes."""
+        lockfiles = {
+            "pnpm-lock.yaml",
+            "package-lock.json",
+            "yarn.lock",
+            "bun.lockb",
+            "poetry.lock",
+            "Pipfile.lock",
+            "Gemfile.lock",
+        }
+        return [f for f in self._changed_file_names(files) if f in lockfiles]
+
+    def _dependency_manifests_changed(self, files: List[Dict]) -> List[str]:
+        """Detect dependency manifest changes."""
+        manifests = {
+            "package.json",
+            "pyproject.toml",
+            "requirements.txt",
+            "Pipfile",
+            "Gemfile",
+            "Cargo.toml",
+            "go.mod",
+            "composer.json",
+        }
+        return [f for f in self._changed_file_names(files) if f in manifests]
+
+    def _lockfile_disclosed(self, pr_body: str) -> bool:
+        import re
+        if not pr_body:
+            return False
+        return bool(re.search(r'Lockfile changes:\s*YES', pr_body, re.IGNORECASE))
+
+    def _dependency_changes_disclosed(self, pr_body: str) -> bool:
+        import re
+        if not pr_body:
+            return False
+        match = re.search(r'Dependency changes:\s*(.+)', pr_body, re.IGNORECASE)
+        if not match:
+            return False
+        value = match.group(1).strip()
+        if value.upper() in ["NONE", "NO", "N/A", "NA"]:
+            return False
+        if "list versions" in value.lower() or "<" in value:
+            return False
+        return True
+
+    def _detect_major_upgrades(self, diff: str) -> List[Dict]:
+        """Detect major version upgrades in dependency diffs (heuristic)."""
+        import re
+
+        def parse_major(version: str) -> Optional[int]:
+            if not version:
+                return None
+            cleaned = version.strip()
+            cleaned = re.sub(r'^(workspace:|file:|link:)', '', cleaned)
+            cleaned = cleaned.lstrip('^~<>=v')
+            major_part = cleaned.split('.')[0]
+            if not major_part.isdigit():
+                return None
+            try:
+                return int(major_part)
+            except ValueError:
+                return None
+
+        ignored_keys = {
+            "name",
+            "version",
+            "private",
+            "license",
+            "description",
+            "main",
+            "module",
+            "types",
+            "packageManager",
+            "engines",
+        }
+
+        changes: Dict[str, Dict[str, str]] = {}
+        for line in diff.splitlines():
+            if not line.startswith(('+', '-')):
+                continue
+            match = re.match(r'[+-]\s*"([^"]+)":\s*"([^"]+)"', line)
+            if not match:
+                continue
+            name, version = match.group(1), match.group(2)
+            if name in ignored_keys:
+                continue
+            entry = changes.setdefault(name, {})
+            if line.startswith('-'):
+                entry['old'] = version
+            else:
+                entry['new'] = version
+
+        upgrades = []
+        for name, versions in changes.items():
+            if 'old' in versions and 'new' in versions:
+                old_major = parse_major(versions['old'])
+                new_major = parse_major(versions['new'])
+                if old_major is not None and new_major is not None and new_major > old_major:
+                    upgrades.append({'name': name, 'old': versions['old'], 'new': versions['new']})
+        return upgrades
+
+    def _body_mentions_packages(self, pr_body: str, packages: List[str]) -> bool:
+        """Check if PR body mentions all package names."""
+        if not pr_body or not packages:
+            return False
+        body_lower = pr_body.lower()
+        return all(pkg.lower() in body_lower for pkg in packages)
+
+    def _post_once_comment(self, repo_name: str, pr_number: int, signature: str, body: str) -> bool:
+        """Post a comment once per PR using a signature marker."""
+        try:
+            comments = self._get_pr_comments(repo_name, pr_number)
+            for existing in comments:
+                if signature in existing.get('body', ''):
+                    return False
+        except Exception as e:
+            self.logger.warning(f"Could not check existing comments: {e}")
+
+        comment_body = f"{signature}\n\n{body}"
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+            f.write(comment_body)
+            temp_file = f.name
+
+        try:
+            cmd = f'gh pr comment {pr_number} --repo {self.owner}/{repo_name} --body-file "{temp_file}"'
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
+            if result.returncode != 0:
+                self.logger.error(f"Failed to post comment: {result.stderr}")
+                return False
+            return True
+        finally:
+            try:
+                os.unlink(temp_file)
+            except:
+                pass
+
     def _create_review_prompt(self, repo: Dict, pr: Dict, diff: str, checks: Dict, files: List[Dict], comments: List[Dict]) -> str:
         """Create the Claude prompt for reviewing a PR - fetched from Firebase.
 
@@ -338,8 +538,9 @@ class BarbossaTechLead:
         session_id = self._generate_session_id()
 
         # Truncate diff if too long
-        if len(diff) > 50000:
-            diff = diff[:25000] + "\n\n... [DIFF TRUNCATED - TOO LARGE] ...\n\n" + diff[-25000:]
+        if len(diff) > self.max_diff_chars:
+            half = int(self.max_diff_chars / 2)
+            diff = diff[:half] + "\n\n... [DIFF TRUNCATED - TOO LARGE] ...\n\n" + diff[-half:]
 
         file_list = "\n".join([f"  - {f.get('path', 'unknown')} (+{f.get('additions', 0)}/-{f.get('deletions', 0)})" for f in files[:30]])
         if len(files) > 30:
@@ -718,6 +919,50 @@ _Senior Engineer: Please address the above feedback and push updates._"""
 
         self.logger.info(f"Fetched {len(comments)} comments for context")
 
+        # Gate: pending CI checks
+        if self.block_on_pending_checks and checks.get('pending'):
+            self.logger.info("Skipping review - CI checks pending")
+            decision_record = {
+                'session_id': session_id,
+                'timestamp': datetime.now().isoformat(),
+                'repository': repo_name,
+                'pr_number': pr_number,
+                'pr_title': pr['title'],
+                'pr_url': pr['url'],
+                'pr_author': pr.get('author', {}).get('login', 'unknown'),
+                'decision': 'PENDING_CHECKS',
+                'reasoning': 'CI checks are still pending. Automated review deferred.',
+                'auto_rejected': False,
+                'executed': False
+            }
+            self._save_decision(decision_record)
+            return decision_record
+
+        # Gate: diff too large for automated review
+        if len(diff) > self.max_diff_chars or pr.get('changedFiles', 0) > self.max_files_for_auto_review:
+            signature = "🚧 **Tech Lead Review - Manual Review Required**"
+            body = (
+                f"Automated review skipped due to large change set "
+                f"(files: {pr.get('changedFiles', 0)}, diff chars: {len(diff)}). "
+                "Please request a manual review."
+            )
+            self._post_once_comment(repo_name, pr_number, signature, body)
+            decision_record = {
+                'session_id': session_id,
+                'timestamp': datetime.now().isoformat(),
+                'repository': repo_name,
+                'pr_number': pr_number,
+                'pr_title': pr['title'],
+                'pr_url': pr['url'],
+                'pr_author': pr.get('author', {}).get('login', 'unknown'),
+                'decision': 'MANUAL_REVIEW_REQUIRED',
+                'reasoning': 'Diff too large for automated review.',
+                'auto_rejected': False,
+                'executed': False
+            }
+            self._save_decision(decision_record)
+            return decision_record
+
         # Quick rejection checks (before Claude review)
         quick_reject = None
 
@@ -737,6 +982,60 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                 'three_strikes': True
             }
             self.logger.info(f"AUTO: Closing PR - 3-strikes rule triggered ({len(tech_lead_change_requests)} change requests)")
+
+        pr_body = pr.get('body', '') or ''
+        lockfiles_changed = self._lockfiles_changed(files)
+        manifests_changed = self._dependency_manifests_changed(files)
+        major_upgrades = self._detect_major_upgrades(diff)
+
+        # Evidence requirement
+        if not quick_reject and self.require_evidence and not self._has_evidence(pr_body):
+            quick_reject = {
+                'decision': 'REQUEST_CHANGES',
+                'reasoning': 'Missing concrete evidence (issue link, repro steps, logs, or file/line references). Add evidence to the PR description.',
+                'value_score': 0,
+                'quality_score': 0,
+                'bloat_risk': 'HIGH',
+                'auto_rejected': True
+            }
+
+        # Lockfile disclosure requirement
+        if not quick_reject and self.require_lockfile_disclosure and lockfiles_changed:
+            if not self._lockfile_disclosed(pr_body):
+                quick_reject = {
+                    'decision': 'REQUEST_CHANGES',
+                    'reasoning': f'Lockfile changes detected ({", ".join(sorted(set(lockfiles_changed)))}) but not disclosed in PR body.',
+                    'value_score': 0,
+                    'quality_score': 0,
+                    'bloat_risk': 'HIGH',
+                    'auto_rejected': True
+                }
+
+        # Dependency disclosure requirement
+        if not quick_reject and (lockfiles_changed or manifests_changed):
+            if not self._dependency_changes_disclosed(pr_body):
+                quick_reject = {
+                    'decision': 'REQUEST_CHANGES',
+                    'reasoning': 'Dependency or lockfile changes detected but "Dependency changes" is missing or set to NONE.',
+                    'value_score': 0,
+                    'quality_score': 0,
+                    'bloat_risk': 'HIGH',
+                    'auto_rejected': True
+                }
+
+        # Major version upgrades must be explicitly justified
+        if not quick_reject and major_upgrades:
+            upgrade_packages = [u['name'] for u in major_upgrades]
+            if not self._body_mentions_packages(pr_body, upgrade_packages) or "major" not in pr_body.lower():
+                upgrades_list = ", ".join([f"{u['name']} {u['old']}→{u['new']}" for u in major_upgrades])
+                quick_reject = {
+                    'decision': 'REQUEST_CHANGES',
+                    'reasoning': f'Major version upgrades detected ({upgrades_list}) without explicit justification in PR body.',
+                    'value_score': 0,
+                    'quality_score': 0,
+                    'bloat_risk': 'HIGH',
+                    'auto_rejected': True
+                }
 
         if not quick_reject and checks.get('any_failing'):
             quick_reject = {

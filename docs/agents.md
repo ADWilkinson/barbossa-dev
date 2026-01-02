@@ -48,12 +48,15 @@ Reviews pull requests with comprehensive quality analysis and decides whether to
 - Merges good PRs automatically (default behavior)
 - Requests changes on weak PRs
 - Set `auto_merge: false` in config to require manual merges
+- Defers review while CI is pending, and requires evidence + lockfile disclosure
+- Skips automated review for oversized diffs and requests manual review
 
 ### Discovery
 Scans the codebase for technical debt and creates GitHub Issues.
 - TODO and FIXME comments
-- Missing tests
-- Accessibility issues
+- Loading/error state gaps (balanced mode)
+- Accessibility and cleanup heuristics (experimental mode)
+- High-precision mode (default) only creates issues with concrete evidence
 
 ### Product Manager
 Analyzes the codebase and proposes high-value features.

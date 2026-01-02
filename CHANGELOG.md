@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Added deterministic quality gates: evidence required, lockfile disclosure required, and manual review enforced for oversized diffs
+- Discovery now defaults to high-precision issue generation and includes concrete evidence in issue bodies
+- Frozen/immutable installs to prevent unintended lockfile churn
+- Config key compatibility for tech lead thresholds (supports legacy names)
+
 ## [1.6.2] - 2025-12-30
 
 ### Fixed

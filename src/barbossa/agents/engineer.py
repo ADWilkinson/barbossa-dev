@@ -48,7 +48,7 @@ class Barbossa:
     Supports both GitHub Issues and Linear for issue tracking.
     """
 
-    VERSION = "1.7.2"  # Fix: wait for webhook notifications before process exit
+    VERSION = "1.7.3"  # Fix: wait for webhook notifications before process exit
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths
@@ -176,7 +176,7 @@ class Barbossa:
 
         # Get settings for test requirements
         settings = self.config.get('settings', {}).get('tech_lead', {})
-        min_lines_for_tests = settings.get('min_lines_for_tests', 50)
+        min_lines_for_tests = settings.get('min_lines_for_tests', settings.get('min_lines_for_tests_required', 50))
 
         # Build closed PRs section to avoid repetition
         if closed_pr_titles:
@@ -188,16 +188,21 @@ class Barbossa:
             closed_pr_section = "(no recently closed PRs)"
 
         # Build install/build commands based on package manager
+        # Prefer frozen/immutable installs to avoid unintended lockfile changes.
         if pkg_manager == 'pnpm':
-            install_cmd = 'pnpm install'
+            install_cmd = 'pnpm install --frozen-lockfile'
             build_cmd = 'pnpm run build'
             test_cmd = 'pnpm run test'
         elif pkg_manager == 'yarn':
-            install_cmd = 'yarn install'
+            install_cmd = 'yarn install --immutable'
             build_cmd = 'yarn build'
             test_cmd = 'yarn test'
+        elif pkg_manager == 'bun':
+            install_cmd = 'bun install --frozen-lockfile'
+            build_cmd = 'bun run build'
+            test_cmd = 'bun test'
         else:
-            install_cmd = 'npm install'
+            install_cmd = 'npm ci'
             build_cmd = 'npm run build'
             test_cmd = 'npm test'
 

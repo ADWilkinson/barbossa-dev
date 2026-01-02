@@ -60,10 +60,87 @@
         "tech_lead": {
           "type": "object",
           "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable Tech Lead agent (default: true)"
+            },
             "auto_merge": {
               "type": "boolean",
               "default": true,
               "description": "Automatically merge PRs that pass review (default: true)"
+            },
+            "min_lines_for_tests": {
+              "type": "integer",
+              "default": 50,
+              "description": "Require tests for changes larger than this threshold"
+            },
+            "min_lines_for_tests_required": {
+              "type": "integer",
+              "description": "Deprecated (use min_lines_for_tests)"
+            },
+            "stale_days": {
+              "type": "integer",
+              "default": 5,
+              "description": "Auto-close stale PRs after N days"
+            },
+            "stale_pr_days": {
+              "type": "integer",
+              "description": "Deprecated (use stale_days)"
+            },
+            "stale_pr_threshold": {
+              "type": "integer",
+              "description": "Deprecated (use stale_days)"
+            },
+            "block_on_pending_checks": {
+              "type": "boolean",
+              "default": true,
+              "description": "Defer review while CI checks are pending"
+            },
+            "require_evidence": {
+              "type": "boolean",
+              "default": true,
+              "description": "Require evidence in PR description"
+            },
+            "require_lockfile_disclosure": {
+              "type": "boolean",
+              "default": true,
+              "description": "Require explicit lockfile disclosure in PR body"
+            },
+            "max_diff_chars": {
+              "type": "integer",
+              "default": 50000,
+              "description": "Maximum diff size for automated review"
+            },
+            "max_files_for_auto_review": {
+              "type": "integer",
+              "default": 30,
+              "description": "Maximum files changed for automated review"
+            },
+            "max_files_per_pr": {
+              "type": "integer",
+              "description": "Deprecated (use max_files_for_auto_review)"
+            }
+          }
+        },
+        "discovery": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable Discovery agent (default: true)"
+            },
+            "max_backlog_issues": {
+              "type": "integer",
+              "default": 20,
+              "description": "Maximum backlog issues before discovery pauses"
+            },
+            "precision_mode": {
+              "type": "string",
+              "enum": ["high", "balanced", "experimental"],
+              "default": "high",
+              "description": "Signal precision for discovery heuristics"
             }
           }
         }

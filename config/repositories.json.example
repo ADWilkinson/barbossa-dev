@@ -55,15 +55,20 @@
     "tech_lead": {
       "enabled": true,
       "auto_merge": true,              // Auto-merge approved PRs
-      "min_lines_for_tests_required": 50,  // Require tests if PR changes >50 lines
-      "max_files_per_pr": 15,          // Limit PR scope
-      "stale_pr_days": 5                // Auto-close stale PRs after N days
+      "min_lines_for_tests": 50,       // Require tests if PR changes >50 lines
+      "max_files_for_auto_review": 30, // Auto-review limit (larger requires manual review)
+      "stale_days": 5,                 // Auto-close stale PRs after N days
+      "block_on_pending_checks": true, // Defer review while CI is pending
+      "require_evidence": true,        // Require evidence in PR description
+      "require_lockfile_disclosure": true,
+      "max_diff_chars": 50000          // Auto-review diff size limit
     },
 
     // Discovery agent settings
     "discovery": {
       "enabled": true,
-      "max_backlog_issues": 20        // Limit backlog size
+      "max_backlog_issues": 20,       // Limit backlog size
+      "precision_mode": "high"        // high | balanced | experimental
     },
 
     // Product Manager agent settings

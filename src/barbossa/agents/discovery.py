@@ -47,8 +47,9 @@ from barbossa.utils.notifications import (
 class BarbossaDiscovery:
     """Autonomous discovery agent that creates issues for the pipeline."""
 
-    VERSION = "1.7.2"  # Fix: wait for webhook notifications before process exit
+    VERSION = "1.7.3"  # Fix: wait for webhook notifications before process exit
     DEFAULT_BACKLOG_THRESHOLD = 20
+    DEFAULT_PRECISION_MODE = "high"
 
     def __init__(self, work_dir: Optional[Path] = None):
         default_dir = Path(os.environ.get('BARBOSSA_DIR', '/app'))
@@ -81,6 +82,7 @@ class BarbossaDiscovery:
         settings = self.config.get('settings', {}).get('discovery', {})
         self.enabled = settings.get('enabled', True)
         self.BACKLOG_THRESHOLD = settings.get('max_backlog_issues', self.DEFAULT_BACKLOG_THRESHOLD)
+        self.precision_mode = settings.get('precision_mode', self.DEFAULT_PRECISION_MODE)
 
         # Issue tracker type for logging
         tracker_type = self.config.get('issue_tracker', {}).get('type', 'github')
@@ -89,7 +91,7 @@ class BarbossaDiscovery:
         self.logger.info(f"BARBOSSA DISCOVERY v{self.VERSION}")
         self.logger.info(f"Repositories: {len(self.repositories)}")
         self.logger.info(f"Issue Tracker: {tracker_type}")
-        self.logger.info(f"Settings: max_backlog_issues={self.BACKLOG_THRESHOLD}")
+        self.logger.info(f"Settings: max_backlog_issues={self.BACKLOG_THRESHOLD}, precision_mode={self.precision_mode}")
         self.logger.info("=" * 60)
 
     def _setup_logging(self):
@@ -192,11 +194,16 @@ class BarbossaDiscovery:
             if result:
                 for line in result.split('\n')[:5]:  # Limit to 5 per pattern
                     if line.strip():
+                        parts = line.split(':', 2)
+                        file_path = parts[0] if len(parts) > 0 else 'unknown'
+                        line_no = parts[1] if len(parts) > 1 else '?'
+                        content = parts[2].strip() if len(parts) > 2 else line
                         findings.append({
                             'type': 'todo',
                             'pattern': pattern,
-                            'location': line.split(':')[0] if ':' in line else 'unknown',
-                            'content': line
+                            'file': file_path,
+                            'line': line_no,
+                            'content': content
                         })
 
         return findings[:10]  # Max 10 findings
@@ -267,10 +274,16 @@ class BarbossaDiscovery:
         if result:
             for line in result.split('\n'):
                 if line.strip():
+                    parts = line.split(':', 2)
+                    file_path = parts[0] if len(parts) > 0 else 'unknown'
+                    line_no = parts[1] if len(parts) > 1 else '?'
+                    content = parts[2].strip() if len(parts) > 2 else line
                     findings.append({
                         'type': 'a11y',
                         'issue': 'Image missing alt attribute',
-                        'location': line.split(':')[0]
+                        'file': file_path,
+                        'line': line_no,
+                        'content': content
                     })
 
         # Buttons without aria-label (icon buttons)
@@ -281,10 +294,16 @@ class BarbossaDiscovery:
         if result:
             for line in result.split('\n'):
                 if line.strip() and 'Icon' in line:
+                    parts = line.split(':', 2)
+                    file_path = parts[0] if len(parts) > 0 else 'unknown'
+                    line_no = parts[1] if len(parts) > 1 else '?'
+                    content = parts[2].strip() if len(parts) > 2 else line
                     findings.append({
                         'type': 'a11y',
                         'issue': 'Icon button missing aria-label',
-                        'location': line.split(':')[0]
+                        'file': file_path,
+                        'line': line_no,
+                        'content': content
                     })
 
         return findings[:5]
@@ -324,10 +343,13 @@ class BarbossaDiscovery:
             body = """## Summary
 Found several TODO/FIXME/HACK comments that should be addressed.
 
-## Findings
+## Evidence
 """
             for f in findings:
-                body += f"- `{f['location']}`: {f['pattern']}\n"
+                file_path = f.get('file', 'unknown')
+                line_no = f.get('line', '?')
+                content = f.get('content', '').strip()
+                body += f"- `{file_path}:{line_no}` — {content}\n"
 
             body += """
 ## Acceptance Criteria
@@ -344,7 +366,7 @@ Found several TODO/FIXME/HACK comments that should be addressed.
             body = """## Summary
 Found components that fetch data but don't show loading states.
 
-## Files Missing Loading States
+## Evidence (Heuristic - verify before coding)
 """
             for f in findings:
                 body += f"- `{f['file']}`\n"
@@ -364,7 +386,7 @@ Found components that fetch data but don't show loading states.
             body = """## Summary
 Found components that fetch data but don't handle errors gracefully.
 
-## Files Missing Error Handling
+## Evidence (Heuristic - verify before coding)
 """
             for f in findings:
                 body += f"- `{f['file']}`\n"
@@ -384,10 +406,13 @@ Found components that fetch data but don't handle errors gracefully.
             body = """## Summary
 Found accessibility issues that should be fixed for better UX.
 
-## Issues Found
+## Evidence
 """
             for f in findings:
-                body += f"- `{f['location']}`: {f['issue']}\n"
+                file_path = f.get('file', 'unknown')
+                line_no = f.get('line', '?')
+                content = f.get('content', '').strip()
+                body += f"- `{file_path}:{line_no}` — {f['issue']} — {content}\n"
 
             body += """
 ## Acceptance Criteria
@@ -405,7 +430,7 @@ Found accessibility issues that should be fixed for better UX.
             body = """## Summary
 Found console.log statements in production code that should be removed.
 
-## Files
+## Evidence (Heuristic - verify before coding)
 """
             for f in files:
                 body += f"- `{f}`\n"
@@ -452,14 +477,27 @@ Found console.log statements in production code that should be removed.
         issues_created = 0
         issues_needed = self.BACKLOG_THRESHOLD - backlog_count
 
-        # Run analyses
+        # Run analyses (precision mode controls signal quality)
+        precision = (self.precision_mode or "").lower()
+        if precision not in ["high", "balanced", "experimental"]:
+            self.logger.warning(f"Unknown precision_mode '{self.precision_mode}', defaulting to high")
+            precision = "high"
+
         analyses = [
             ('todo', self._analyze_todos(repo_path)),
-            ('loading', self._analyze_missing_loading_states(repo_path)),
-            ('error', self._analyze_missing_error_handling(repo_path)),
-            ('a11y', self._analyze_accessibility(repo_path)),
-            ('cleanup', self._analyze_console_logs(repo_path)),
         ]
+
+        if precision in ["balanced", "experimental"]:
+            analyses.extend([
+                ('loading', self._analyze_missing_loading_states(repo_path)),
+                ('error', self._analyze_missing_error_handling(repo_path)),
+            ])
+
+        if precision == "experimental":
+            analyses.extend([
+                ('a11y', self._analyze_accessibility(repo_path)),
+                ('cleanup', self._analyze_console_logs(repo_path)),
+            ])
 
         for category, findings in analyses:
             if issues_created >= issues_needed:

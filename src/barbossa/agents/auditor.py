@@ -49,7 +49,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "1.7.2"  # Fix: wait for webhook notifications before process exit
+    VERSION = "1.7.3"  # Fix: wait for webhook notifications before process exit
     ROLE = "auditor"
 
     def __init__(self, work_dir: Optional[Path] = None):

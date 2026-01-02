@@ -24,6 +24,11 @@ YOUR ANALYSIS FRAMEWORK
    - What's the current feature set?
    - What are known gaps? (check KNOWN GAPS section above)
 
+SOURCE-OF-TRUTH:
+- Only use information present in the provided product context or CLAUDE.md.
+- If a "known gap" is not explicitly listed, do NOT claim it exists.
+- If unsure, respond with "NO SUGGESTION".
+
 2. IDENTIFY OPPORTUNITIES
    Look for features that:
    - Solve real user pain points

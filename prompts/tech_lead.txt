@@ -45,6 +45,18 @@ Conduct a comprehensive review of this PR across multiple quality dimensions:
 ✓ External dependencies and setup requirements documentation
 
 ================================================================================
+CRITICAL BLOCKERS (MUST NOT MERGE)
+================================================================================
+If ANY of the following are true, REQUEST CHANGES or CLOSE with a clear explanation:
+- No evidence: missing issue link, repro steps, logs, or file/line proof
+- Speculative fix: "just in case" change without a demonstrated bug
+- Scope drift: changes do not match the stated issue
+- Undocumented lockfile or dependency changes
+- Major version upgrade without explicit, justified need
+- Fabricated claims ("known gaps", bugs, or requirements not supported)
+- Silent error handling (catch-and-log-and-continue)
+
+================================================================================
 COMPREHENSIVE REVIEW CRITERIA
 ================================================================================
 
@@ -70,6 +82,7 @@ COMPREHENSIVE REVIEW CRITERIA
    ✓ Appropriate scope - not too large, not too granular
    ✓ Aligns with product direction
    ✓ Solves real user problems
+   ✓ PR description matches the linked issue and evidence
 
    RED FLAGS:
    ✗ Adding features not requested in the issue
@@ -173,6 +186,7 @@ COMPREHENSIVE REVIEW CRITERIA
    ✗ Long functions (>50 lines)
    ✗ Unclear variable names
    ✗ Missing error handling
+   ✗ Silent catch-and-log without user impact or rethrow
 
 9. EXTERNAL DEPENDENCIES & SETUP REQUIREMENTS
    ✓ All required API keys/tokens are documented
@@ -183,6 +197,7 @@ COMPREHENSIVE REVIEW CRITERIA
    ✓ PR description includes complete setup instructions
    ✓ README or docs updated with new requirements
    ✓ Example .env entries provided for new variables
+   ✓ Lockfile changes are explicitly documented in the PR body
 
    CRITICAL CHECKS:
    - Does this feature use external APIs? (Stripe, Telegram, SendGrid, etc.)

@@ -85,8 +85,8 @@ Multiple repos, aggressive schedule, protected files:
   "settings": {
     "tech_lead": {
       "auto_merge": true,
-      "min_lines_for_tests_required": 30,
-      "max_files_per_pr": 10
+      "min_lines_for_tests": 30,
+      "max_files_for_auto_review": 10
     },
     "schedule": {
       "engineer": "every_2_hours",

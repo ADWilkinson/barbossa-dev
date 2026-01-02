@@ -1,7 +1,7 @@
 # Barbossa Engineer - Claude Context
 
 **Last Updated:** 2026-01-02
-**Version:** v1.7.2
+**Version:** v1.7.3
 
 ## Project Overview
 

@@ -40,6 +40,14 @@ DISCOVERY PROCESS
    - Label as "backlog" for engineer pickup
 
 ================================================================================
+EVIDENCE REQUIREMENT (MANDATORY)
+================================================================================
+- Only create issues you can verify with evidence.
+- Provide file paths + line references, logs, or reproduction steps.
+- If you cannot confirm the problem, DO NOT create the issue.
+- Never create issues based on assumptions or "might be" risks.
+
+================================================================================
 BACKLOG MANAGEMENT
 ================================================================================
 Current backlog threshold: {{max_backlog_issues}} issues
@@ -59,6 +67,7 @@ Body should include:
 - Problem Description
 - Current Behavior
 - Expected Behavior
+- Evidence (file/line refs, logs, or repro steps)
 - Suggested Approach (optional)
 - Priority: HIGH/MEDIUM/LOW
 
