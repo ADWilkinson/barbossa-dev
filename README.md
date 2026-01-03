@@ -6,17 +6,28 @@
 
 **AI engineers that ship code while you sleep.**
 
-Five AI agents discover features, find technical debt, implement changes, review code, and merge PRs—automatically.
+Barbossa is an autonomous development pipeline powered by Claude. Two modes: autonomous coding or product specification generation.
 
 ```bash
-docker pull ghcr.io/adwilkinson/barbossa-dev:latest
+docker pull ghcr.io/adwilkinson/barbossa-dev:1.8.0
 ```
 
 [Documentation](https://barbossa.dev) · [Quick Start](https://barbossa.dev/quickstart.html)
 
 ---
 
-## How It Works
+## Two Modes
+
+| Mode | What It Does |
+|------|--------------|
+| **Autonomous** (default) | AI implements code from backlog, reviews PRs, merges |
+| **Spec Mode** | AI generates cross-repo feature specs, no code changes |
+
+---
+
+## Autonomous Mode
+
+Five agents work in a continuous pipeline:
 
 ```
 Discovery + Product Manager
@@ -33,8 +44,29 @@ Discovery + Product Manager
 | **Engineer** | Picks backlog tasks, creates PRs, addresses review feedback |
 | **Tech Lead** | 8-dimension quality review, auto-merge or request changes, 3-strikes close |
 | **Discovery** | Finds TODOs, missing tests, accessibility issues, tech debt |
-| **Product Manager** | Proposes features with acceptance criteria, semantic deduplication |
-| **Auditor** | Health scoring, creates issues for critical quality problems |
+| **Product Manager** | Proposes features with acceptance criteria |
+| **Auditor** | Health scoring, creates issues for critical problems |
+
+---
+
+## Spec Mode
+
+When `spec_mode.enabled = true`, all autonomous agents are disabled. Only the Spec Generator runs.
+
+**Use when:** You want detailed feature specifications spanning multiple repos instead of autonomous code changes.
+
+**Output:** Parent spec ticket + child implementation tickets in each affected repo.
+
+```
+     Product Configuration
+   (linked repos, context)
+           ↓
+      Spec Generator
+           ↓
+  Parent Spec (primary repo)
+     + Child Tickets
+   (per affected repo)
+```
 
 ---
 
@@ -48,23 +80,14 @@ Discovery + Product Manager
   - [Claude Pro/Max subscription](https://claude.ai) (recommended - long-lasting tokens)
   - [Anthropic API account](https://console.anthropic.com) (pay-as-you-go)
 
-**Platform Support:**
-- Linux (x86_64, amd64)
-- macOS (Intel and Apple Silicon via Rosetta 2 emulation)
-
 ### Setup
 
 ```bash
 # 1. Generate authentication tokens
-# GitHub token
-gh auth token  # OR create at https://github.com/settings/tokens
+gh auth token                # GitHub token
+claude setup-token           # Claude token (recommended)
 
-# Claude token (Option 1 - Recommended)
-claude setup-token   # Follow prompts to generate long-lived token
-# Claude API key (Option 2)
-# Get from: https://console.anthropic.com/settings/keys
-
-# 2. Run install script (will prompt for tokens)
+# 2. Run install script
 curl -fsSL https://raw.githubusercontent.com/ADWilkinson/barbossa-dev/main/install.sh | bash
 
 # 3. Start
@@ -74,20 +97,11 @@ cd barbossa && docker compose up -d
 docker exec barbossa barbossa health
 ```
 
-The install script will:
-- Prompt for your GitHub username and repository
-- Ask for your GitHub token
-- Ask for your Claude token/API key
-- Create a `.env` file with your authentication
-- Configure everything automatically
-
-To add more repositories later, edit `config/repositories.json`.
-
 ---
 
 ## Configuration
 
-Minimal config (`config/repositories.json`):
+### Autonomous Mode (default)
 
 ```json
 {
@@ -101,29 +115,46 @@ Minimal config (`config/repositories.json`):
 }
 ```
 
-With options:
+### Spec Mode
 
 ```json
 {
   "owner": "your-github-username",
   "repositories": [
+    { "name": "backend-api", "url": "https://github.com/you/backend-api.git" },
+    { "name": "frontend-web", "url": "https://github.com/you/frontend-web.git" }
+  ],
+  "products": [
     {
-      "name": "my-app",
-      "url": "https://github.com/your-github-username/my-app.git",
-      "package_manager": "pnpm",
-      "do_not_touch": ["src/lib/auth.ts", "prisma/migrations/"],
-      "focus": "Quality and resilience",
-      "known_gaps": ["Missing error boundaries", "Weak network handling"]
+      "name": "my-platform",
+      "repositories": ["backend-api", "frontend-web"],
+      "primary_repo": "frontend-web",
+      "context": {
+        "vision": "Leading platform for X",
+        "current_phase": "MVP hardening",
+        "constraints": ["API < 200ms", "Mobile support"],
+        "strategy_notes": ["Users want faster onboarding"]
+      }
     }
   ],
   "settings": {
-    "telemetry": true,
-    "tech_lead": { "auto_merge": true },
-    "discovery": { "enabled": true },
-    "product_manager": { "enabled": true }
+    "spec_mode": {
+      "enabled": true,
+      "max_specs_per_run": 2,
+      "min_value_score": 7
+    }
   }
 }
 ```
+
+| Field | Description |
+|-------|-------------|
+| `products` | Groups of linked repos forming a system |
+| `primary_repo` | Where parent spec tickets are created |
+| `context` | Vision, constraints, strategy notes for Claude |
+| `spec_mode.enabled` | Global switch - disables all other agents |
+
+### Common Options
 
 | Field | Description |
 |-------|-------------|
@@ -131,79 +162,38 @@ With options:
 | `do_not_touch` | Files agents should never modify |
 | `focus` | Development priority (e.g., "Quality and resilience") |
 | `known_gaps` | Priority issues for agents to address |
-| `telemetry` | `true` (default) or `false` to disable analytics |
-| `auto_merge` | `true` = merge automatically, `false` = approval comment only |
-| `enabled` | Enable/disable individual agents |
+| `auto_merge` | `true` = merge automatically, `false` = approval only |
 
-### Scheduling
+---
 
-Agents run on optimized schedules to avoid resource contention:
+## Commands
 
-```json
-{
-  "settings": {
-    "schedule": {
-      "engineer": "every_2_hours",
-      "tech_lead": "0 1,3,5,7,9,11,13,15,17,19,21,23 * * *",
-      "discovery": "0 1,5,9,13,17,21 * * *",
-      "product_manager": "0 3,11,19 * * *"
-    }
-  }
-}
+```bash
+docker exec barbossa barbossa health          # Check status
+docker exec barbossa barbossa run engineer    # Run engineer now
+docker exec barbossa barbossa run tech-lead   # Run tech lead now
+docker exec barbossa barbossa run spec        # Run spec generator
+docker exec barbossa barbossa status          # View activity
 ```
-
-**Default Schedule:**
-- **Engineer:** 12x daily (00:00, 02:00, 04:00...) - implements features
-- **Tech Lead:** 12x daily (01:00, 03:00, 05:00...) - reviews PRs 1h after engineer
-- **Discovery:** 6x daily (01:00, 05:00, 09:00, 13:00, 17:00, 21:00) - finds issues
-- **Product:** 3x daily (03:00, 11:00, 19:00) - suggests features
-
-**Why Offset?**
-- Avoids simultaneous API calls and resource contention
-- Tech Lead reviews PRs created in previous hour
-- Discovery keeps backlog fresh for next Engineer run
-- Ensures smooth operation across all agents
-
-Available presets: `every_hour`, `every_2_hours`, `every_3_hours`, `4x_daily`, `3x_daily`, `2x_daily`, `daily_morning`, or use custom cron expressions.
 
 ---
 
 ## Linear Integration
 
-Use Linear instead of GitHub Issues for issue tracking:
-
 ```json
 {
-  "owner": "your-github-username",
   "issue_tracker": {
     "type": "linear",
-    "linear": {
-      "team_key": "MUS",
-      "backlog_state": "Backlog"
-    }
-  },
-  "repositories": [...]
+    "linear": { "team_key": "ENG", "backlog_state": "Backlog" }
+  }
 }
 ```
 
-Set `LINEAR_API_KEY` environment variable or add `api_key` to config.
-
-| Field | Description |
-|-------|-------------|
-| `type` | `github` (default) or `linear` |
-| `team_key` | Linear team key (e.g., "MUS", "ENG") |
-| `backlog_state` | State name for backlog (default: "Backlog") |
-
-With Linear, agents:
-- Create issues in your Linear team
-- Fetch backlog items for the Engineer
-- Link branches to Linear issues automatically
+Set `LINEAR_API_KEY` environment variable.
 
 ---
 
 ## Notifications
-
-Get real-time Discord notifications for agent activity:
 
 ```json
 {
@@ -222,133 +212,52 @@ Get real-time Discord notifications for agent activity:
 }
 ```
 
-| Event | Description |
-|-------|-------------|
-| `run_complete` | Agent finished a run |
-| `pr_created` | Engineer created a PR |
-| `pr_merged` | Tech Lead merged a PR |
-| `pr_closed` | Tech Lead closed a PR |
-| `error` | Any agent error |
-
-Notifications are fire-and-forget—webhook failures never block agents.
-
 ---
 
 ## Authentication
 
 ### GitHub Token
 
-Generate a token with `repo` and `workflow` scopes:
-
 ```bash
-# Option 1: Via GitHub CLI
-gh auth token
-
-# Option 2: Manual creation
-# Visit: https://github.com/settings/tokens
-# Scopes: repo, workflow
-```
-
-Add to `.env`:
-```bash
-GITHUB_TOKEN=ghp_your_token_here
+gh auth token  # OR create at https://github.com/settings/tokens (scopes: repo, workflow)
 ```
 
 ### Claude Token
 
-**Option 1: Claude Pro/Max Subscription Token (Recommended)**
-
-Long-lasting token (up to 1 year) from your Claude subscription:
-
 ```bash
-# 1. Run setup-token command
+# Option 1: Claude Pro/Max (recommended)
 claude setup-token
+# Add to .env: CLAUDE_CODE_OAUTH_TOKEN=<token>
 
-# 2. Follow the prompts to generate a long-lived token
-
-# 3. Add to .env
-CLAUDE_CODE_OAUTH_TOKEN=<your_token_from_setup>
-```
-
-**Option 2: Pay-as-you-go API Key**
-
-For users preferring API billing:
-
-```bash
+# Option 2: API key
 # Get from: https://console.anthropic.com/settings/keys
-ANTHROPIC_API_KEY=sk-ant-api03-your_key_here
-```
-
----
-
-## Commands
-
-```bash
-docker exec barbossa barbossa health          # Check status
-docker exec barbossa barbossa run engineer    # Run now
-docker exec barbossa barbossa status          # Activity
-docker compose logs -f                        # Logs
+# Add to .env: ANTHROPIC_API_KEY=sk-ant-api03-...
 ```
 
 ---
 
 ## Troubleshooting
 
-### Authentication failures
-
 ```bash
-# Verify tokens in .env file
-cat .env
-
-# Update tokens
-vim .env  # Edit GITHUB_TOKEN and CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY
-docker compose restart
-```
-
-### Validation errors on startup
-
-```bash
-# Check validation output
+# Check validation
 docker logs barbossa | head -50
 
-# Common fixes:
-# - GITHUB_TOKEN not set or invalid
-# - CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY not set or invalid
-# - Config file malformed
+# Verify tokens
+cat .env
+
+# Update and restart
+vim .env && docker compose restart
 ```
 
 See [troubleshooting docs](https://barbossa.dev/troubleshooting.html) for more.
 
 ---
 
-## Privacy & Telemetry
+## Privacy
 
-Barbossa collects anonymous usage data to improve the project:
+Anonymous telemetry (run counts, success rates). No code or identifying info collected.
 
-- **What's collected:** Anonymous installation ID, agent run counts, success rates, version
-- **What's NOT collected:** Repository names, code, usernames, or any identifying information
-
-**To opt out**, set in your config:
-
-```json
-{
-  "settings": {
-    "telemetry": false
-  }
-}
-```
-
-Or via environment variable:
-
-```bash
-BARBOSSA_ANALYTICS_OPT_OUT=true
-```
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+Opt out: `"settings": { "telemetry": false }`
 
 ---
 
