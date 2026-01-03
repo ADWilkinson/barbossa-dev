@@ -48,7 +48,7 @@ class Barbossa:
     Supports both GitHub Issues and Linear for issue tracking.
     """
 
-    VERSION = "1.8.0"  # Fix: wait for webhook notifications before process exit
+    VERSION = "1.8.1"
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths

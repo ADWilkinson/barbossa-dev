@@ -15,7 +15,7 @@ from typing import Dict, Optional
 PROMPTS_DIR = Path(__file__).parent.parent.parent.parent / "prompts"
 
 # Valid agent types
-AGENT_TYPES = ["engineer", "tech_lead", "discovery", "product_manager", "auditor"]
+AGENT_TYPES = ["engineer", "tech_lead", "discovery", "product_manager", "auditor", "spec_generator", "spec_critique"]
 
 logger = logging.getLogger('barbossa.prompts')
 

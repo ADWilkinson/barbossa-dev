@@ -1,7 +1,7 @@
 # Barbossa Engineer - Claude Context
 
 **Last Updated:** 2026-01-03
-**Version:** v1.8.0
+**Version:** v1.8.1
 
 ## Project Overview
 
@@ -533,6 +533,17 @@ On container startup, `validate.py` checks:
 **Critical failures block startup** to prevent silent failures.
 
 ## Development History
+
+### v1.8.1 - 2026-01-03 (Spec Mode Bugfix)
+- **BUG FIX**: Spec Generator now loads prompts correctly
+- **Issue:** `prompts.py` had a hardcoded `AGENT_TYPES` list that didn't include `spec_generator` or `spec_critique`
+- **Impact:** Spec mode would fail with "Unknown agent type: spec_generator" error
+- **Fix:** Added `spec_generator` and `spec_critique` to the `AGENT_TYPES` list in `src/barbossa/utils/prompts.py`
+- **Files Modified:**
+  - `src/barbossa/utils/prompts.py:18`: Added spec_generator and spec_critique to AGENT_TYPES
+  - All agent versions bumped to v1.8.1
+  - Package version bumped to v1.8.1
+  - Docker image tag updated to v1.8.1
 
 ### v1.8.0 - 2026-01-03 (Spec Mode - Global System Switch)
 - **FEATURE**: Spec Mode - a global system switch that transforms Barbossa from autonomous development to product specification generation

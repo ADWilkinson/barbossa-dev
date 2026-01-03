@@ -47,7 +47,7 @@ from barbossa.utils.notifications import (
 class BarbossaDiscovery:
     """Autonomous discovery agent that creates issues for the pipeline."""
 
-    VERSION = "1.8.0"  # Fix: wait for webhook notifications before process exit
+    VERSION = "1.8.1"
     DEFAULT_BACKLOG_THRESHOLD = 20
     DEFAULT_PRECISION_MODE = "high"
 

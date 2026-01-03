@@ -78,3 +78,4 @@ changelogs/*.md
 changelogs/*.txt
 config/firebase-service-account.json
 .firebase/
+.backup/

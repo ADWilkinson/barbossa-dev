@@ -47,7 +47,7 @@ class BarbossaTechLead:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "1.8.0"  # Fix: wait for webhook notifications before process exit
+    VERSION = "1.8.1"
     ROLE = "tech_lead"
 
     # Default review criteria (can be overridden in config)
