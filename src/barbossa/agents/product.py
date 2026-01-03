@@ -182,14 +182,25 @@ class BarbossaProduct:
         return []
 
     def _clone_or_update_repo(self, repo: Dict) -> Optional[Path]:
-        """Ensure repo is cloned and up to date."""
+        """Ensure repo is cloned and up to date.
+
+        Tries 'main' branch first, falls back to 'master' for older repos.
+        """
         repo_name = repo['name']
         repo_path = self.projects_dir / repo_name
 
         if repo_path.exists():
-            self._run_cmd("git fetch origin && git checkout main && git pull origin main", cwd=str(repo_path))
+            # Try main branch first, fall back to master
+            result = self._run_cmd("git fetch origin && git checkout main && git pull origin main", cwd=str(repo_path))
+            if result is None:
+                # Try master branch as fallback for older repos
+                self._run_cmd("git fetch origin && git checkout master && git pull origin master", cwd=str(repo_path))
         else:
-            self._run_cmd(f"git clone {repo['url']} {repo_name}", cwd=str(self.projects_dir))
+            self.projects_dir.mkdir(parents=True, exist_ok=True)
+            result = self._run_cmd(f"git clone {repo['url']} {repo_name}", cwd=str(self.projects_dir))
+            if result is None:
+                self.logger.error(f"Failed to clone repository: {repo['url']}")
+                return None
 
         if repo_path.exists():
             return repo_path
