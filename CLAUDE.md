@@ -57,9 +57,9 @@ barbossa-engineer/
 - **Owner:** ADWilkinson
 - **Schedule (Optimized):**
   - Engineer: 12x daily at :00 (0,2,4,6,8,10,12,14,16,18,20,22 UTC)
-  - Tech Lead: 12x daily at :00 (1,3,5,7,9,11,13,15,17,19,21,23 UTC) - 1h after engineer
-  - Discovery: 6x daily offset (1,5,9,13,17,21 UTC) - keeps backlog stocked
-  - Product Manager: 3x daily offset (3,11,19 UTC) - quality over quantity
+  - Tech Lead: 12x daily at :00 (1,3,5,7,9,11,13,15,17,19,21,23 UTC), 1h after engineer
+  - Discovery: 6x daily offset (1,5,9,13,17,21 UTC); keeps backlog stocked
+  - Product Manager: 3x daily offset (3,11,19 UTC); prioritizes quality over quantity
   - Auditor: Daily at 06:30 UTC
 - **Schedule Philosophy:** Agents offset to avoid resource contention, ensure fresh PRs are reviewed in next cycle, and keep backlog healthy
 
@@ -80,8 +80,8 @@ barbossa-engineer/
 ### CRITICAL FIXES: Product Manager & Auditor Functionality Restored
 **Date:** 2025-12-26
 **Issues Fixed:**
-1. **Product Manager was returning NO suggestions** - prompt template was completely outdated
-2. **Auditor was only logging recommendations** - not creating actionable GitHub issues
+1. **Product Manager was returning NO suggestions** because the prompt template was completely outdated
+2. **Auditor was only logging recommendations** instead of creating actionable GitHub issues
 
 **Product Manager Fixes (`barbossa_product.py` + `prompts/product_manager.txt`):**
 
@@ -100,10 +100,10 @@ barbossa-engineer/
 - ✅ Added examples of good vs bad feature suggestions
 
 **Impact:**
-- ✅ Product Manager NOW WORKING - created 2 high-value feature issues in test run:
+- ✅ Product Manager NOW WORKING; created 2 high-value feature issues in test run:
   - peerlytics #125: "Custom Date Range Picker for Analytics Dashboard" (value: 8)
   - usdctofiat #116: "Bulk rate update for multiple deposits"
-- ✅ Quality over quantity - can decline to suggest if no high-value ideas
+- ✅ Quality over quantity; can decline to suggest if no high-value ideas
 - ✅ Better feature quality with structured acceptance criteria
 
 **Auditor Enhancements (`barbossa_auditor.py`):**
@@ -209,7 +209,7 @@ barbossa-engineer/
 **Impact:**
 - ✅ Stops wasted effort on unfixable or stalled PRs
 - ✅ Forces Engineer to try different approach (new PR from scratch)
-- ✅ Clears backlog faster - no zombie PRs
+- ✅ Clears backlog faster; no zombie PRs
 - ✅ Still fair (3 chances is reasonable)
 - ✅ 5-day stale cleanup becomes backup, not primary mechanism
 
@@ -280,10 +280,10 @@ barbossa-engineer/
 ## Issue Tracking
 
 ### Supported Systems
-Barbossa supports both **GitHub Issues** (default) and **Linear** for issue tracking. All agents work seamlessly with either system via a unified abstraction layer.
+Barbossa supports both **GitHub Issues** (default) and **Linear** for issue tracking. All agents work with either system through a unified abstraction layer.
 
 ### GitHub Issues (Default)
-- No configuration needed - works out of the box
+- No configuration needed; works out of the box
 - Uses `gh` CLI for issue operations
 - Agents reference issues as `#123`
 - PRs linked via "Closes #123" in PR description
@@ -509,7 +509,7 @@ On container startup, `validate.py` checks:
 3. ✅ `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` environment variable set
 4. ✅ `LINEAR_API_KEY` set and valid (if Linear is configured)
 5. ⚠️ Git user.name and user.email configured (warning only)
-6. ⚠️ SSH keys if SSH URLs configured (warning only - HTTPS recommended)
+6. ⚠️ SSH keys if SSH URLs configured (warning only; HTTPS recommended)
 
 **Critical failures block startup** to prevent silent failures.
 
@@ -518,7 +518,7 @@ On container startup, `validate.py` checks:
 ### v1.7.2 - 2026-01-02 (Discord Webhook Fix)
 - **BUG FIX**: Discord webhook notifications now reliably sent before process exits
 - **Issue:** Notifications used daemon threads that were killed when main process exited
-- **Root Cause:** Python daemon threads (`daemon=True`) terminate when main thread exits - agent run completed before HTTP request finished
+- **Root Cause:** Python daemon threads (`daemon=True`) terminate when the main thread exits, so the agent run completed before the HTTP request finished
 - **Fix:**
   - ✅ Added thread tracking in `notifications.py` to monitor pending notifications
   - ✅ Added `wait_for_pending()` function that blocks until all webhook calls complete
@@ -565,7 +565,7 @@ On container startup, `validate.py` checks:
 - **FEATURE**: Added Discord webhook notification system for real-time agent insights
 - **Design**: Fire-and-forget notifications that never block agent execution
 - **Implementation:**
-  - Created `src/barbossa/utils/notifications.py` - extensible notification module
+  - Created `src/barbossa/utils/notifications.py`, an extensible notification module
   - Integrated notifications into all 5 agents (Engineer, Tech Lead, Discovery, Product, Auditor)
   - Rich Discord embeds with agent-specific colors and emojis
   - Configurable notification types (run_complete, pr_created, pr_merged, pr_closed, error)
@@ -601,7 +601,7 @@ On container startup, `validate.py` checks:
 **Impact:**
 - ✅ Real-time visibility into Barbossa operations via Discord
 - ✅ Immediate error alerts for faster debugging
-- ✅ Non-blocking design - webhook failures never affect agent execution
+- ✅ Non-blocking design; webhook failures never affect agent execution
 - ✅ Extensible for future platforms (Slack, Teams, etc.)
 
 ### v1.6.6 - 2026-01-01 (Product Manager Fix)
@@ -658,7 +658,7 @@ On container startup, `validate.py` checks:
   - ✅ Engineer agent reads `focus` and `known_gaps` from repository config
   - ✅ Product Manager reads `focus` and `known_gaps` from repository config
   - ✅ New config fields injected into agent prompts dynamically
-  - ✅ Backward compatible - repos without these fields continue to work normally
+  - ✅ Backward compatible; repos without these fields continue to work normally
 - **Config Fields:**
   - `focus` (string): Development focus/philosophy for the repository (e.g., "QUALITY & RESILIENCE ONLY")
   - `known_gaps` (array): List of specific known issues and priority areas to address
@@ -711,7 +711,7 @@ On container startup, `validate.py` checks:
   - Package version bumped to v1.6.3
 
 **Impact:**
-- ✅ `auto_merge: false` now works correctly - PRs get approval comments but aren't merged
+- ✅ `auto_merge: false` now works correctly; PRs get approval comments but aren't merged
 - ✅ `auto_merge: true` continues to work as before
 - ✅ Users regain control over when PRs are merged
 - ✅ Prevents unexpected merges when manual review is desired
@@ -733,14 +733,14 @@ On container startup, `validate.py` checks:
 - **Token Type Detection:**
   - sk-ant-oat01-* → Sets `CLAUDE_CODE_OAUTH_TOKEN` (from claude setup-token)
   - sk-ant-api03-* → Sets `ANTHROPIC_API_KEY` (from console.anthropic.com)
-- **Migration:** No action needed - both methods now supported
+- **Migration:** No action needed; both methods now supported
 - All agent versions bumped to v1.6.1
 
 **Impact:**
 - ✅ Both authentication methods now work correctly
 - ✅ `claude setup-token` (recommended) now functional
 - ✅ API keys from console.anthropic.com continue to work
-- ✅ No breaking changes - backward compatible with v1.6.0
+- ✅ No breaking changes; backward compatible with v1.6.0
 
 ### v1.5.1 - 2025-12-28 (Hotfix release)
 - **CRITICAL FIX**: Fixed prompts.py path resolution after v1.5.0 refactor
@@ -752,17 +752,17 @@ On container startup, `validate.py` checks:
 **Impact:**
 - ✅ Agents can now load prompt templates correctly
 - ✅ Fixes "Prompt file not found" error that blocked all agent execution
-- ✅ No configuration changes needed - drop-in replacement for v1.5.0
+- ✅ No configuration changes needed; drop-in replacement for v1.5.0
 
-### v1.5.0 - 2025-12-28 (Internal refactor - no release)
+### v1.5.0 - 2025-12-28 (Internal refactor, not released)
 - **INTERNAL**: Repository restructured to proper Python package layout
 - **NOTE**: This was an internal code reorganization with no user-facing changes
 - Restructured to `src/barbossa/` Python package structure:
-  - `src/barbossa/agents/` - All AI agent modules
-  - `src/barbossa/utils/` - Shared utilities (prompts, issue_tracker, linear_client)
-  - `src/barbossa/cli/` - CLI tool
-  - `scripts/` - Build and deployment scripts
-  - `tests/` - Test suite
+  - `src/barbossa/agents/`: All AI agent modules
+  - `src/barbossa/utils/`: Shared utilities (prompts, issue_tracker, linear_client)
+  - `src/barbossa/cli/`: CLI tool
+  - `scripts/`: Build and deployment scripts
+  - `tests/`: Test suite
 - Added `pyproject.toml` for proper Python package metadata
 - All imports updated to module-based paths (`from barbossa.agents import engineer`)
 - Updated Docker build to use new directory structure
@@ -817,7 +817,7 @@ On container startup, `validate.py` checks:
 - Reduces manual cleanup needed for frontend layout, responsive design, visual polish
 
 ### v1.2.0 - 2025-12-26
-- **CRITICAL FIX**: Product Manager prompt completely rewritten - NOW WORKING
+- **CRITICAL FIX**: Product Manager prompt completely rewritten and now working
 - **CRITICAL FIX**: Auditor now creates GitHub issues for critical quality problems
 - Product Manager: Rewrote prompt with JSON schema and "NO SUGGESTION" option
 - Product Manager: Successfully creating high-value feature issues (peerlytics #125, usdctofiat #116)
@@ -870,11 +870,11 @@ On container startup, `validate.py` checks:
 
 ## Next Steps
 
-1. **Monitor v1.1.0 Fixes** - Verify Engineer catches Tech Lead feedback on first review
-2. **Monitor Tech Lead Review Method** - Check if using formal reviews or falling back to comments
-3. **Monitor 3-Strikes Rule** - Verify zombie PRs get closed after 3 REQUEST_CHANGES
-4. **Monitor Detection Logging** - Review logs to confirm proper PR flagging
-5. **SSH Keys (Optional)** - Mount ~/.ssh if switching to SSH URLs
+1. **Monitor v1.1.0 Fixes**: Verify Engineer catches Tech Lead feedback on first review
+2. **Monitor Tech Lead Review Method**: Check if using formal reviews or falling back to comments
+3. **Monitor 3-Strikes Rule**: Verify zombie PRs get closed after 3 REQUEST_CHANGES
+4. **Monitor Detection Logging**: Review logs to confirm proper PR flagging
+5. **SSH Keys (Optional)**: Mount ~/.ssh if switching to SSH URLs
 
 ## Troubleshooting
 
