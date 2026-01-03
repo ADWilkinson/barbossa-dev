@@ -134,6 +134,9 @@ class GitHubIssueTracker(IssueTracker):
             )
             if result.returncode == 0:
                 return result.stdout.strip()
+            # Log stderr for debugging when command fails
+            if result.stderr:
+                self.logger.warning(f"Command failed (exit {result.returncode}): {result.stderr.strip()}")
             return None
         except Exception as e:
             self.logger.warning(f"Command failed: {cmd} - {e}")
@@ -187,6 +190,36 @@ class GitHubIssueTracker(IssueTracker):
         except json.JSONDecodeError:
             return []  # Invalid JSON from gh command
 
+    def _ensure_label_exists(self, label: str) -> bool:
+        """Create label if it doesn't exist. Returns True if label exists/created."""
+        # Check if label exists
+        check_cmd = f'gh label list --repo {self.owner}/{self.repo} --search "{label}" --json name'
+        result = self._run_cmd(check_cmd, timeout=15)
+
+        if result:
+            try:
+                import json
+                existing = json.loads(result)
+                if any(l.get('name', '').lower() == label.lower() for l in existing):
+                    return True
+            except json.JSONDecodeError:
+                pass
+
+        # Label doesn't exist, create it
+        colors = {
+            'quality': 'd93f0b',      # Red-orange
+            'backlog': '0e8a16',      # Green
+            'discovery': '1d76db',    # Blue
+            'feature': 'a2eeef',      # Cyan
+            'product': 'f9d0c4',      # Peach
+        }
+        color = colors.get(label, 'ededed')  # Default gray
+
+        create_cmd = f'gh label create "{label}" --repo {self.owner}/{self.repo} --color "{color}" --force 2>/dev/null || true'
+        self._run_cmd(create_cmd, timeout=15)
+        self.logger.info(f"Created label '{label}' on {self.owner}/{self.repo}")
+        return True
+
     def create_issue(
         self,
         title: str,
@@ -196,6 +229,11 @@ class GitHubIssueTracker(IssueTracker):
         import tempfile
 
         labels = labels or ['backlog']
+
+        # Ensure all labels exist before creating issue
+        for label in labels:
+            self._ensure_label_exists(label)
+
         label_str = ','.join(labels)
 
         # Write body to temp file to handle special characters
