@@ -31,7 +31,8 @@ from barbossa.utils.notifications import (
     notify_agent_run_complete,
     notify_error,
     notify_spec_created,
-    wait_for_pending
+    wait_for_pending,
+    process_retry_queue
 )
 
 
@@ -852,6 +853,9 @@ This ticket covers the **{repo_name}** portion of: **{spec.get('title', 'Feature
         self.logger.info("BARBOSSA SPEC GENERATOR RUN")
         self.logger.info(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         self.logger.info(f"{'#'*60}\n")
+
+        # Process any pending webhook retries from previous runs
+        process_retry_queue()
 
         # Track run start
         track_run_start("spec_generator", run_session_id, len(self.products))
