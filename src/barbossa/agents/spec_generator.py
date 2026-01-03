@@ -12,6 +12,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -721,8 +722,6 @@ This ticket covers the **{repo_name}** portion of: **{spec.get('title', 'Feature
             self.logger.debug("Skipping issue body update for Linear (uses native relationships)")
             return
 
-        import tempfile
-
         with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
             f.write(body)
             body_file = f.name
@@ -737,7 +736,6 @@ This ticket covers the **{repo_name}** portion of: **{spec.get('title', 'Feature
             else:
                 self.logger.warning(f"Could not update issue #{issue_number} with child references (non-critical)")
         finally:
-            import os
             os.unlink(body_file)
 
     def generate_for_product(self, product: Dict) -> int:

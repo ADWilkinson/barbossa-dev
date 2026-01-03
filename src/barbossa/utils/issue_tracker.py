@@ -198,7 +198,6 @@ class GitHubIssueTracker(IssueTracker):
 
         if result:
             try:
-                import json
                 existing = json.loads(result)
                 if any(l.get('name', '').lower() == label.lower() for l in existing):
                     return True
@@ -264,7 +263,6 @@ class GitHubIssueTracker(IssueTracker):
                     )
             return None
         finally:
-            import os
             os.unlink(body_file)
 
     def get_issue_list_command(self, labels: Optional[List[str]] = None, limit: int = 10) -> str:

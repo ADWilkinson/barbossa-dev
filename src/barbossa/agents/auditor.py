@@ -24,7 +24,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from collections import defaultdict
-import re
 import uuid
 
 # Local prompt loading and optional analytics/state tracking

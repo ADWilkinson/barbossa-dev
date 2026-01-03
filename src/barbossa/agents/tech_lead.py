@@ -16,12 +16,14 @@ Prompts loaded locally from prompts/ directory.
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
+import tempfile
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
-import uuid
 
 # Local prompt loading and optional analytics/state tracking
 from barbossa.utils.prompts import get_system_prompt
@@ -362,7 +364,6 @@ class BarbossaTechLead:
 
     def _extract_section(self, body: str, heading: str) -> str:
         """Extract a markdown section by heading (e.g., 'Evidence')."""
-        import re
         if not body:
             return ""
         pattern = rf"##\s*{re.escape(heading)}\s*(.*?)(?:\n##\s|\Z)"
@@ -371,7 +372,6 @@ class BarbossaTechLead:
 
     def _has_evidence(self, pr_body: str) -> bool:
         """Check if PR body includes concrete evidence (issue, repro, log, or file/line)."""
-        import re
         if not pr_body:
             return False
         evidence_section = self._extract_section(pr_body, "Evidence") or pr_body
@@ -420,13 +420,11 @@ class BarbossaTechLead:
         return [f for f in self._changed_file_names(files) if f in manifests]
 
     def _lockfile_disclosed(self, pr_body: str) -> bool:
-        import re
         if not pr_body:
             return False
         return bool(re.search(r'Lockfile changes:\s*YES', pr_body, re.IGNORECASE))
 
     def _dependency_changes_disclosed(self, pr_body: str) -> bool:
-        import re
         if not pr_body:
             return False
         match = re.search(r'Dependency changes:\s*(.+)', pr_body, re.IGNORECASE)
@@ -441,8 +439,6 @@ class BarbossaTechLead:
 
     def _detect_major_upgrades(self, diff: str) -> List[Dict]:
         """Detect major version upgrades in dependency diffs (heuristic)."""
-        import re
-
         def parse_major(version: str) -> Optional[int]:
             if not version:
                 return None
@@ -513,7 +509,6 @@ class BarbossaTechLead:
             self.logger.warning(f"Could not check existing comments: {e}")
 
         comment_body = f"{signature}\n\n{body}"
-        import tempfile
         with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
             f.write(comment_body)
             temp_file = f.name
@@ -595,8 +590,6 @@ class BarbossaTechLead:
 
     def _parse_decision(self, output: str) -> Optional[Dict]:
         """Parse the decision from Claude's output with robust pattern matching"""
-        import re
-
         result = {
             'decision': None,
             'reasoning': 'No reasoning provided',
@@ -769,7 +762,6 @@ class BarbossaTechLead:
 ---
 _Auto-merge is disabled. Please merge manually when ready._"""
 
-                    import tempfile
                     with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
                         f.write(comment_body)
                         temp_file = f.name
@@ -861,7 +853,6 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                 except Exception as e:
                     self.logger.warning(f"Could not check for duplicate comments: {e}")
 
-                import tempfile
                 with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
                     f.write(comment_body)
                     temp_file = f.name
