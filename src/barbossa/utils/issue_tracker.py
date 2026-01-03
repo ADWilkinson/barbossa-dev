@@ -147,8 +147,8 @@ class GitHubIssueTracker(IssueTracker):
             try:
                 issues = json.loads(result)
                 return len(issues)
-            except:
-                pass
+            except json.JSONDecodeError:
+                pass  # Invalid JSON from gh command
         return 0
 
     def get_existing_titles(self, limit: int = 50) -> List[str]:
@@ -159,8 +159,8 @@ class GitHubIssueTracker(IssueTracker):
             try:
                 issues = json.loads(result)
                 return [i['title'].lower() for i in issues]
-            except:
-                pass
+            except json.JSONDecodeError:
+                pass  # Invalid JSON from gh command
         return []
 
     def list_issues(
@@ -184,8 +184,8 @@ class GitHubIssueTracker(IssueTracker):
         try:
             issues_data = json.loads(result)
             return [Issue.from_github(d) for d in issues_data]
-        except:
-            return []
+        except json.JSONDecodeError:
+            return []  # Invalid JSON from gh command
 
     def create_issue(
         self,

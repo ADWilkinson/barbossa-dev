@@ -172,8 +172,8 @@ class BarbossaProduct:
             try:
                 prs = json.loads(result)
                 return [p['title'].lower() for p in prs]
-            except:
-                pass
+            except json.JSONDecodeError as e:
+                self.logger.warning(f"Could not parse PR list: {e}")
         return []
 
     def _clone_or_update_repo(self, repo: Dict) -> Optional[Path]:
