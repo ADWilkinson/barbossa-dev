@@ -2,7 +2,7 @@
 
 > AI engineers that ship code while you sleep.
 
-Barbossa is an autonomous development pipeline powered by Claude. Version 1.8.0.
+Barbossa is an autonomous development pipeline powered by Claude. Version 1.8.1.
 
 ## Two Modes
 
@@ -139,8 +139,9 @@ Opt out: `"settings": { "telemetry": false }`
 
 ## Version
 
-**Current:** 1.8.0 (2026-01-03)
+**Current:** 1.8.1 (2026-01-03)
 
+- v1.8.1: Spec Generator prompt loading fix
 - v1.8.0: Spec Mode with two-pass quality review
 - v1.7.0: Discord webhook notifications
 - v1.6.4: Repository focus and known_gaps config

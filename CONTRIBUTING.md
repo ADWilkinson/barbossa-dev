@@ -17,14 +17,16 @@ git clone https://github.com/your-username/barbossa.git
 cd barbossa
 
 # Copy example config
-cp config/barbossa.example.json config/repositories.json
+cp config/repositories.json.example config/repositories.json
 
 # Set up environment
 cp .env.example .env
 # Edit .env with your settings
 
 # Run locally (without Docker)
-python3 barbossa_engineer.py --help
+PYTHONPATH=src python3 -m barbossa.agents.engineer --help
+# Or use the CLI:
+barbossa run engineer --help
 ```
 
 ## Making Changes
