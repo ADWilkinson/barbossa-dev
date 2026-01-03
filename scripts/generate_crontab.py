@@ -2,15 +2,20 @@
 """
 Generate crontab from config/repositories.json schedule settings.
 
-Default schedule (if not configured):
-- Engineer: every 2 hours at :00 (12x daily)
-- Tech Lead: 1h after engineer (12x daily) - avoids collision, reviews fresh PRs
-- Discovery: 6x daily offset from engineer - keeps backlog stocked
-- Product Manager: 3x daily offset - quality over quantity
-- Auditor: daily at 06:30
+TWO MODES:
+1. AUTONOMOUS MODE (default): Full development pipeline
+   - Engineer: every 2 hours at :00 (12x daily)
+   - Tech Lead: 1h after engineer (12x daily) - avoids collision, reviews fresh PRs
+   - Discovery: 6x daily offset from engineer - keeps backlog stocked
+   - Product Manager: 3x daily offset - quality over quantity
+   - Auditor: daily at 06:30
 
-Schedule philosophy: Offset agents to avoid resource contention and ensure
-fresh work is reviewed/processed in the next cycle.
+2. SPEC MODE: Product AI for specifications only
+   - Only Spec Generator runs
+   - All other agents disabled
+   - Generates detailed cross-repo feature specs
+
+Enable spec mode with: settings.spec_mode.enabled = true
 """
 
 import json
@@ -18,8 +23,7 @@ import sys
 from pathlib import Path
 
 
-# Default schedules (cron format)
-# Optimized to avoid resource contention and ensure fresh work is processed
+# Default schedules for autonomous mode (cron format)
 DEFAULTS = {
     'engineer': {
         'cron': '0 0,2,4,6,8,10,12,14,16,18,20,22 * * *',
@@ -40,12 +44,16 @@ DEFAULTS = {
     'auditor': {
         'cron': '30 6 * * *',
         'description': 'Daily at 06:30'
+    },
+    'spec_generator': {
+        'cron': '0 9 * * *',
+        'description': 'Daily at 09:00 (spec mode)'
     }
 }
 
 # Human-readable schedule presets
 PRESETS = {
-    # Engineer presets
+    # Hourly presets
     'every_hour': '0 * * * *',
     'every_2_hours': '0 0,2,4,6,8,10,12,14,16,18,20,22 * * *',
     'every_3_hours': '0 0,3,6,9,12,15,18,21 * * *',
@@ -87,29 +95,51 @@ def resolve_schedule(schedule_value: str) -> str:
     return None
 
 
-def generate_crontab(config_path: Path) -> str:
-    """Generate crontab content from config."""
-
-    # Load config
-    config = {}
-    if config_path.exists():
-        try:
-            with open(config_path) as f:
-                config = json.load(f)
-        except Exception as e:
-            print(f"Warning: Could not load config: {e}", file=sys.stderr)
-
-    settings = config.get('settings', {})
-    schedule = settings.get('schedule', {})
-
+def generate_spec_mode_crontab(config: dict, settings: dict) -> list:
+    """Generate crontab for SPEC MODE (only spec generator runs)."""
     lines = [
-        "# Barbossa Crontab - Generated from config",
-        "# Edit config/repositories.json to change schedule",
+        "# Barbossa Crontab - SPEC MODE",
+        "# Only Spec Generator is active. Other agents are disabled.",
+        "# To switch to Autonomous Mode, set settings.spec_mode.enabled = false",
         "",
         "SHELL=/bin/bash",
         "PATH=/usr/local/bin:/usr/bin:/bin",
         "",
     ]
+
+    spec_mode = settings.get('spec_mode', {})
+    products = config.get('products', [])
+
+    # Get global spec_mode schedule
+    schedule = resolve_schedule(spec_mode.get('schedule')) or DEFAULTS['spec_generator']['cron']
+
+    if products:
+        lines.append(f"# Spec Generator - {DEFAULTS['spec_generator']['description']}")
+        lines.append(f"# Generates cross-repo specifications for {len(products)} product(s)")
+        lines.append(f'{schedule} cd /app && PYTHONPATH=/app/src python3 -m barbossa.agents.spec_generator >> /app/logs/spec_cron.log 2>&1')
+    else:
+        lines.append("# WARNING: Spec mode enabled but no products configured!")
+        lines.append("# Add products to config/repositories.json")
+
+    lines.append("")
+    lines.append("")
+
+    return lines
+
+
+def generate_autonomous_mode_crontab(config: dict, settings: dict) -> list:
+    """Generate crontab for AUTONOMOUS MODE (full development pipeline)."""
+    lines = [
+        "# Barbossa Crontab - AUTONOMOUS MODE",
+        "# Full development pipeline with all agents active.",
+        "# To switch to Spec Mode, set settings.spec_mode.enabled = true",
+        "",
+        "SHELL=/bin/bash",
+        "PATH=/usr/local/bin:/usr/bin:/bin",
+        "",
+    ]
+
+    schedule = settings.get('schedule', {})
 
     # Engineer
     engineer_settings = settings.get('engineer', {})
@@ -153,6 +183,32 @@ def generate_crontab(config_path: Path) -> str:
 
     # Required empty line at end
     lines.append("")
+
+    return lines
+
+
+def generate_crontab(config_path: Path) -> str:
+    """Generate crontab content from config."""
+
+    # Load config
+    config = {}
+    if config_path.exists():
+        try:
+            with open(config_path) as f:
+                config = json.load(f)
+        except Exception as e:
+            print(f"Warning: Could not load config: {e}", file=sys.stderr)
+
+    settings = config.get('settings', {})
+
+    # Check if spec_mode is enabled (global switch)
+    spec_mode = settings.get('spec_mode', {})
+    is_spec_mode = spec_mode.get('enabled', False)
+
+    if is_spec_mode:
+        lines = generate_spec_mode_crontab(config, settings)
+    else:
+        lines = generate_autonomous_mode_crontab(config, settings)
 
     return "\n".join(lines)
 

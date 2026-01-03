@@ -4,9 +4,21 @@ How Barbossa works under the hood.
 
 ---
 
+## Operating Modes
+
+Barbossa has two operating modes controlled by `settings.spec_mode.enabled`:
+
+### Autonomous Mode (Default)
+Five AI agents work in a continuous development pipeline. Engineer implements, Tech Lead reviews, Discovery finds issues, Product suggests features, Auditor monitors health.
+
+### Spec Mode
+When `spec_mode.enabled = true`, all autonomous agents are disabled. Only the Spec Generator runs, creating detailed cross-repo product specifications.
+
+---
+
 ## System Overview
 
-Barbossa is a team of five AI agents running in a Docker container. Each agent has a specific role and runs on a schedule.
+Barbossa runs AI agents in a Docker container. Each agent has a specific role and runs on a schedule.
 
 ```
 +--------------------------------------------------+
@@ -179,6 +191,25 @@ Weekly health check of the entire system.
 - Actionable recommendations
 - Creates GitHub issues for critical problems
 
+### Spec Generator (Spec Mode Only)
+
+Cross-repo product specification generator. **Only runs when `spec_mode.enabled = true`.**
+
+**Workflow:**
+1. Loads "products" (groups of linked repositories) from config
+2. Clones/updates all linked repositories
+3. Aggregates context from CLAUDE.md files + product config
+4. Calls Claude to generate detailed, prompt-ready specs
+5. Creates distributed tickets:
+   - Parent spec in `primary_repo` with `spec` label
+   - Child implementation tickets in each affected repo
+
+**Key behaviors:**
+- Semantic deduplication prevents duplicate specs
+- Value scoring filters low-value ideas
+- Each child ticket is self-contained and implementation-ready
+- Product context (vision, constraints, strategy) guides spec generation
+
 ---
 
 ## File Structure
@@ -187,26 +218,27 @@ Weekly health check of the entire system.
 barbossa-engineer/
 ├── src/barbossa/
 │   ├── agents/
-│   │   ├── engineer.py      # Main engineer agent
-│   │   ├── tech_lead.py     # PR reviewer agent
-│   │   ├── discovery.py     # Tech debt finder
-│   │   ├── product.py       # Feature suggester
-│   │   └── auditor.py       # Health monitor
+│   │   ├── engineer.py        # Main engineer agent
+│   │   ├── tech_lead.py       # PR reviewer agent
+│   │   ├── discovery.py       # Tech debt finder
+│   │   ├── product.py         # Feature suggester
+│   │   ├── auditor.py         # Health monitor
+│   │   └── spec_generator.py  # Cross-repo spec generator (Spec Mode)
 │   ├── utils/
-│   │   ├── prompts.py       # Prompt template loader
-│   │   ├── issue_tracker.py # GitHub/Linear abstraction
-│   │   ├── linear_client.py # Linear API wrapper
-│   │   └── notifications.py # Discord webhook notifications
+│   │   ├── prompts.py         # Prompt template loader
+│   │   ├── issue_tracker.py   # GitHub/Linear abstraction
+│   │   ├── linear_client.py   # Linear API wrapper
+│   │   └── notifications.py   # Discord webhook notifications
 │   └── cli/
-│       └── barbossa         # CLI entrypoint
-├── prompts/                  # Prompt templates
+│       └── barbossa           # CLI entrypoint
+├── prompts/                    # Prompt templates
 ├── config/
-│   └── repositories.json    # Your configuration
+│   └── repositories.json      # Your configuration
 ├── scripts/
-│   ├── validate.py          # Startup validation
-│   ├── generate_crontab.py  # Schedule generator
-│   └── run.sh               # Agent runner
-└── logs/                    # Agent logs
+│   ├── validate.py            # Startup validation
+│   ├── generate_crontab.py    # Mode-aware schedule generator
+│   └── run.sh                 # Agent runner
+└── logs/                      # Agent logs
 ```
 
 ---

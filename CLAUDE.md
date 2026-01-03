@@ -1,7 +1,7 @@
 # Barbossa Engineer - Claude Context
 
-**Last Updated:** 2026-01-02
-**Version:** v1.7.3
+**Last Updated:** 2026-01-03
+**Version:** v1.8.0
 
 ## Project Overview
 
@@ -19,6 +19,7 @@ barbossa-engineer/
 │       │   ├── discovery.py # Discovery - finds code improvements
 │       │   ├── product.py   # Product manager - creates feature issues
 │       │   ├── auditor.py   # Auditor - system health checks
+│       │   ├── spec_generator.py  # Spec Generator - cross-repo product specs
 │       │   └── firebase.py  # Firebase sync (future)
 │       ├── utils/           # Shared utilities
 │       │   ├── prompts.py   # Prompt templates loader
@@ -452,6 +453,18 @@ Add to `config/repositories.json`:
 3. Calculates health score (0-100)
 4. Generates recommendations for improvements
 
+### Spec Generator Agent (`spec_generator.py`)
+**Only runs when spec_mode.enabled=true** (all other agents disabled)
+1. Operates on "products" (groups of linked repositories)
+2. Aggregates context from all linked repos' CLAUDE.md files
+3. Uses product context (vision, constraints, strategy notes) from config
+4. Generates detailed, prompt-ready cross-repo specifications
+5. Creates distributed tickets:
+   - Parent spec ticket in primary_repo with `spec` label
+   - Child implementation tickets in each affected repo with `backlog` label
+6. Links parent ↔ children for traceability
+7. Semantic deduplication prevents duplicate specs
+
 ## Common Operations
 
 ### Manual Agent Execution
@@ -462,6 +475,8 @@ docker exec -it barbossa barbossa run tech-lead
 docker exec -it barbossa barbossa run discovery
 docker exec -it barbossa barbossa run product
 docker exec -it barbossa barbossa run auditor
+docker exec -it barbossa barbossa run spec                        # All products
+docker exec -it barbossa barbossa run spec --product my-platform  # Specific product
 
 # Health check
 docker exec -it barbossa barbossa health
@@ -508,12 +523,107 @@ On container startup, `validate.py` checks:
 2. ✅ `GITHUB_TOKEN` environment variable set and valid
 3. ✅ `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` environment variable set
 4. ✅ `LINEAR_API_KEY` set and valid (if Linear is configured)
-5. ⚠️ Git user.name and user.email configured (warning only)
-6. ⚠️ SSH keys if SSH URLs configured (warning only; HTTPS recommended)
+5. ✅ Spec mode configuration valid (if enabled)
+   - Products array must exist with at least one product
+   - All product repositories exist in `repositories` array
+   - Each product has `primary_repo` set
+6. ⚠️ Git user.name and user.email configured (warning only)
+7. ⚠️ SSH keys if SSH URLs configured (warning only; HTTPS recommended)
 
 **Critical failures block startup** to prevent silent failures.
 
 ## Development History
+
+### v1.8.0 - 2026-01-03 (Spec Mode - Global System Switch)
+- **FEATURE**: Spec Mode - a global system switch that transforms Barbossa from autonomous development to product specification generation
+- **Purpose**: When enabled, the system stops autonomous code implementation and instead generates detailed, prompt-ready feature specs that span multiple linked repositories
+
+**Two Modes:**
+1. **AUTONOMOUS MODE (default)**: All agents run (Engineer, Tech Lead, Discovery, Product Manager, Auditor)
+2. **SPEC MODE**: Only Spec Generator runs - all other agents are disabled
+
+**Design Philosophy:**
+- Products are groups of linked repositories that form a coherent system
+- Specs span the full stack (backend, frontend, indexer, etc.)
+- Each child ticket is prompt-ready for direct Claude implementation
+- Distributed tickets link parent ↔ children for traceability
+
+**New Files:**
+- `src/barbossa/agents/spec_generator.py`: New agent (~800 lines)
+- `prompts/spec_generator.txt`: Prompt template for spec generation
+
+**Configuration (Global System Switch):**
+```json
+{
+  "settings": {
+    "spec_mode": {
+      "enabled": true,                    // GLOBAL SWITCH - disables all other agents
+      "schedule": "0 9 * * *",            // Daily at 09:00 UTC
+      "max_specs_per_run": 2,
+      "deduplication_days": 14,
+      "min_value_score": 7,
+      "spec_label": "spec",
+      "implementation_label": "backlog"
+    }
+  },
+  "products": [
+    {
+      "name": "my-platform",
+      "description": "Full-stack platform",
+      "repositories": ["backend-api", "frontend-web", "frontend-mobile"],
+      "primary_repo": "frontend-web",
+      "context": {
+        "vision": "Become the leading platform for X",
+        "current_phase": "MVP hardening",
+        "target_users": "Small business owners",
+        "constraints": ["Must support mobile browsers"],
+        "strategy_notes": ["BD feedback: faster onboarding needed"],
+        "known_integrations": {
+          "backend-api": "REST API - user management, auth",
+          "frontend-web": "React SPA - dashboard",
+          "frontend-mobile": "React Native app"
+        }
+      }
+    }
+  ]
+}
+```
+
+**Crontab Behavior:**
+- **Spec Mode enabled**: Only Spec Generator cron job generated
+- **Spec Mode disabled (default)**: All autonomous agent cron jobs generated
+
+**Ticket Creation:**
+- Parent spec ticket in `primary_repo` with `[SPEC]` prefix and `spec` label
+- Child implementation tickets in each affected repo with `backlog` label
+- Cross-references link all tickets together
+- Each child ticket contains prompt-ready implementation details
+
+**Files Modified:**
+- `src/barbossa/agents/spec_generator.py`: New agent
+- `prompts/spec_generator.txt`: New prompt template
+- `src/barbossa/cli/barbossa`: Added `spec` agent command
+- `src/barbossa/utils/notifications.py`: Added `notify_spec_created()`
+- `scripts/generate_crontab.py`: Mode-aware crontab generation
+- `scripts/validate.py`: Spec mode validation
+- `config/repositories.json.example`: Updated schema documentation
+- All agent versions bumped to v1.8.0
+
+**Usage:**
+```bash
+barbossa run spec                        # All products
+barbossa run spec --product my-platform  # Specific product only
+```
+
+**Impact:**
+- ✅ Global switch between autonomous dev and spec generation
+- ✅ All other agents disabled when spec_mode.enabled=true
+- ✅ Cross-repo feature planning without code implementation
+- ✅ Detailed specs usable as implementation prompts
+- ✅ Distributed tickets with full traceability
+- ✅ Strategic context (vision, constraints, BD notes) fed to Claude
+- ✅ Semantic deduplication prevents duplicate specs
+- ✅ Discord notifications for new specs
 
 ### v1.7.2 - 2026-01-02 (Discord Webhook Fix)
 - **BUG FIX**: Discord webhook notifications now reliably sent before process exits

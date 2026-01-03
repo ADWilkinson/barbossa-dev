@@ -328,6 +328,87 @@ export BARBOSSA_ANALYTICS_OPT_OUT=true
 
 ---
 
+## Spec Mode
+
+### Product Specification Generation
+
+Use Spec Mode to generate detailed cross-repo feature specifications instead of autonomous development:
+
+```json
+{
+  "owner": "yourname",
+  "repositories": [
+    {
+      "name": "backend-api",
+      "url": "https://github.com/yourname/backend-api.git"
+    },
+    {
+      "name": "frontend-web",
+      "url": "https://github.com/yourname/frontend-web.git"
+    },
+    {
+      "name": "mobile-app",
+      "url": "https://github.com/yourname/mobile-app.git"
+    }
+  ],
+  "products": [
+    {
+      "name": "my-platform",
+      "description": "Full-stack platform with web and mobile clients",
+      "repositories": ["backend-api", "frontend-web", "mobile-app"],
+      "primary_repo": "frontend-web",
+      "context": {
+        "vision": "Become the leading platform for X",
+        "current_phase": "MVP hardening - focus on reliability and UX",
+        "target_users": "Small business owners needing Y",
+        "constraints": [
+          "Must support mobile browsers",
+          "API response time < 200ms",
+          "Keep bundle size under 500KB"
+        ],
+        "strategy_notes": [
+          "BD feedback: Users want faster onboarding",
+          "Competitors are adding multi-language support"
+        ],
+        "known_integrations": {
+          "backend-api": "REST API - user management, data storage, auth",
+          "frontend-web": "React SPA - user dashboard and settings",
+          "mobile-app": "React Native - mobile experience"
+        }
+      }
+    }
+  ],
+  "settings": {
+    "spec_mode": {
+      "enabled": true,
+      "schedule": "0 9 * * *",
+      "max_specs_per_run": 2,
+      "min_value_score": 7
+    }
+  }
+}
+```
+
+**What happens:**
+- Spec Generator runs daily at 09:00
+- Creates parent spec tickets in `frontend-web` with `spec` label
+- Creates child implementation tickets in each affected repo with `backlog` label
+- Each ticket is prompt-ready for AI implementation
+
+### Switching Between Modes
+
+```json
+// Enable Spec Mode (disables all other agents)
+"spec_mode": { "enabled": true }
+
+// Disable Spec Mode (enables all autonomous agents)
+"spec_mode": { "enabled": false }
+```
+
+Restart Barbossa after changing modes.
+
+---
+
 ## Common Workflows
 
 ### Adding Barbossa to Existing Project
@@ -344,20 +425,16 @@ Initial issues will be created by Discovery agent. Engineer picks them up automa
 Run any agent immediately:
 
 ```bash
-# Create issues
-docker exec barbossa barbossa run discovery
+# Autonomous mode agents
+docker exec barbossa barbossa run discovery    # Create issues
+docker exec barbossa barbossa run engineer     # Implement from backlog
+docker exec barbossa barbossa run tech-lead    # Review pending PRs
+docker exec barbossa barbossa run product      # Propose features
+docker exec barbossa barbossa run auditor      # Health check
 
-# Implement from backlog
-docker exec barbossa barbossa run engineer
-
-# Review pending PRs
-docker exec barbossa barbossa run tech-lead
-
-# Propose features
-docker exec barbossa barbossa run product
-
-# Health check
-docker exec barbossa barbossa run auditor
+# Spec mode agent
+docker exec barbossa barbossa run spec                        # All products
+docker exec barbossa barbossa run spec --product my-platform  # Specific product
 ```
 
 ### Checking Status

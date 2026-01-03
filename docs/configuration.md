@@ -307,6 +307,102 @@ Control which events trigger notifications:
 
 ---
 
+## Spec Mode (Product Specifications)
+
+**New in v1.8.0:** Spec Mode transforms Barbossa from autonomous development into a Product AI that generates detailed feature specifications.
+
+### How It Works
+
+When `spec_mode.enabled = true`:
+- All autonomous agents are **disabled** (Engineer, Tech Lead, Discovery, Product, Auditor)
+- Only the **Spec Generator** runs
+- Generates cross-repo specifications for linked repository groups ("products")
+- Creates distributed tickets: parent spec + child implementation tickets
+
+### Configuration
+
+```json
+{
+  "settings": {
+    "spec_mode": {
+      "enabled": true,
+      "schedule": "0 9 * * *",
+      "max_specs_per_run": 2,
+      "deduplication_days": 14,
+      "min_value_score": 7,
+      "spec_label": "spec",
+      "implementation_label": "backlog"
+    }
+  },
+  "products": [
+    {
+      "name": "my-platform",
+      "description": "Full-stack platform with API and web frontend",
+      "repositories": ["backend-api", "frontend-web"],
+      "primary_repo": "frontend-web",
+      "context": {
+        "vision": "Become the leading platform for X",
+        "current_phase": "MVP hardening - focus on reliability",
+        "target_users": "Small business owners",
+        "constraints": [
+          "Must support mobile browsers",
+          "API response time < 200ms"
+        ],
+        "strategy_notes": [
+          "BD feedback: Users want faster onboarding",
+          "Q1 focus is enterprise features"
+        ],
+        "known_integrations": {
+          "backend-api": "REST API - user management, data storage",
+          "frontend-web": "React SPA - dashboard and settings"
+        }
+      }
+    }
+  ]
+}
+```
+
+### Spec Mode Settings
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `enabled` | `false` | **Global switch** - when true, disables all other agents |
+| `schedule` | `0 9 * * *` | Cron schedule for spec generation |
+| `max_specs_per_run` | `2` | Maximum specs to generate per run |
+| `deduplication_days` | `14` | Days to check for duplicate specs |
+| `min_value_score` | `7` | Minimum value score (1-10) to create a spec |
+| `spec_label` | `spec` | Label for parent spec tickets |
+| `implementation_label` | `backlog` | Label for child implementation tickets |
+
+### Product Configuration
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Product identifier |
+| `description` | No | Human-readable description |
+| `repositories` | Yes | List of linked repository names |
+| `primary_repo` | Yes | Where parent spec tickets are created |
+| `context.vision` | No | Product vision statement |
+| `context.current_phase` | No | Current development phase |
+| `context.target_users` | No | Target user description |
+| `context.constraints` | No | Technical/business constraints |
+| `context.strategy_notes` | No | Strategic context (BD feedback, etc.) |
+| `context.known_integrations` | No | How each repo fits in the system |
+
+### Switching Modes
+
+```json
+// Autonomous Mode (default)
+"spec_mode": { "enabled": false }
+
+// Spec Mode
+"spec_mode": { "enabled": true }
+```
+
+Restart Barbossa after changing modes to regenerate the crontab.
+
+---
+
 ## Timezone
 
 Set the `TZ` environment variable in docker-compose.yml to control when agents run. Default is `UTC`.

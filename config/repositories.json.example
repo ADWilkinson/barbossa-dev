@@ -1,95 +1,120 @@
 {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BARBOSSA CONFIGURATION
+  // ═══════════════════════════════════════════════════════════════════════════
+  //
+  // TWO MODES:
+  //   1. AUTONOMOUS MODE (default) - AI implements code from backlog
+  //   2. SPEC MODE - AI generates feature specs, no code changes
+  //
+  // MINIMAL CONFIG (Autonomous Mode):
+  //   {
+  //     "owner": "your-github-username",
+  //     "repositories": [{ "name": "my-app", "url": "https://github.com/you/my-app.git" }]
+  //   }
+  //
+  // MINIMAL CONFIG (Spec Mode):
+  //   {
+  //     "owner": "your-github-username",
+  //     "repositories": [
+  //       { "name": "backend", "url": "..." },
+  //       { "name": "frontend", "url": "..." }
+  //     ],
+  //     "products": [{ "name": "my-product", "repositories": ["backend", "frontend"], "primary_repo": "frontend" }],
+  //     "settings": { "spec_mode": { "enabled": true } }
+  //   }
+  //
+  // ═══════════════════════════════════════════════════════════════════════════
+
   "owner": "your-github-username",
 
-  // OPTIONAL: Issue tracker configuration (defaults to GitHub Issues)
-  // Uncomment to use Linear instead:
-  // "issue_tracker": {
-  //   "type": "linear",
-  //   "linear": {
-  //     "team_key": "MUS",
-  //     "backlog_state": "Backlog"
-  //   }
-  // },
-
+  // ---------------------------------------------------------------------------
+  // REPOSITORIES - Define your repos (required for both modes)
+  // ---------------------------------------------------------------------------
   "repositories": [
     {
-      // Basic single repository configuration
       "name": "my-app",
-      "url": "https://github.com/your-github-username/my-app.git",
-      "package_manager": "npm"  // Auto-detected if not specified (npm, yarn, pnpm, bun)
+      "url": "https://github.com/your-github-username/my-app.git"
+      // Optional fields:
+      // "package_manager": "pnpm",           // npm, yarn, pnpm, bun (auto-detected)
+      // "do_not_touch": [".env*", "migrations/"],
+      // "focus": "QUALITY ONLY - bug fixes, tests, security",
+      // "known_gaps": ["Missing error handling", "No rate limiting"]
     }
-
-    // Advanced multi-repository configuration:
-    // {
-    //   "name": "my-backend",
-    //   "url": "https://github.com/your-github-username/my-backend.git",
-    //   "package_manager": "pnpm",
-    //   "do_not_touch": [
-    //     ".env*",
-    //     "src/lib/auth.ts",
-    //     "src/lib/stripe.ts",
-    //     "prisma/migrations/"
-    //   ]
-    // }
   ],
 
+  // ---------------------------------------------------------------------------
+  // PRODUCTS - Link repos for cross-repo specs (only needed for Spec Mode)
+  // ---------------------------------------------------------------------------
+  // "products": [
+  //   {
+  //     "name": "my-platform",
+  //     "repositories": ["backend-api", "frontend-web"],
+  //     "primary_repo": "frontend-web",      // Where parent spec tickets go
+  //     "context": {
+  //       "vision": "Leading platform for X",
+  //       "current_phase": "MVP hardening",
+  //       "target_users": "Small business owners",
+  //       "constraints": ["Mobile support", "API < 200ms"],
+  //       "strategy_notes": ["Users want faster onboarding"],
+  //       "known_integrations": {
+  //         "backend-api": "REST API - auth, data storage",
+  //         "frontend-web": "React SPA - dashboard"
+  //       }
+  //     }
+  //   }
+  // ],
+
+  // ---------------------------------------------------------------------------
+  // ISSUE TRACKER - GitHub Issues (default) or Linear
+  // ---------------------------------------------------------------------------
+  // "issue_tracker": {
+  //   "type": "linear",
+  //   "linear": { "team_key": "ENG", "backlog_state": "Backlog" }
+  // },
+
   "settings": {
-    // Global telemetry (optional, defaults to true)
-    "telemetry": true,
+    // -------------------------------------------------------------------------
+    // SPEC MODE - Enable to switch from autonomous dev to spec generation
+    // -------------------------------------------------------------------------
+    // "spec_mode": {
+    //   "enabled": true,              // ← GLOBAL SWITCH - disables all other agents
+    //   "schedule": "0 9 * * *",      // Daily at 09:00 UTC
+    //   "max_specs_per_run": 2,
+    //   "min_value_score": 7
+    // },
 
-    // Agent scheduling (optional - defaults shown below)
-    // Optimized to avoid resource contention and ensure fresh work is processed
+    // -------------------------------------------------------------------------
+    // AUTONOMOUS MODE SETTINGS (ignored when spec_mode.enabled = true)
+    // -------------------------------------------------------------------------
     "schedule": {
-      "engineer": "every_2_hours",                           // 12x daily at :00
-      "tech_lead": "0 1,3,5,7,9,11,13,15,17,19,21,23 * * *", // 12x daily 1h after engineer
-      "discovery": "0 1,5,9,13,17,21 * * *",                 // 6x daily offset
-      "product_manager": "0 3,11,19 * * *"                   // 3x daily offset
+      "engineer": "every_2_hours",
+      "tech_lead": "0 1,3,5,7,9,11,13,15,17,19,21,23 * * *",
+      "discovery": "0 1,5,9,13,17,21 * * *",
+      "product_manager": "0 3,11,19 * * *"
     },
 
-    // Engineer agent settings
-    "engineer": {
-      "enabled": true
-    },
-
-    // Tech Lead agent settings
     "tech_lead": {
-      "enabled": true,
-      "auto_merge": true,              // Auto-merge approved PRs
-      "min_lines_for_tests": 50,       // Require tests if PR changes >50 lines
-      "max_files_for_auto_review": 30, // Auto-review limit (larger requires manual review)
-      "stale_days": 5,                 // Auto-close stale PRs after N days
-      "block_on_pending_checks": true, // Defer review while CI is pending
-      "require_evidence": true,        // Require evidence in PR description
-      "require_lockfile_disclosure": true,
-      "max_diff_chars": 50000          // Auto-review diff size limit
+      "auto_merge": true,
+      "min_lines_for_tests": 50,
+      "stale_days": 5
     },
 
-    // Discovery agent settings
     "discovery": {
-      "enabled": true,
-      "max_backlog_issues": 20,       // Limit backlog size
-      "precision_mode": "high"        // high | balanced | experimental
+      "precision_mode": "high"
     },
 
-    // Product Manager agent settings
-    "product_manager": {
-      "enabled": true,
-      "max_issues_per_run": 3         // Limit feature suggestions per run
-    },
-
-    // Webhook notifications (optional)
-    // Sends insightful updates about agent runs to Discord (Slack coming soon)
+    // -------------------------------------------------------------------------
+    // NOTIFICATIONS (works in both modes)
+    // -------------------------------------------------------------------------
     "notifications": {
-      "enabled": false,                // Set to true to enable notifications
-      "discord_webhook": "",           // Your Discord webhook URL
-
-      // Customize which events trigger notifications
+      "enabled": false,
+      "discord_webhook": "https://discord.com/api/webhooks/...",
       "notify_on": {
-        "run_complete": true,          // Agent run summaries
-        "pr_created": true,            // New PR created
-        "pr_merged": true,             // PR merged by Tech Lead
-        "pr_closed": false,            // PR closed (off by default - less important)
-        "error": true                  // Agent errors (always recommended)
+        "run_complete": true,
+        "pr_created": true,
+        "pr_merged": true,
+        "error": true
       }
     }
   }

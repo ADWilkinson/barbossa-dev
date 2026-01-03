@@ -343,13 +343,17 @@ def cmd_run(args):
         'discovery': 'barbossa.agents.discovery',
         'product': 'barbossa.agents.product',
         'auditor': 'barbossa.agents.auditor',
+        'spec': 'barbossa.agents.spec_generator',
     }
 
     if not args.agent:
         header("Available Agents")
         print()
         for name in agents:
-            print(f"  barbossa run {name}")
+            if name == 'spec':
+                print(f"  barbossa run {name} [--product NAME]")
+            else:
+                print(f"  barbossa run {name}")
         print()
         return 0
 
@@ -367,7 +371,15 @@ def cmd_run(args):
     # Set PYTHONPATH and run the agent as a module
     env = os.environ.copy()
     env['PYTHONPATH'] = str(app_dir / 'src')
-    os.execvpe('python3', ['python3', '-m', module], env)
+
+    # Build command with extra arguments
+    cmd = ['python3', '-m', module]
+
+    # Pass through --product for spec agent
+    if agent == 'spec' and hasattr(args, 'product') and args.product:
+        cmd.extend(['--product', args.product])
+
+    os.execvpe('python3', cmd, env)
 
 
 # =============================================================================
@@ -447,6 +459,7 @@ def cmd_logs(args):
         'discovery': 'discovery_*.log',
         'product': 'product_*.log',
         'auditor': 'auditor_*.log',
+        'spec': 'spec_*.log',
     }
 
     if args.agent:
@@ -512,7 +525,8 @@ Examples:
 
     # run
     run_parser = subparsers.add_parser('run', help='Run an agent manually')
-    run_parser.add_argument('agent', nargs='?', help='Agent to run: engineer, tech-lead, discovery, product, auditor')
+    run_parser.add_argument('agent', nargs='?', help='Agent to run: engineer, tech-lead, discovery, product, auditor, spec')
+    run_parser.add_argument('--product', help='For spec agent: only process this product')
     run_parser.set_defaults(func=cmd_run)
 
     # status

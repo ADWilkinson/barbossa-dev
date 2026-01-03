@@ -230,6 +230,83 @@ def validate_linear():
         return False
 
 
+def validate_spec_mode():
+    """Validate spec mode configuration (global system switch)."""
+    config_file = Path('/app/config/repositories.json')
+
+    if not config_file.exists():
+        return True  # Config validation will catch this
+
+    try:
+        with open(config_file) as f:
+            config = json.load(f)
+    except:
+        return True  # Config validation will catch this
+
+    settings = config.get('settings', {})
+    spec_mode = settings.get('spec_mode', {})
+    is_spec_mode = spec_mode.get('enabled', False)
+
+    products = config.get('products', [])
+    repositories = config.get('repositories', [])
+    repo_names = {r.get('name') for r in repositories}
+
+    # If spec mode is enabled, validate products configuration
+    if is_spec_mode:
+        if not products:
+            err("Spec mode enabled but no products configured")
+            print("  Add 'products' array to define linked repository groups")
+            print("  Example:")
+            print("    \"products\": [{")
+            print("      \"name\": \"my-platform\",")
+            print("      \"repositories\": [\"backend-api\", \"frontend-web\"],")
+            print("      \"primary_repo\": \"frontend-web\"")
+            print("    }]")
+            return False
+
+        # Validate each product
+        for i, product in enumerate(products):
+            name = product.get('name')
+            if not name:
+                err(f"Product {i+1} missing 'name'")
+                return False
+
+            # Check repositories exist
+            product_repos = product.get('repositories', [])
+            if not product_repos:
+                err(f"Product '{name}' has no repositories configured")
+                return False
+
+            for repo in product_repos:
+                if repo not in repo_names:
+                    err(f"Product '{name}' references unknown repository: {repo}")
+                    print(f"  Repository '{repo}' must be defined in 'repositories' array")
+                    return False
+
+            # Check primary_repo is set (required for spec mode)
+            primary = product.get('primary_repo')
+            if not primary:
+                err(f"Product '{name}' missing 'primary_repo'")
+                print("  Set 'primary_repo' to indicate where parent spec tickets are created")
+                return False
+
+            if primary not in product_repos:
+                err(f"Product '{name}' primary_repo '{primary}' not in product repositories")
+                return False
+
+        ok(f"SPEC MODE: Enabled ({len(products)} products)")
+        for p in products:
+            print(f"    - {p.get('name', 'unnamed')} ({len(p.get('repositories', []))} repos)")
+
+    else:
+        # Autonomous mode - products are optional
+        ok("AUTONOMOUS MODE: Active (all agents enabled)")
+        if products:
+            print(f"    ({len(products)} products configured for spec mode when enabled)")
+
+    return True
+
+
 def validate_ssh():
     """Validate SSH keys exist only if SSH URLs are configured."""
     # Check if any repos use SSH URLs
@@ -298,6 +375,10 @@ def main():
 
     # Linear validation (critical if configured)
     if not validate_linear():
+        critical_ok = False
+
+    # Spec mode validation (global system switch)
+    if not validate_spec_mode():
         critical_ok = False
 
     # Non-critical checks (warnings only)

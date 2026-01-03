@@ -39,7 +39,7 @@ from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
 # Current version
-VERSION = "1.7.3"
+VERSION = "1.8.0"
 
 # Timeout for webhook calls (short - we never want to block)
 WEBHOOK_TIMEOUT = 10
@@ -183,6 +183,7 @@ AGENT_STYLES = {
     'discovery': {'emoji': '\U0001F50E', 'color': COLORS['orange'], 'name': 'Discovery'},
     'product': {'emoji': '\U0001F4A1', 'color': COLORS['pink'], 'name': 'Product Manager'},
     'auditor': {'emoji': '\U0001F4CA', 'color': COLORS['warning'], 'name': 'Auditor'},
+    'spec_generator': {'emoji': '\U0001F4DC', 'color': COLORS['purple'], 'name': 'Spec Generator'},
 }
 
 
@@ -553,6 +554,59 @@ def notify_tech_lead_decision(
     elif decision == 'CLOSE':
         notify_pr_closed(repo_name, pr_number, pr_title, pr_url, reasoning)
     # REQUEST_CHANGES doesn't need a notification - it's part of the normal flow
+
+
+@_fire_and_forget
+def notify_spec_created(
+    product_name: str,
+    spec_title: str,
+    parent_url: str,
+    child_count: int,
+    affected_repos: List[str],
+    value_score: int = None
+):
+    """
+    Notify when a new product spec is created with linked tickets.
+
+    Args:
+        product_name: Name of the product
+        spec_title: Title of the spec
+        parent_url: URL to the parent spec issue
+        child_count: Number of child implementation tickets created
+        affected_repos: List of repository names affected
+        value_score: Value score of the spec
+    """
+    if not _should_notify('spec_created'):
+        # Fall back to run_complete notification type
+        if not _should_notify('run_complete'):
+            return
+
+    title = f"\U0001F4DC New Spec: {spec_title[:50]}"
+
+    fields = [
+        {'name': 'Product', 'value': product_name, 'inline': True},
+        {'name': 'Tickets Created', 'value': str(child_count + 1), 'inline': True},
+    ]
+
+    if value_score is not None:
+        fields.append({'name': 'Value Score', 'value': f"{value_score}/10", 'inline': True})
+
+    if affected_repos:
+        fields.append({
+            'name': 'Affected Repos',
+            'value': ', '.join(affected_repos[:5]),
+            'inline': False
+        })
+
+    embed = _build_discord_embed(
+        title=title,
+        color=COLORS['purple'],
+        fields=fields,
+        url=parent_url,
+        footer=f"Barbossa v{VERSION}"
+    )
+
+    _send_discord_webhook({'embeds': [embed]})
 
 
 def reload_config():
