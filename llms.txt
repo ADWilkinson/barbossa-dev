@@ -35,6 +35,10 @@ When `spec_mode.enabled = true`, all autonomous agents are disabled. Only the Sp
 
 **Output:** Parent spec ticket (in primary_repo) + child implementation tickets (in each affected repo).
 
+**Two-Pass Quality:** Specs go through critique before ticket creation:
+1. Pass 1: Generate raw specs from product context
+2. Pass 2: Critique for precision - reject vague specs, refine unclear ones
+
 ## Requirements
 
 - Docker
@@ -137,7 +141,7 @@ Opt out: `"settings": { "telemetry": false }`
 
 **Current:** 1.8.0 (2026-01-03)
 
-- v1.8.0: Spec Mode - cross-repo product specifications
+- v1.8.0: Spec Mode with two-pass quality review
 - v1.7.0: Discord webhook notifications
 - v1.6.4: Repository focus and known_gaps config
 - v1.3.0: Enhanced UI/UX review, external dependency detection

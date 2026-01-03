@@ -383,6 +383,125 @@ class BarbossaSpecGenerator:
 
         return False
 
+    def _build_critique_prompt(self, specs: List[Dict], product: Dict, context: Dict[str, Any]) -> str:
+        """Build the critique prompt for second-pass review."""
+        template = get_system_prompt("spec_critique")
+        if not template:
+            self.logger.warning("No critique prompt found, skipping refinement pass")
+            return None
+
+        specs_json = json.dumps({"specs": specs}, indent=2)
+
+        prompt = template
+        prompt = prompt.replace("{{product_name}}", product.get('name', 'Unknown'))
+        prompt = prompt.replace("{{repo_names}}", ", ".join(context['repos'].keys()))
+        prompt = prompt.replace("{{specs_json}}", specs_json)
+
+        return prompt
+
+    def _critique_and_refine_specs(self, specs: List[Dict], product: Dict, context: Dict[str, Any]) -> List[Dict]:
+        """
+        Second-pass review: critique and refine specs for precision.
+
+        Returns only specs that pass review (approved or refined).
+        Rejected specs are logged and discarded.
+        """
+        if not specs:
+            return []
+
+        self.logger.info(f"PASS 2: Critiquing {len(specs)} spec(s) for precision...")
+
+        prompt = self._build_critique_prompt(specs, product, context)
+        if not prompt:
+            self.logger.warning("Skipping critique pass - no prompt template")
+            return specs  # Return original specs if no critique prompt
+
+        # Write prompt to temp file
+        prompt_file = self.work_dir / 'temp_critique_prompt.txt'
+        with open(prompt_file, 'w') as f:
+            f.write(prompt)
+
+        self.logger.info(f"Critique prompt size: {len(prompt)} chars")
+
+        # Call Claude CLI for critique (10 minute timeout)
+        result = self._run_cmd(
+            f'cat {prompt_file} | claude -p --output-format json',
+            timeout=600
+        )
+
+        prompt_file.unlink(missing_ok=True)
+
+        if not result:
+            self.logger.warning("No response from critique pass, using original specs")
+            return specs
+
+        try:
+            wrapper = json.loads(result)
+            if 'result' not in wrapper:
+                self.logger.warning("No 'result' in critique response, using original specs")
+                return specs
+
+            inner_result = wrapper['result']
+
+            # Extract JSON from response
+            review_data = None
+
+            # Try markdown code block first
+            json_block_match = re.search(r'```json\s*\n([\s\S]*?)\n```', inner_result)
+            if json_block_match:
+                review_data = json.loads(json_block_match.group(1).strip())
+            else:
+                # Try direct parse
+                try:
+                    review_data = json.loads(inner_result)
+                except json.JSONDecodeError:
+                    # Try finding JSON object
+                    json_obj_match = re.search(r'\{[\s\S]*"reviewed_specs"\s*:\s*\[[\s\S]*\][\s\S]*\}', inner_result)
+                    if json_obj_match:
+                        review_data = json.loads(json_obj_match.group())
+
+            if not review_data:
+                self.logger.warning("Could not parse critique response, using original specs")
+                return specs
+
+            # Process reviewed specs
+            reviewed = review_data.get('reviewed_specs', [])
+            summary = review_data.get('summary', {})
+
+            self.logger.info(f"Critique summary: {summary.get('approved', 0)} approved, "
+                           f"{summary.get('refined', 0)} refined, {summary.get('rejected', 0)} rejected")
+            if summary.get('notes'):
+                self.logger.info(f"Reviewer notes: {summary['notes']}")
+
+            refined_specs = []
+            for review in reviewed:
+                decision = review.get('decision', 'REJECT')
+                original_title = review.get('original_title', 'Unknown')
+
+                if decision == 'REJECT':
+                    reason = review.get('rejection_reason', 'No reason provided')
+                    self.logger.info(f"REJECTED: '{original_title}' - {reason}")
+                    continue
+
+                refined_spec = review.get('refined_spec')
+                if refined_spec:
+                    if decision == 'REFINE':
+                        self.logger.info(f"REFINED: '{original_title}'")
+                    else:
+                        self.logger.info(f"APPROVED: '{original_title}'")
+                    refined_specs.append(refined_spec)
+                else:
+                    self.logger.warning(f"No refined_spec for {decision} decision on '{original_title}'")
+
+            return refined_specs
+
+        except json.JSONDecodeError as e:
+            self.logger.warning(f"JSON parse error in critique: {e}, using original specs")
+            return specs
+        except Exception as e:
+            self.logger.warning(f"Error in critique pass: {e}, using original specs")
+            return specs
+
     def _generate_parent_spec_body(self, spec: Dict, product: Dict, child_tickets: List[Dict] = None) -> str:
         """Generate the parent spec issue body."""
         user_stories = spec.get('user_stories', [])
@@ -653,7 +772,16 @@ This ticket covers the **{repo_name}** portion of: **{spec.get('title', 'Feature
             self.logger.info(f"No specs generated: {reason}")
             return 0
 
-        self.logger.info(f"Claude generated {len(specs)} spec(s)")
+        self.logger.info(f"PASS 1: Claude generated {len(specs)} raw spec(s)")
+
+        # Pass 2: Critique and refine specs for precision
+        specs = self._critique_and_refine_specs(specs, product, context)
+
+        if not specs:
+            self.logger.info("No specs passed critique review")
+            return 0
+
+        self.logger.info(f"Proceeding with {len(specs)} spec(s) after critique")
 
         # Process each spec
         specs_created = 0
