@@ -35,8 +35,10 @@ def run_cmd(cmd, timeout=10):
             text=True, timeout=timeout
         )
         return result.returncode == 0, result.stdout.strip(), result.stderr.strip()
-    except:
-        return False, "", ""
+    except subprocess.TimeoutExpired:
+        return False, "", "Command timed out"
+    except subprocess.SubprocessError as e:
+        return False, "", str(e)
 
 
 def validate_config():
@@ -167,7 +169,7 @@ def validate_linear():
     try:
         with open(config_file) as f:
             config = json.load(f)
-    except:
+    except (json.JSONDecodeError, IOError):
         return True  # Config validation will catch this
 
     # Check if Linear is configured
@@ -243,8 +245,8 @@ def validate_ssh():
                 if url.startswith('git@') or url.startswith('ssh://'):
                     uses_ssh = True
                     break
-        except:
-            pass
+        except (json.JSONDecodeError, IOError):
+            pass  # Config validation will catch JSON/file errors
 
     if not uses_ssh:
         # Using HTTPS URLs - gh CLI handles auth, no SSH needed
