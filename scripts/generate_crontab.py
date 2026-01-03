@@ -21,6 +21,7 @@ Enable spec mode with: settings.spec_mode.enabled = true
 import json
 import sys
 from pathlib import Path
+from typing import Optional
 
 
 # Default schedules for autonomous mode (cron format)
@@ -76,7 +77,7 @@ PRESETS = {
 }
 
 
-def resolve_schedule(schedule_value: str) -> str:
+def resolve_schedule(schedule_value: str) -> Optional[str]:
     """Convert preset name or cron expression to cron format."""
     if not schedule_value:
         return None
