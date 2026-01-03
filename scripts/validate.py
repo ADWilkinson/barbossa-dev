@@ -240,7 +240,7 @@ def validate_spec_mode():
     try:
         with open(config_file) as f:
             config = json.load(f)
-    except:
+    except (IOError, json.JSONDecodeError):
         return True  # Config validation will catch this
 
     settings = config.get('settings', {})

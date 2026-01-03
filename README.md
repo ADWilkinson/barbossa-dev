@@ -9,7 +9,7 @@
 Barbossa is an autonomous development pipeline powered by Claude. Two modes: autonomous coding or product specification generation.
 
 ```bash
-docker pull ghcr.io/adwilkinson/barbossa-dev:1.8.0
+docker pull ghcr.io/adwilkinson/barbossa-dev:1.8.1
 ```
 
 [Documentation](https://barbossa.dev) · [Quick Start](https://barbossa.dev/quickstart.html)
