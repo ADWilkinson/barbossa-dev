@@ -1,6 +1,6 @@
 services:
   barbossa:
-    image: ghcr.io/adwilkinson/barbossa-dev:1.7.2
+    image: ghcr.io/adwilkinson/barbossa-dev:1.7.3
     platform: linux/amd64
     container_name: barbossa
     restart: unless-stopped
