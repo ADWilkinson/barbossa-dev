@@ -927,6 +927,25 @@ docker logs barbossa | head -50
 - **Issues:** https://github.com/ADWilkinson/barbossa-dev/issues
 - **Release Notes:** See CHANGELOG.md
 
+## Verification
+
+After making changes, run:
+```bash
+# Run tests
+pytest tests/ -v
+
+# Type check (if mypy installed)
+mypy src/barbossa --ignore-missing-imports
+
+# Validate configuration
+python scripts/validate.py
+```
+
+For agent changes, also test manually:
+```bash
+docker exec -it barbossa barbossa run [agent-name]
+```
+
 ## AI Agent Guidelines
 
 When working with this codebase:
