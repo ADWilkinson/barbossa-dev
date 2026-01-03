@@ -38,7 +38,8 @@ from barbossa.utils.notifications import (
     notify_pr_merged,
     notify_pr_closed,
     notify_error,
-    wait_for_pending
+    wait_for_pending,
+    process_retry_queue
 )
 
 
@@ -1219,6 +1220,9 @@ _Senior Engineer: Please address the above feedback and push updates._"""
         self.logger.info("Mode: GitHub as single source of truth (no file-based state)")
         self.logger.info(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         self.logger.info(f"{'#'*70}\n")
+
+        # Process any pending webhook retries from previous runs
+        process_retry_queue()
 
         # Track run start (fire-and-forget, never blocks)
         track_run_start("tech_lead", run_session_id, len(self.repositories))

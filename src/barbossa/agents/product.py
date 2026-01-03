@@ -41,7 +41,8 @@ from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker
 from barbossa.utils.notifications import (
     notify_agent_run_complete,
     notify_error,
-    wait_for_pending
+    wait_for_pending,
+    process_retry_queue
 )
 
 
@@ -602,6 +603,9 @@ KEY FILES:
         self.logger.info("BARBOSSA PRODUCT MANAGER RUN")
         self.logger.info(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         self.logger.info(f"{'#'*60}\n")
+
+        # Process any pending webhook retries from previous runs
+        process_retry_queue()
 
         # Track run start (fire-and-forget, never blocks)
         track_run_start("product_manager", run_session_id, len(self.repositories))
