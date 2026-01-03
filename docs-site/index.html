@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Barbossa - AI Engineers That Ship Code While You Sleep</title>
-    <meta name="description" content="Five AI agents discover features, find technical debt, implement changes, review code, and merge PRs—automatically.">
+    <meta name="description" content="Autonomous AI development pipeline. Two modes: implement code automatically or generate cross-repo feature specs.">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -178,9 +178,49 @@
             color: #ccc;
         }
 
+        /* Modes */
+        .modes {
+            margin: 4rem 0;
+        }
+        .modes-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--ghost);
+            margin-bottom: 1.5rem;
+        }
+        .mode {
+            padding: 1.25rem;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .mode h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .mode p {
+            font-size: 13px;
+            color: var(--ghost);
+            margin: 0;
+        }
+        .mode .tag {
+            display: inline-block;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            background: var(--accent-dim);
+            color: var(--accent);
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            margin-left: 0.5rem;
+        }
+
         /* Pipeline diagram */
         .pipeline {
-            margin: 4rem 0;
+            margin: 3rem 0;
             background: var(--line);
             border-radius: 6px;
             padding: 2rem;
@@ -208,7 +248,7 @@
             padding: 1.25rem 0;
             border-top: 1px solid var(--line);
             display: grid;
-            grid-template-columns: 120px 1fr;
+            grid-template-columns: 140px 1fr;
             gap: 1rem;
             align-items: baseline;
         }
@@ -315,47 +355,65 @@
 
     <main>
         <div class="hero">
-            <span class="version">v1.7.0</span>
+            <span class="version">v1.8.0</span>
             <h1>AI engineers that ship code while you sleep</h1>
-            <p>Five autonomous agents discover features, find technical debt, implement changes, review code, and merge PRs. Set it up once, wake up to merged PRs.</p>
+            <p>Autonomous development pipeline powered by Claude. Implements code from your backlog, or generates detailed cross-repo feature specs.</p>
         </div>
 
         <div class="install">
-            <code><span class="comment"># install and run</span><br>docker pull ghcr.io/adwilkinson/barbossa-dev:latest</code>
-            <button class="copy" onclick="navigator.clipboard.writeText('docker pull ghcr.io/adwilkinson/barbossa-dev:latest')">copy</button>
+            <code><span class="comment"># install and run</span><br>docker pull ghcr.io/adwilkinson/barbossa-dev:1.8.0</code>
+            <button class="copy" onclick="navigator.clipboard.writeText('docker pull ghcr.io/adwilkinson/barbossa-dev:1.8.0')">copy</button>
+        </div>
+
+        <div class="modes">
+            <div class="modes-title">Two Modes</div>
+            <div class="mode">
+                <h3>Autonomous Mode <span class="tag">default</span></h3>
+                <p>Five agents implement code from backlog, review PRs, and merge. Wake up to merged PRs.</p>
+            </div>
+            <div class="mode">
+                <h3>Spec Mode</h3>
+                <p>Generate detailed cross-repo feature specs. Parent ticket + implementation tickets per repo. No code changes.</p>
+            </div>
         </div>
 
         <div class="pipeline">
-            <pre>Discovery + Product Manager    ← find issues & propose features
-           ↓
-    GitHub Issues (backlog)     ← prioritized work queue
-           ↓
-        Engineer                ← implements & creates PR
-           ↓
-       Tech Lead                ← reviews & merges</pre>
+            <pre>AUTONOMOUS MODE                 SPEC MODE
+─────────────────              ─────────────
+Discovery + Product     →      Product Config
+        ↓                           ↓
+  GitHub Issues         →      Spec Generator
+        ↓                           ↓
+    Engineer            →      Parent Spec
+        ↓                      + Child Tickets
+   Tech Lead                   (per repo)</pre>
         </div>
 
         <div class="agents">
-            <div class="agents-title">The Team</div>
+            <div class="agents-title">Autonomous Agents</div>
             <div class="agent">
                 <h3>Engineer</h3>
-                <p>Picks tasks from backlog, implements features, creates pull requests with proper linking</p>
+                <p>Picks tasks from backlog, implements features, creates pull requests</p>
             </div>
             <div class="agent">
                 <h3>Tech Lead</h3>
-                <p>Reviews PRs with 8-dimension quality criteria, auto-merges or requests changes</p>
+                <p>8-dimension quality review, auto-merges or requests changes, 3-strikes close</p>
             </div>
             <div class="agent">
                 <h3>Discovery</h3>
-                <p>Scans codebase for TODOs, missing tests, accessibility issues, console.logs</p>
+                <p>Finds TODOs, missing tests, accessibility issues, tech debt</p>
             </div>
             <div class="agent">
                 <h3>Product Manager</h3>
-                <p>Analyzes your docs, proposes high-value features with acceptance criteria</p>
+                <p>Proposes high-value features with acceptance criteria</p>
             </div>
             <div class="agent">
                 <h3>Auditor</h3>
-                <p>Weekly health checks, tracks success rates, creates issues for critical problems</p>
+                <p>Weekly health checks, creates issues for critical problems</p>
+            </div>
+            <div class="agent">
+                <h3>Spec Generator</h3>
+                <p>Cross-repo feature specs with distributed implementation tickets (Spec Mode only)</p>
             </div>
         </div>
 
@@ -367,19 +425,19 @@
         <div class="features">
             <div class="feature">
                 <h4>GitHub + Linear</h4>
-                <p>Works with GitHub Issues or Linear for issue tracking. Auto-links PRs to issues.</p>
+                <p>Works with GitHub Issues or Linear. Auto-links PRs to issues.</p>
             </div>
             <div class="feature">
-                <h4>Self-Reviewing</h4>
-                <p>Tech Lead reviews Engineer's PRs. 3-strikes rule closes stalled PRs automatically.</p>
+                <h4>Discord Notifications</h4>
+                <p>Real-time webhooks for PRs, merges, specs, and errors.</p>
             </div>
             <div class="feature">
                 <h4>Protected Files</h4>
-                <p>Configure files agents should never touch. Auth, migrations, configs stay safe.</p>
+                <p>Configure files agents should never touch. Auth, migrations stay safe.</p>
             </div>
             <div class="feature">
-                <h4>Customizable</h4>
-                <p>Override prompts, adjust schedules, tune quality settings. Make it yours.</p>
+                <h4>Cross-Repo Specs</h4>
+                <p>Spec Mode links repos as products. Full-stack feature planning.</p>
             </div>
         </div>
     </main>
