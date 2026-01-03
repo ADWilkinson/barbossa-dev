@@ -149,8 +149,12 @@ class BarbossaTechLead:
     def _load_config(self) -> Dict:
         """Load repository configuration"""
         if self.config_file.exists():
-            with open(self.config_file, 'r') as f:
-                return json.load(f)
+            try:
+                with open(self.config_file, 'r') as f:
+                    return json.load(f)
+            except json.JSONDecodeError as e:
+                self.logger.error(f"Invalid JSON in config file {self.config_file}: {e}")
+                return {'repositories': []}
         self.logger.error(f"Config file not found: {self.config_file}")
         return {'repositories': []}
 

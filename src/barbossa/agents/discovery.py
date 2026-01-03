@@ -108,8 +108,12 @@ class BarbossaDiscovery:
 
     def _load_config(self) -> Dict:
         if self.config_file.exists():
-            with open(self.config_file, 'r') as f:
-                return json.load(f)
+            try:
+                with open(self.config_file, 'r') as f:
+                    return json.load(f)
+            except json.JSONDecodeError as e:
+                self.logger.error(f"Invalid JSON in config file {self.config_file}: {e}")
+                return {'repositories': []}
         return {'repositories': []}
 
     def _run_cmd(self, cmd: str, cwd: str = None, timeout: int = 60) -> Optional[str]:
