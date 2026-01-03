@@ -347,19 +347,26 @@
     </nav>
 
     <main>
-        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#overview">Overview</a></li><li><a href="#pipeline">Pipeline</a></li><li><a href="#how-each-agent-works">How Each Agent Works</a></li><li><a href="#notifications">Notifications</a></li><li><a href="#run-manually">Run Manually</a></li></ul></div>
+        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#operating-modes">Operating Modes</a></li><li><a href="#autonomous-mode-pipeline">Autonomous Mode Pipeline</a></li><li><a href="#spec-mode-pipeline">Spec Mode Pipeline</a></li><li><a href="#how-each-agent-works">How Each Agent Works</a></li><li><a href="#notifications">Notifications</a></li><li><a href="#run-manually">Run Manually</a></li></ul></div>
         <h1 id="agents">Agents</h1>
 
-<p>Five autonomous agents work on your codebase.</p>
+<p>Barbossa has two operating modes with different agent configurations.</p>
 
 <hr>
 
-<h2 id="overview">Overview</h2>
+<h2 id="operating-modes">Operating Modes</h2>
+
+<h3 id="autonomous-mode-default">Autonomous Mode (Default)</h3>
+<p>Five agents work together in a continuous development pipeline:</p>
 
 <table><tr><th>Agent</th><th>Purpose</th></tr><tr><td><strong>Engineer</strong></td><td>Picks tasks from backlog, creates PRs</td></tr><tr><td><strong>Tech Lead</strong></td><td>Reviews PRs, merges or requests changes</td></tr><tr><td><strong>Discovery</strong></td><td>Finds TODOs, missing tests, issues</td></tr><tr><td><strong>Product Manager</strong></td><td>Proposes high-value features</td></tr><tr><td><strong>Auditor</strong></td><td>Monitors system health</td></tr></table>
+<h3 id="spec-mode">Spec Mode</h3>
+<p>When <code>settings.spec_mode.enabled = true</code>, all autonomous agents are disabled and only the Spec Generator runs:</p>
+
+<table><tr><th>Agent</th><th>Purpose</th></tr><tr><td><strong>Spec Generator</strong></td><td>Creates detailed cross-repo product specifications</td></tr></table>
 <hr>
 
-<h2 id="pipeline">Pipeline</h2>
+<h2 id="autonomous-mode-pipeline">Autonomous Mode Pipeline</h2>
 
 <pre class="language-text"><code class="language-text">Discovery + Product Manager
            ↓
@@ -368,6 +375,17 @@
         Engineer → Pull Request
            ↓
        Tech Lead → Merge/Reject</code></pre>
+
+<h2 id="spec-mode-pipeline">Spec Mode Pipeline</h2>
+
+<pre class="language-text"><code class="language-text">Product Configuration
+   (linked repos, context)
+           ↓
+      Spec Generator
+           ↓
+  Parent Spec (primary repo)
+     + Child Tickets
+   (per affected repo)</code></pre>
 
 <hr>
 
@@ -392,14 +410,17 @@
 <li>Merges good PRs automatically (default behavior)</li>
 <li>Requests changes on weak PRs</li>
 <li>Set <code>auto_merge: false</code> in config to require manual merges</li>
+<li>Defers review while CI is pending, and requires evidence + lockfile disclosure</li>
+<li>Skips automated review for oversized diffs and requests manual review</li>
 </ul>
 
 <h3 id="discovery">Discovery</h3>
 <p>Scans the codebase for technical debt and creates GitHub Issues.</p>
 <ul>
 <li>TODO and FIXME comments</li>
-<li>Missing tests</li>
-<li>Accessibility issues</li>
+<li>Loading/error state gaps (balanced mode)</li>
+<li>Accessibility and cleanup heuristics (experimental mode)</li>
+<li>High-precision mode (default) only creates issues with concrete evidence</li>
 </ul>
 
 <h3 id="product-manager">Product Manager</h3>
@@ -417,6 +438,20 @@
 <li>Detects code bloat patterns (large files, deep nesting, duplicates)</li>
 <li>Validates architecture consistency</li>
 <li>Provides actionable recommendations for quality improvements</li>
+</ul>
+
+<h3 id="spec-generator-spec-mode-only">Spec Generator (Spec Mode Only)</h3>
+<p>Generates detailed, cross-repo product specifications.</p>
+<ul>
+<li><strong>Only runs when spec_mode.enabled = true</strong> (disables all other agents)</li>
+<li>Operates on "products" (groups of linked repositories)</li>
+<li>Aggregates context from all repos' CLAUDE.md files</li>
+<li>Uses product context (vision, constraints, strategy notes)</li>
+<li>Creates distributed tickets:</li>
+<li>Parent spec in <code>primary_repo</code> with <code>spec</code> label</li>
+<li>Child implementation tickets in affected repos with <code>backlog</code> label</li>
+<li>Semantic deduplication prevents duplicate specs</li>
+<li>Each child ticket is prompt-ready for AI implementation</li>
 </ul>
 
 <hr>
@@ -438,9 +473,16 @@
 
 <h2 id="run-manually">Run Manually</h2>
 
-<pre class="language-bash"><code class="language-bash">docker exec barbossa barbossa run engineer
+<pre class="language-bash"><code class="language-bash"># Autonomous mode agents
+docker exec barbossa barbossa run engineer
 docker exec barbossa barbossa run tech-lead
-docker exec barbossa barbossa run discovery</code></pre>
+docker exec barbossa barbossa run discovery
+docker exec barbossa barbossa run product
+docker exec barbossa barbossa run auditor
+
+# Spec mode agent
+docker exec barbossa barbossa run spec                        # All products
+docker exec barbossa barbossa run spec --product my-platform  # Specific product</code></pre>
 
     </main>
 

@@ -347,16 +347,28 @@
     </nav>
 
     <main>
-        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#system-overview">System Overview</a></li><li><a href="#agent-pipeline">Agent Pipeline</a></li><li><a href="#agent-details">Agent Details</a></li><li><a href="#file-structure">File Structure</a></li><li><a href="#security-model">Security Model</a></li><li><a href="#scheduling-philosophy">Scheduling Philosophy</a></li><li><a href="#extending-barbossa">Extending Barbossa</a></li></ul></div>
+        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#operating-modes">Operating Modes</a></li><li><a href="#system-overview">System Overview</a></li><li><a href="#agent-pipeline">Agent Pipeline</a></li><li><a href="#agent-details">Agent Details</a></li><li><a href="#file-structure">File Structure</a></li><li><a href="#security-model">Security Model</a></li><li><a href="#scheduling-philosophy">Scheduling Philosophy</a></li><li><a href="#extending-barbossa">Extending Barbossa</a></li></ul></div>
         <h1 id="architecture">Architecture</h1>
 
 <p>How Barbossa works under the hood.</p>
 
 <hr>
 
+<h2 id="operating-modes">Operating Modes</h2>
+
+<p>Barbossa has two operating modes controlled by <code>settings.spec_mode.enabled</code>:</p>
+
+<h3 id="autonomous-mode-default">Autonomous Mode (Default)</h3>
+<p>Five AI agents work in a continuous development pipeline. Engineer implements, Tech Lead reviews, Discovery finds issues, Product suggests features, Auditor monitors health.</p>
+
+<h3 id="spec-mode">Spec Mode</h3>
+<p>When <code>spec_mode.enabled = true</code>, all autonomous agents are disabled. Only the Spec Generator runs, creating detailed cross-repo product specifications.</p>
+
+<hr>
+
 <h2 id="system-overview">System Overview</h2>
 
-<p>Barbossa is a team of five AI agents running in a Docker container. Each agent has a specific role and runs on a schedule.</p>
+<p>Barbossa runs AI agents in a Docker container. Each agent has a specific role and runs on a schedule.</p>
 
 <pre class="language-text"><code class="language-text">+--------------------------------------------------+
 |               DOCKER CONTAINER                    |
@@ -543,6 +555,31 @@
 <li>Creates GitHub issues for critical problems</li>
 </ul>
 
+<h3 id="spec-generator-spec-mode-only">Spec Generator (Spec Mode Only)</h3>
+
+<p>Cross-repo product specification generator. <strong>Only runs when <code>spec_mode.enabled = true</code>.</strong></p>
+
+<strong>Workflow:</strong>
+<ol>
+<li>Loads "products" (groups of linked repositories) from config</li>
+<li>Clones/updates all linked repositories</li>
+<li>Aggregates context from CLAUDE.md files + product config</li>
+<li>Calls Claude to generate detailed, prompt-ready specs</li>
+<li>Creates distributed tickets:</li>
+</ol>
+<ul>
+<li>Parent spec in <code>primary_repo</code> with <code>spec</code> label</li>
+<li>Child implementation tickets in each affected repo</li>
+</ul>
+
+<strong>Key behaviors:</strong>
+<ul>
+<li>Semantic deduplication prevents duplicate specs</li>
+<li>Value scoring filters low-value ideas</li>
+<li>Each child ticket is self-contained and implementation-ready</li>
+<li>Product context (vision, constraints, strategy) guides spec generation</li>
+</ul>
+
 <hr>
 
 <h2 id="file-structure">File Structure</h2>
@@ -550,26 +587,27 @@
 <pre class="language-text"><code class="language-text">barbossa-engineer/
 ├── src/barbossa/
 │   ├── agents/
-│   │   ├── engineer.py      # Main engineer agent
-│   │   ├── tech_lead.py     # PR reviewer agent
-│   │   ├── discovery.py     # Tech debt finder
-│   │   ├── product.py       # Feature suggester
-│   │   └── auditor.py       # Health monitor
+│   │   ├── engineer.py        # Main engineer agent
+│   │   ├── tech_lead.py       # PR reviewer agent
+│   │   ├── discovery.py       # Tech debt finder
+│   │   ├── product.py         # Feature suggester
+│   │   ├── auditor.py         # Health monitor
+│   │   └── spec_generator.py  # Cross-repo spec generator (Spec Mode)
 │   ├── utils/
-│   │   ├── prompts.py       # Prompt template loader
-│   │   ├── issue_tracker.py # GitHub/Linear abstraction
-│   │   ├── linear_client.py # Linear API wrapper
-│   │   └── notifications.py # Discord webhook notifications
+│   │   ├── prompts.py         # Prompt template loader
+│   │   ├── issue_tracker.py   # GitHub/Linear abstraction
+│   │   ├── linear_client.py   # Linear API wrapper
+│   │   └── notifications.py   # Discord webhook notifications
 │   └── cli/
-│       └── barbossa         # CLI entrypoint
-├── prompts/                  # Prompt templates
+│       └── barbossa           # CLI entrypoint
+├── prompts/                    # Prompt templates
 ├── config/
-│   └── repositories.json    # Your configuration
+│   └── repositories.json      # Your configuration
 ├── scripts/
-│   ├── validate.py          # Startup validation
-│   ├── generate_crontab.py  # Schedule generator
-│   └── run.sh               # Agent runner
-└── logs/                    # Agent logs</code></pre>
+│   ├── validate.py            # Startup validation
+│   ├── generate_crontab.py    # Mode-aware schedule generator
+│   └── run.sh                 # Agent runner
+└── logs/                      # Agent logs</code></pre>
 
 <hr>
 

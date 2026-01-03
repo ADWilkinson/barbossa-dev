@@ -347,7 +347,7 @@
     </nav>
 
     <main>
-        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#minimal-config">Minimal Config</a></li><li><a href="#common-options">Common Options</a></li><li><a href="#repository-specific-guidance">Repository-Specific Guidance</a></li><li><a href="#scheduling">Scheduling</a></li><li><a href="#issue-tracking">Issue Tracking</a></li><li><a href="#webhook-notifications">Webhook Notifications</a></li><li><a href="#multiple-repos">Multiple Repos</a></li><li><a href="#timezone">Timezone</a></li><li><a href="#privacy-telemetry">Privacy & Telemetry</a></li></ul></div>
+        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#minimal-config">Minimal Config</a></li><li><a href="#common-options">Common Options</a></li><li><a href="#repository-specific-guidance">Repository-Specific Guidance</a></li><li><a href="#scheduling">Scheduling</a></li><li><a href="#issue-tracking">Issue Tracking</a></li><li><a href="#webhook-notifications">Webhook Notifications</a></li><li><a href="#multiple-repos">Multiple Repos</a></li><li><a href="#spec-mode-product-specifications">Spec Mode (Product Specifications)</a></li><li><a href="#timezone">Timezone</a></li><li><a href="#privacy-telemetry">Privacy & Telemetry</a></li></ul></div>
         <h1 id="configuration">Configuration</h1>
 
 <p>All configuration is in <code>config/repositories.json</code>.</p>
@@ -386,17 +386,22 @@
     "telemetry": true,
     "tech_lead": {
       "auto_merge": true,
-      "min_lines_for_tests_required": 50,
-      "max_files_per_pr": 15,
-      "stale_pr_threshold": 5
+      "min_lines_for_tests": 50,
+      "max_files_for_auto_review": 30,
+      "stale_days": 5,
+      "block_on_pending_checks": true,
+      "require_evidence": true,
+      "require_lockfile_disclosure": true
     },
-    "discovery": { "enabled": true },
+    "discovery": { "enabled": true, "precision_mode": "high" },
     "product_manager": { "enabled": true }
   }
 }</code></pre>
 
-<table><tr><th>Field</th><th>Description</th></tr><tr><td><code>package_manager</code></td><td><code>npm</code>, <code>yarn</code>, <code>pnpm</code>, or <code>bun</code> (auto-detected if omitted)</td></tr><tr><td><code>do_not_touch</code></td><td>Files/directories agents should never modify</td></tr><tr><td><code>telemetry</code></td><td><code>true</code> (default) or <code>false</code> to disable anonymous usage tracking</td></tr><tr><td><code>auto_merge</code></td><td>Enabled by default. Set to <code>false</code> for manual merge control</td></tr><tr><td><code>min_lines_for_tests_required</code></td><td>Minimum lines changed to require tests (default: 50)</td></tr><tr><td><code>max_files_per_pr</code></td><td>Maximum files allowed in a PR (default: 15)</td></tr><tr><td><code>stale_pr_threshold</code></td><td>Days before PR considered stale (default: 5)</td></tr><tr><td><code>enabled</code></td><td>Enable/disable individual agents</td></tr></table>
+<table><tr><th>Field</th><th>Description</th></tr><tr><td><code>package_manager</code></td><td><code>npm</code>, <code>yarn</code>, <code>pnpm</code>, or <code>bun</code> (auto-detected if omitted)</td></tr><tr><td><code>do_not_touch</code></td><td>Files/directories agents should never modify</td></tr><tr><td><code>telemetry</code></td><td><code>true</code> (default) or <code>false</code> to disable anonymous usage tracking</td></tr><tr><td><code>auto_merge</code></td><td>Enabled by default. Set to <code>false</code> for manual merge control</td></tr><tr><td><code>min_lines_for_tests</code></td><td>Minimum lines changed to require tests (default: 50)</td></tr><tr><td><code>max_files_for_auto_review</code></td><td>Maximum files for automated review (default: 30)</td></tr><tr><td><code>stale_days</code></td><td>Days before PR considered stale (default: 5)</td></tr><tr><td><code>block_on_pending_checks</code></td><td>Defer review while CI is pending (default: true)</td></tr><tr><td><code>require_evidence</code></td><td>Require evidence in PR description (default: true)</td></tr><tr><td><code>require_lockfile_disclosure</code></td><td>Require lockfile disclosure in PR body (default: true)</td></tr><tr><td><code>precision_mode</code></td><td>Discovery signal quality: <code>high</code>, <code>balanced</code>, <code>experimental</code> (default: high)</td></tr><tr><td><code>enabled</code></td><td>Enable/disable individual agents</td></tr></table>
 <hr>
+
+<p>Legacy keys (still supported): <code>min_lines_for_tests_required</code>, <code>max_files_per_pr</code>, <code>stale_pr_threshold</code></p>
 
 <h2 id="repository-specific-guidance">Repository-Specific Guidance</h2>
 
@@ -603,6 +608,79 @@
     { "name": "backend", "url": "https://github.com/you/backend.git" }
   ]
 }</code></pre>
+
+<hr>
+
+<h2 id="spec-mode-product-specifications">Spec Mode (Product Specifications)</h2>
+
+<strong>New in v1.8.0:</strong> Spec Mode transforms Barbossa from autonomous development into a Product AI that generates detailed feature specifications.
+
+<h3 id="how-it-works">How It Works</h3>
+
+<p>When <code>spec_mode.enabled = true</code>:</p>
+<ul>
+<li>All autonomous agents are <strong>disabled</strong> (Engineer, Tech Lead, Discovery, Product, Auditor)</li>
+<li>Only the <strong>Spec Generator</strong> runs</li>
+<li>Generates cross-repo specifications for linked repository groups ("products")</li>
+<li>Creates distributed tickets: parent spec + child implementation tickets</li>
+</ul>
+
+<h3 id="configuration">Configuration</h3>
+
+<pre class="language-json"><code class="language-json">{
+  "settings": {
+    "spec_mode": {
+      "enabled": true,
+      "schedule": "0 9 * * *",
+      "max_specs_per_run": 2,
+      "deduplication_days": 14,
+      "min_value_score": 7,
+      "spec_label": "spec",
+      "implementation_label": "backlog"
+    }
+  },
+  "products": [
+    {
+      "name": "my-platform",
+      "description": "Full-stack platform with API and web frontend",
+      "repositories": ["backend-api", "frontend-web"],
+      "primary_repo": "frontend-web",
+      "context": {
+        "vision": "Become the leading platform for X",
+        "current_phase": "MVP hardening - focus on reliability",
+        "target_users": "Small business owners",
+        "constraints": [
+          "Must support mobile browsers",
+          "API response time &lt; 200ms"
+        ],
+        "strategy_notes": [
+          "BD feedback: Users want faster onboarding",
+          "Q1 focus is enterprise features"
+        ],
+        "known_integrations": {
+          "backend-api": "REST API - user management, data storage",
+          "frontend-web": "React SPA - dashboard and settings"
+        }
+      }
+    }
+  ]
+}</code></pre>
+
+<h3 id="spec-mode-settings">Spec Mode Settings</h3>
+
+<table><tr><th>Field</th><th>Default</th><th>Description</th></tr><tr><td><code>enabled</code></td><td><code>false</code></td><td><strong>Global switch</strong> - when true, disables all other agents</td></tr><tr><td><code>schedule</code></td><td><code>0 9 <em> </em> *</code></td><td>Cron schedule for spec generation</td></tr><tr><td><code>max_specs_per_run</code></td><td><code>2</code></td><td>Maximum specs to generate per run</td></tr><tr><td><code>deduplication_days</code></td><td><code>14</code></td><td>Days to check for duplicate specs</td></tr><tr><td><code>min_value_score</code></td><td><code>7</code></td><td>Minimum value score (1-10) to create a spec</td></tr><tr><td><code>spec_label</code></td><td><code>spec</code></td><td>Label for parent spec tickets</td></tr><tr><td><code>implementation_label</code></td><td><code>backlog</code></td><td>Label for child implementation tickets</td></tr></table>
+<h3 id="product-configuration">Product Configuration</h3>
+
+<table><tr><th>Field</th><th>Required</th><th>Description</th></tr><tr><td><code>name</code></td><td>Yes</td><td>Product identifier</td></tr><tr><td><code>description</code></td><td>No</td><td>Human-readable description</td></tr><tr><td><code>repositories</code></td><td>Yes</td><td>List of linked repository names</td></tr><tr><td><code>primary_repo</code></td><td>Yes</td><td>Where parent spec tickets are created</td></tr><tr><td><code>context.vision</code></td><td>No</td><td>Product vision statement</td></tr><tr><td><code>context.current_phase</code></td><td>No</td><td>Current development phase</td></tr><tr><td><code>context.target_users</code></td><td>No</td><td>Target user description</td></tr><tr><td><code>context.constraints</code></td><td>No</td><td>Technical/business constraints</td></tr><tr><td><code>context.strategy_notes</code></td><td>No</td><td>Strategic context (BD feedback, etc.)</td></tr><tr><td><code>context.known_integrations</code></td><td>No</td><td>How each repo fits in the system</td></tr></table>
+<h3 id="switching-modes">Switching Modes</h3>
+
+<pre class="language-json"><code class="language-json">// Autonomous Mode (default)
+"spec_mode": { "enabled": false }
+
+// Spec Mode
+"spec_mode": { "enabled": true }</code></pre>
+
+<p>Restart Barbossa after changing modes to regenerate the crontab.</p>
 
 <hr>
 
