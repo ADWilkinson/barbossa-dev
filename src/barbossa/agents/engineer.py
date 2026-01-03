@@ -124,8 +124,8 @@ class Barbossa:
             try:
                 with open(self.pr_history_file, 'r') as f:
                     return json.load(f)
-            except:
-                pass
+            except (json.JSONDecodeError, IOError) as e:
+                self.logger.warning(f"Could not load PR history: {e}")
         return {'closed_prs': [], 'merged_prs': [], 'failed_attempts': {}}
 
     def _save_pr_history(self):
@@ -362,7 +362,8 @@ If there ARE issues labeled "backlog":
             try:
                 with open(sessions_file, 'r') as f:
                     sessions = json.load(f)
-            except:
+            except (json.JSONDecodeError, IOError) as e:
+                self.logger.warning(f"Could not load sessions file: {e}")
                 sessions = []
 
         # Add new session
@@ -404,8 +405,8 @@ If there ARE issues labeled "backlog":
 
             with open(sessions_file, 'w') as f:
                 json.dump(sessions, f, indent=2)
-        except:
-            pass
+        except (json.JSONDecodeError, IOError) as e:
+            self.logger.warning(f"Could not update session status: {e}")
 
     def _cleanup_stale_sessions(self):
         """Mark sessions that have been running for too long as timeout"""
@@ -458,8 +459,8 @@ If there ARE issues labeled "backlog":
             matches = re.findall(pr_pattern, content)
             if matches:
                 return matches[-1]  # Return the last PR URL found
-        except:
-            pass
+        except IOError as e:
+            self.logger.warning(f"Could not read log file for PR extraction: {e}")
         return None
 
     def _extract_summary(self, log_file: Path) -> Optional[str]:
@@ -482,8 +483,8 @@ If there ARE issues labeled "backlog":
                 line = line.strip()
                 if line and not line.startswith('#') and len(line) > 20:
                     return line[:200]
-        except:
-            pass
+        except IOError as e:
+            self.logger.warning(f"Could not read log file for summary extraction: {e}")
         return None
 
     def _create_changelog(self, repo_name: str, session_id: str, output_file: Path):

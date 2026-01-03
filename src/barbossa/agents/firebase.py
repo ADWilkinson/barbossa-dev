@@ -160,8 +160,8 @@ def _call_firebase(endpoint: str, method: str = "GET", data: Optional[Dict] = No
             if response.status in (200, 204):
                 try:
                     return json.loads(response.read().decode('utf-8'))
-                except:
-                    return {"success": True}
+                except json.JSONDecodeError:
+                    return {"success": True}  # Response was successful but not JSON
         return None
 
     except URLError as e:

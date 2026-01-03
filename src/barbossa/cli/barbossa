@@ -391,8 +391,8 @@ def cmd_status(args):
             ok(f"Configured: {len(repos)} repositories")
             for repo in repos:
                 print(f"    - {repo.get('name', 'unnamed')}")
-        except:
-            err("Could not read config")
+        except (json.JSONDecodeError, IOError) as e:
+            err(f"Could not read config: {e}")
     else:
         warn("No config file found")
 
@@ -415,8 +415,8 @@ def cmd_status(args):
                     print(f"    [{icon}] {repo} - {started}")
                     if session.get('pr_url'):
                         print(f"        PR: {session['pr_url']}")
-        except:
-            pass
+        except (json.JSONDecodeError, IOError):
+            pass  # Could not read sessions file
 
     print()
 

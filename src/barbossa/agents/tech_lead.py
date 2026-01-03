@@ -163,7 +163,8 @@ class BarbossaTechLead:
             try:
                 with open(self.decisions_file, 'r') as f:
                     decisions = json.load(f)
-            except:
+            except (json.JSONDecodeError, IOError) as e:
+                self.logger.warning(f"Could not load decisions file: {e}")
                 decisions = []
 
         decisions.insert(0, decision)
@@ -527,8 +528,8 @@ class BarbossaTechLead:
         finally:
             try:
                 os.unlink(temp_file)
-            except:
-                pass
+            except OSError:
+                pass  # Temp file cleanup is best-effort
 
     def _create_review_prompt(self, repo: Dict, pr: Dict, diff: str, checks: Dict, files: List[Dict], comments: List[Dict]) -> str:
         """Create the Claude prompt for reviewing a PR - fetched from Firebase.
@@ -784,8 +785,8 @@ _Auto-merge is disabled. Please merge manually when ready._"""
                     finally:
                         try:
                             os.unlink(temp_file)
-                        except:
-                            pass
+                        except OSError:
+                            pass  # Temp file cleanup is best-effort
                     return success
 
                 # Auto-merge is enabled - execute the merge
@@ -889,8 +890,8 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                 finally:
                     try:
                         os.unlink(temp_file)
-                    except:
-                        pass
+                    except OSError:
+                        pass  # Temp file cleanup is best-effort
                 return success
 
         except Exception as e:
@@ -1172,8 +1173,8 @@ _Senior Engineer: Please address the above feedback and push updates._"""
             try:
                 created_date = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
                 age_days = (datetime.now(created_date.tzinfo) - created_date).days
-            except:
-                age_days = 0
+            except ValueError:
+                age_days = 0  # Invalid date format, assume not stale
 
             branch = pr.get('headRefName', '')
             is_barbossa_pr = branch.startswith('barbossa/')

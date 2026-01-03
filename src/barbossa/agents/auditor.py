@@ -116,8 +116,8 @@ class BarbossaAuditor:
             try:
                 with open(self.audit_history_file, 'r') as f:
                     return json.load(f)
-            except:
-                pass
+            except (json.JSONDecodeError, IOError) as e:
+                self.logger.warning(f"Could not load audit history: {e}")
         return []
 
     def _save_audit_history(self, audit: Dict):
@@ -168,8 +168,8 @@ class BarbossaAuditor:
                     created = datetime.fromisoformat(created_str.replace('Z', '+00:00'))
                     if created.replace(tzinfo=None) >= cutoff:
                         barbossa_prs.append(pr)
-                except:
-                    pass
+                except ValueError:
+                    pass  # Invalid date format, skip this PR
 
             # Calculate stats
             total = len(barbossa_prs)
@@ -313,7 +313,8 @@ class BarbossaAuditor:
         try:
             with open(decisions_file, 'r') as f:
                 decisions = json.load(f)
-        except:
+        except (json.JSONDecodeError, IOError) as e:
+            self.logger.warning(f"Could not load decisions file: {e}")
             return {}
 
         if not decisions:
@@ -520,8 +521,8 @@ class BarbossaAuditor:
                         result['has_api_integration_tests'] = True
                     if 'database' in content.lower() or 'prisma' in content.lower() or 'migrate' in content.lower():
                         result['has_db_integration_tests'] = True
-                except:
-                    pass
+                except IOError:
+                    pass  # Skip unreadable test files
 
             # Determine status
             if result['integration_test_count'] >= 10:
@@ -597,8 +598,8 @@ class BarbossaAuditor:
                     for flow in critical_flows:
                         if flow in content and flow not in result['critical_flows_covered']:
                             result['critical_flows_covered'].append(flow)
-                except:
-                    pass
+                except IOError:
+                    pass  # Skip unreadable test files
 
             # Determine status
             if result['e2e_test_count'] >= 10 and len(result['critical_flows_covered']) >= 3:
@@ -737,8 +738,8 @@ class BarbossaAuditor:
                     pkg_json = json.loads((repo_path / 'package.json').read_text())
                     deps = {**pkg_json.get('dependencies', {}), **pkg_json.get('devDependencies', {})}
                     is_react_app = 'react' in deps or 'next' in deps
-                except:
-                    is_react_app = False
+                except (json.JSONDecodeError, IOError):
+                    is_react_app = False  # Can't parse package.json, assume not React
 
             # Check for pattern consistency
             if is_react_app:
@@ -818,8 +819,8 @@ class BarbossaAuditor:
                         merged_dt = datetime.fromisoformat(pr['mergedAt'].replace('Z', '+00:00'))
                         if merged_dt.replace(tzinfo=None) >= cutoff:
                             recent_prs.append(pr)
-                    except:
-                        pass
+                    except ValueError:
+                        pass  # Invalid date format, skip this PR
 
             # Analyze UI changes
             ui_file_patterns = ['.tsx', '.jsx', '.css', '.scss', '.styled.ts', '.styled.js']
@@ -908,8 +909,8 @@ class BarbossaAuditor:
                         merged_dt = datetime.fromisoformat(pr['mergedAt'].replace('Z', '+00:00'))
                         if merged_dt.replace(tzinfo=None) >= cutoff:
                             recent_prs.append(pr)
-                    except:
-                        pass
+                    except ValueError:
+                        pass  # Invalid date format, skip this PR
 
             # Analyze cross-layer changes
             for pr in recent_prs:
@@ -1343,8 +1344,8 @@ class BarbossaAuditor:
                             session['completed'] = datetime.now().isoformat()
                             session['timeout_reason'] = 'Marked stale by auditor'
                             cleaned += 1
-                    except:
-                        pass
+                    except ValueError:
+                        pass  # Invalid date format, skip this session
 
             if cleaned > 0:
                 with open(sessions_file, 'w') as f:
