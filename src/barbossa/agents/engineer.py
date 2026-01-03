@@ -37,7 +37,8 @@ from barbossa.utils.notifications import (
     notify_agent_run_complete,
     notify_pr_created,
     notify_error,
-    wait_for_pending
+    wait_for_pending,
+    process_retry_queue
 )
 
 
@@ -1017,6 +1018,9 @@ Begin your work now."""
         self.logger.info(f"BARBOSSA RUN STARTED")
         self.logger.info(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         self.logger.info(f"{'#'*60}\n")
+
+        # Process any pending webhook retries from previous runs
+        process_retry_queue()
 
         # Track run start (fire-and-forget, never blocks)
         track_run_start("engineer", run_session_id, len(self.repositories))

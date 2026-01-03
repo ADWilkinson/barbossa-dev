@@ -38,7 +38,8 @@ from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker
 from barbossa.utils.notifications import (
     notify_agent_run_complete,
     notify_error,
-    wait_for_pending
+    wait_for_pending,
+    process_retry_queue
 )
 
 
@@ -1770,6 +1771,9 @@ class BarbossaAuditor:
         self.logger.info(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         self.logger.info(f"Analysis Period: Last {days} days")
         self.logger.info(f"{'#'*70}\n")
+
+        # Process any pending webhook retries from previous runs
+        process_retry_queue()
 
         # Track run start (fire-and-forget, never blocks)
         track_run_start("auditor", run_session_id, len(self.repositories))
