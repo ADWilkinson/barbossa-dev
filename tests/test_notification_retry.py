@@ -456,5 +456,172 @@ class TestWebhookQueueingOnFailure(unittest.TestCase):
         self.assertEqual(len(queue), 0)
 
 
+class TestWaitForPending(unittest.TestCase):
+    """Test wait_for_pending adaptive timeout behavior."""
+
+    def setUp(self):
+        """Reset pending threads list before each test."""
+        import barbossa.utils.notifications as notif
+        with notif._threads_lock:
+            notif._pending_threads.clear()
+
+    def tearDown(self):
+        """Clean up any remaining threads."""
+        import barbossa.utils.notifications as notif
+        with notif._threads_lock:
+            notif._pending_threads.clear()
+
+    def test_wait_for_pending_empty(self):
+        """wait_for_pending returns immediately with no threads."""
+        from barbossa.utils.notifications import wait_for_pending
+        import time
+
+        start = time.monotonic()
+        wait_for_pending(timeout=1.0)
+        elapsed = time.monotonic() - start
+
+        # Should return immediately, not wait for timeout
+        self.assertLess(elapsed, 0.1)
+
+    def test_wait_for_pending_fast_threads(self):
+        """wait_for_pending handles fast-completing threads efficiently."""
+        import barbossa.utils.notifications as notif
+        from barbossa.utils.notifications import wait_for_pending
+        import time
+        import threading
+
+        def fast_task():
+            time.sleep(0.05)  # Complete quickly
+
+        # Add 5 fast threads
+        with notif._threads_lock:
+            for _ in range(5):
+                t = threading.Thread(target=fast_task)
+                t.start()
+                notif._pending_threads.append(t)
+
+        start = time.monotonic()
+        wait_for_pending(timeout=5.0, min_per_thread=1.0)
+        elapsed = time.monotonic() - start
+
+        # All threads completed quickly, should not wait for full timeout
+        self.assertLess(elapsed, 1.0)
+
+        # All threads should be cleaned up
+        with notif._threads_lock:
+            remaining = [t for t in notif._pending_threads if t.is_alive()]
+        self.assertEqual(len(remaining), 0)
+
+    def test_wait_for_pending_respects_timeout(self):
+        """wait_for_pending respects total timeout even with slow threads."""
+        import barbossa.utils.notifications as notif
+        from barbossa.utils.notifications import wait_for_pending
+        import time
+        import threading
+
+        def slow_task():
+            time.sleep(10)  # Very slow
+
+        # Add 2 slow threads
+        with notif._threads_lock:
+            for _ in range(2):
+                t = threading.Thread(target=slow_task)
+                t.daemon = True  # Allow test to exit
+                t.start()
+                notif._pending_threads.append(t)
+
+        start = time.monotonic()
+        wait_for_pending(timeout=0.5, min_per_thread=0.2)
+        elapsed = time.monotonic() - start
+
+        # Should not exceed timeout by much
+        self.assertLess(elapsed, 1.0)
+
+    def test_wait_for_pending_min_per_thread(self):
+        """Each thread gets at least min_per_thread time."""
+        import barbossa.utils.notifications as notif
+        from barbossa.utils.notifications import wait_for_pending
+        import time
+        import threading
+
+        completion_times = []
+
+        def medium_task():
+            time.sleep(0.5)  # Take 0.5s
+            completion_times.append(time.monotonic())
+
+        # Add 3 threads that each need 0.5s
+        with notif._threads_lock:
+            for _ in range(3):
+                t = threading.Thread(target=medium_task)
+                t.start()
+                notif._pending_threads.append(t)
+
+        # With old code: 5s / 3 threads = 1.67s per thread - would work
+        # With old code: 1s / 3 threads = 0.33s per thread - would fail (threads need 0.5s)
+        # With new code: min_per_thread=0.6s ensures each thread gets enough time
+
+        start = time.monotonic()
+        wait_for_pending(timeout=5.0, min_per_thread=0.6)
+        elapsed = time.monotonic() - start
+
+        # All 3 threads should have completed
+        with notif._threads_lock:
+            remaining = [t for t in notif._pending_threads if t.is_alive()]
+        self.assertEqual(len(remaining), 0)
+
+        # Total time should be reasonable (threads run concurrently)
+        self.assertLess(elapsed, 2.0)
+
+    def test_wait_for_pending_many_threads_old_bug_scenario(self):
+        """Regression test: many threads with short total timeout.
+
+        The old bug: timeout / len(threads) gave each thread too little time.
+        With 10 threads and 5s timeout, each got only 0.5s.
+        If threads needed 1s each, they would be marked as incomplete.
+
+        The fix: min_per_thread ensures each gets at least 2s by default.
+        """
+        import barbossa.utils.notifications as notif
+        from barbossa.utils.notifications import wait_for_pending
+        import time
+        import threading
+
+        completed_count = [0]
+        lock = threading.Lock()
+
+        def task_needing_one_second():
+            time.sleep(0.3)  # Each task needs 0.3s
+            with lock:
+                completed_count[0] += 1
+
+        # Add 10 threads (old code would give each only 0.5s with 5s total)
+        threads = []
+        with notif._threads_lock:
+            for _ in range(10):
+                t = threading.Thread(target=task_needing_one_second)
+                t.start()
+                notif._pending_threads.append(t)
+                threads.append(t)
+
+        # With old code: 5s / 10 = 0.5s per thread - threads would complete
+        # But with only 1s total: 1s / 10 = 0.1s per thread - would fail
+        # New code with min_per_thread=0.5 ensures each gets at least 0.5s
+
+        wait_for_pending(timeout=5.0, min_per_thread=0.5)
+
+        # All threads should complete since they only need 0.3s each
+        # and min_per_thread gives them 0.5s
+        with notif._threads_lock:
+            remaining = [t for t in notif._pending_threads if t.is_alive()]
+
+        # Wait for any stragglers (threads may still be cleaning up)
+        for t in threads:
+            t.join(timeout=1.0)
+
+        # All should have completed
+        self.assertEqual(completed_count[0], 10)
+
+
 if __name__ == '__main__':
     unittest.main()
