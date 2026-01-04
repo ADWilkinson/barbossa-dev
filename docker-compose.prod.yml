@@ -1,7 +1,7 @@
 services:
   barbossa:
     build: .
-    image: barbossa:1.8.2
+    image: barbossa:1.8.3
     platform: linux/amd64
     container_name: barbossa
     restart: unless-stopped
