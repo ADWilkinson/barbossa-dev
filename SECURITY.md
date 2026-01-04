@@ -76,8 +76,11 @@ Even with `auto_merge: true`, periodically review merged PRs to ensure quality.
 If you discover a security vulnerability:
 
 1. **Do NOT** create a public GitHub issue
-2. Email security concerns to the maintainers
-3. Include steps to reproduce if possible
+2. Open a private GitHub Security Advisory:
+   https://github.com/ADWilkinson/barbossa-dev/security/advisories/new
+3. Alternatively, email security concerns to the maintainers at
+   gm@andrewwilkinson.io
+4. Include steps to reproduce if possible
 
 We aim to respond within 48 hours and patch critical issues quickly.
 

@@ -1,18 +1,32 @@
 # Barbossa
 
+[![CI](https://github.com/ADWilkinson/barbossa-dev/actions/workflows/ci.yml/badge.svg)](https://github.com/ADWilkinson/barbossa-dev/actions/workflows/ci.yml)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io%2Fadwilkinson%2Fbarbossa--dev-blue?logo=docker)](https://ghcr.io/adwilkinson/barbossa-dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-barbossa.dev-green)](https://barbossa.dev)
 
 **AI engineers that ship code while you sleep.**
 
-Barbossa is an autonomous development pipeline powered by Claude. Two modes: autonomous coding or product specification generation.
+Barbossa is an autonomous development pipeline powered by Claude. It turns backlog items into reviewed pull requests, or generates cross-repo product specifications when you need planning before code.
+
+[Documentation](https://barbossa.dev) · [Quick Start](https://barbossa.dev/quickstart.html) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+
+---
+
+## Highlights
+
+- Autonomous coding + review pipeline with quality gates
+- Spec Mode for multi-repo product specifications
+- GitHub or Linear issue sources
+- Self-hosted via Docker; your code stays in your repos
 
 ```bash
 docker pull ghcr.io/adwilkinson/barbossa-dev:1.8.1
 ```
 
-[Documentation](https://barbossa.dev) · [Quick Start](https://barbossa.dev/quickstart.html)
+## Project Status
+
+Barbossa is in beta. Expect some breaking changes between minor versions while the API and workflows stabilize.
 
 ---
 
@@ -178,7 +192,9 @@ docker exec barbossa barbossa status          # View activity
 
 ---
 
-## Linear Integration
+## Integrations
+
+### Linear
 
 ```json
 {
@@ -260,6 +276,18 @@ Anonymous telemetry (run counts, success rates). No code or identifying info col
 Opt out: `"settings": { "telemetry": false }`
 
 ---
+
+## Contributing
+
+We welcome issues and PRs. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before you start.
+
+## Code of Conduct
+
+This project follows the Contributor Covenant. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+## Security
+
+Report security issues via GitHub Security Advisories or email. See [SECURITY.md](SECURITY.md).
 
 ## License
 

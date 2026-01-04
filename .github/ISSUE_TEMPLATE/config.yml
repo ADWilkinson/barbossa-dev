@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://barbossa.dev
+    about: Read the docs and quick start guides
+  - name: Security policy
+    url: https://github.com/ADWilkinson/barbossa-dev/security/policy
+    about: Please report security issues privately

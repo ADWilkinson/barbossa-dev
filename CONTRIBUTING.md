@@ -2,6 +2,10 @@
 
 Thanks for your interest in contributing to Barbossa! This document outlines how to get started.
 
+## Code of Conduct
+
+By participating, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Getting Started
 
 1. Fork the repository
@@ -13,8 +17,8 @@ Thanks for your interest in contributing to Barbossa! This document outlines how
 
 ```bash
 # Clone your fork
-git clone https://github.com/your-username/barbossa.git
-cd barbossa
+git clone https://github.com/your-username/barbossa-dev.git
+cd barbossa-dev
 
 # Copy example config
 cp config/repositories.json.example config/repositories.json
@@ -22,6 +26,11 @@ cp config/repositories.json.example config/repositories.json
 # Set up environment
 cp .env.example .env
 # Edit .env with your settings
+
+# (Optional) install dev dependencies
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
 
 # Run locally (without Docker)
 PYTHONPATH=src python3 -m barbossa.agents.engineer --help
@@ -67,6 +76,10 @@ When reporting issues, please include:
 - Expected vs actual behavior
 - Relevant logs or error messages
 - Your environment (OS, Python version, Docker version)
+
+## Security Issues
+
+Please do not disclose security issues publicly. See [SECURITY.md](SECURITY.md).
 
 ## Questions?
 
