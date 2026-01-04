@@ -338,15 +338,24 @@ def _fire_and_forget(func):
     return wrapper
 
 
-def wait_for_pending(timeout: float = 5.0):
+def wait_for_pending(timeout: float = 5.0, min_per_thread: float = 2.0):
     """Wait for all pending notification threads to complete.
 
     Call this at the end of agent runs to ensure notifications are sent
     before the process exits.
 
+    Uses an adaptive timeout strategy: each thread gets at least min_per_thread
+    seconds, and any time saved by threads completing quickly is redistributed
+    to remaining threads. This prevents the issue where dividing total timeout
+    evenly among many threads gives each too little time (e.g., 10 threads with
+    5s total = 0.5s per thread, but webhooks may need 2-3s).
+
     Args:
-        timeout: Maximum seconds to wait (default 5s, enough for webhook calls)
+        timeout: Maximum total seconds to wait (default 5s)
+        min_per_thread: Minimum seconds to wait per thread (default 2s)
     """
+    import time as time_module  # Avoid name conflict with datetime.time
+
     with _threads_lock:
         threads = list(_pending_threads)
 
@@ -355,8 +364,18 @@ def wait_for_pending(timeout: float = 5.0):
 
     logger.debug(f"Waiting for {len(threads)} pending notification(s)...")
 
+    start_time = time_module.monotonic()
+    deadline = start_time + timeout
+
     for thread in threads:
-        thread.join(timeout=timeout / len(threads) if threads else timeout)
+        # Calculate remaining time until deadline
+        remaining_time = deadline - time_module.monotonic()
+        if remaining_time <= 0:
+            break
+
+        # Give thread at least min_per_thread seconds, but not more than remaining time
+        thread_timeout = min(max(min_per_thread, remaining_time), remaining_time)
+        thread.join(timeout=thread_timeout)
 
     # Clean up
     with _threads_lock:
