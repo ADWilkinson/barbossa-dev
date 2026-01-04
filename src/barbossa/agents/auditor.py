@@ -257,11 +257,23 @@ class BarbossaAuditor:
                     if 'could not parse' in line.lower():
                         parse_failures += 1
 
-                # Check session outcome
-                if 'PR created successfully' in content or 'Successfully' in content:
+                # Check session outcome based on actual log patterns
+                # Success indicators from engineer.py output
+                has_success = (
+                    ': SUCCESS' in content or  # RUN SUMMARY shows "repo: SUCCESS"
+                    'PR created:' in content or  # PR was created
+                    ': ADDRESSED' in content or  # Revision mode completed
+                    'PR created successfully' in content or
+                    'Successfully' in content
+                )
+                # Failure indicators - check for actual ERROR log level, not just word "error"
+                has_failure = '- ERROR -' in content or ': FAILED' in content
+
+                if has_success and not has_failure:
                     successful_sessions += 1
-                elif 'error' in content.lower() or 'failed' in content.lower():
+                elif has_failure:
                     failed_sessions += 1
+                # Sessions without clear success/failure are not counted (e.g., no work to do)
 
             except Exception as e:
                 self.logger.warning(f"Could not analyze {log_file}: {e}")

@@ -1,7 +1,7 @@
 # Barbossa Engineer - Claude Context
 
 **Last Updated:** 2026-01-03
-**Version:** v1.8.1
+**Version:** v1.8.2
 
 ## Project Overview
 
@@ -332,7 +332,7 @@ On container startup, `validate.py` checks:
 
 ## Version History
 
-**Current Version:** v1.8.1 (2026-01-03)
+**Current Version:** v1.8.2 (2026-01-04)
 
 For detailed release notes, see [CHANGELOG.md](CHANGELOG.md).
 

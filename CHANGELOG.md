@@ -5,6 +5,17 @@ All notable changes to Barbossa are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.2] - 2026-01-04
+
+### Fixed
+- **Auditor Session Detection Bug** 🔧
+  - Fixed false 0/100 health scores caused by flawed session success/failure detection
+  - **Root Cause:** Success detection looked for narrow patterns (`"Successfully"`, `"PR created successfully"`) that didn't match actual log output (`"SUCCESS"`, `"PR created:"`)
+  - **Root Cause:** Failure detection was too broad (`'error' in content.lower()`) catching false positives
+  - **Fix:** Now detects actual success patterns: `": SUCCESS"`, `"PR created:"`, `": ADDRESSED"`
+  - **Fix:** Now detects actual failure patterns: `"- ERROR -"` (log level), `": FAILED"`
+  - Sessions with neither clear success nor failure are not counted (e.g., no work to do)
+
 ## [Unreleased]
 
 ### Fixed
