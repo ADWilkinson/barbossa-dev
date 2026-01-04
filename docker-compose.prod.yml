@@ -1,6 +1,7 @@
 services:
   barbossa:
-    image: ghcr.io/adwilkinson/barbossa-dev:1.8.1
+    build: .
+    image: barbossa:1.8.2
     platform: linux/amd64
     container_name: barbossa
     restart: unless-stopped

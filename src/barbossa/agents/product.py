@@ -49,7 +49,7 @@ from barbossa.utils.notifications import (
 class BarbossaProduct:
     """Product Manager agent that creates feature Issues for the pipeline."""
 
-    VERSION = "1.8.1"
+    VERSION = "1.8.2"
     DEFAULT_MAX_ISSUES_PER_RUN = 3
     DEFAULT_FEATURE_BACKLOG_THRESHOLD = 20
 
