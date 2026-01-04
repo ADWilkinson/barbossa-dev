@@ -8,6 +8,7 @@ Exits with error if critical checks fail, preventing silent failures.
 
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -73,12 +74,44 @@ def validate_config():
         print("  Add at least one repository to 'repositories' array")
         return False
 
+    # Check for duplicate repository names
+    repo_names = [r.get('name') for r in repos if r.get('name')]
+    duplicates = [name for name in repo_names if repo_names.count(name) > 1]
+    if duplicates:
+        unique_dups = list(set(duplicates))
+        err(f"Duplicate repository names: {', '.join(unique_dups)}")
+        print("  Each repository must have a unique name")
+        return False
+
+    # Valid URL patterns for repositories
+    # Supports: GitHub, GitLab, Bitbucket, Azure DevOps HTTPS and SSH URLs
+    url_patterns = [
+        r'^https://github\.com/[\w.-]+/[\w.-]+(?:\.git)?$',
+        r'^https://gitlab\.com/[\w.-]+/[\w.-]+(?:\.git)?$',
+        r'^https://bitbucket\.org/[\w.-]+/[\w.-]+(?:\.git)?$',
+        r'^https://[\w.-]+\.visualstudio\.com/[\w.-]+/_git/[\w.-]+$',
+        r'^https://dev\.azure\.com/[\w.-]+/[\w.-]+/_git/[\w.-]+$',
+        r'^git@github\.com:[\w.-]+/[\w.-]+(?:\.git)?$',
+        r'^git@gitlab\.com:[\w.-]+/[\w.-]+(?:\.git)?$',
+        r'^git@bitbucket\.org:[\w.-]+/[\w.-]+(?:\.git)?$',
+    ]
+
     for i, repo in enumerate(repos):
         if not repo.get('name'):
             err(f"Repository {i+1} missing 'name'")
             return False
         if not repo.get('url'):
             err(f"Repository '{repo.get('name')}' missing 'url'")
+            return False
+
+        # Validate URL format
+        url = repo.get('url', '')
+        if not any(re.match(pattern, url) for pattern in url_patterns):
+            err(f"Repository '{repo.get('name')}' has invalid URL format")
+            print(f"  URL: {url}")
+            print("  Expected formats:")
+            print("    HTTPS: https://github.com/owner/repo.git")
+            print("    SSH:   git@github.com:owner/repo.git")
             return False
 
     ok(f"Config valid: {len(repos)} repositories")
@@ -354,6 +387,99 @@ def validate_ssh():
     return True  # Non-critical
 
 
+def validate_notifications():
+    """Validate Discord webhook URL format if notifications are enabled."""
+    config_file = Path('/app/config/repositories.json')
+
+    if not config_file.exists():
+        return True  # Config validation will catch this
+
+    try:
+        with open(config_file) as f:
+            config = json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return True  # Config validation will catch this
+
+    settings = config.get('settings', {})
+    notifications = settings.get('notifications', {})
+
+    if not notifications.get('enabled', False):
+        # Notifications disabled - no validation needed
+        return True
+
+    webhook_url = notifications.get('discord_webhook', '')
+    if not webhook_url:
+        warn("Notifications enabled but discord_webhook not configured")
+        print("  Add 'discord_webhook' URL to settings.notifications")
+        return True  # Non-critical warning
+
+    # Discord webhook URL pattern
+    # Format: https://discord.com/api/webhooks/{webhook_id}/{webhook_token}
+    discord_pattern = r'^https://discord\.com/api/webhooks/\d+/[\w-]+$'
+    # Also support discordapp.com (legacy)
+    discord_legacy_pattern = r'^https://discordapp\.com/api/webhooks/\d+/[\w-]+$'
+
+    if not (re.match(discord_pattern, webhook_url) or re.match(discord_legacy_pattern, webhook_url)):
+        err("Invalid Discord webhook URL format")
+        print(f"  URL: {webhook_url[:50]}..." if len(webhook_url) > 50 else f"  URL: {webhook_url}")
+        print("  Expected format: https://discord.com/api/webhooks/ID/TOKEN")
+        return False
+
+    ok("Discord webhook URL valid")
+    return True
+
+
+def validate_repository_access():
+    """Check if configured repositories are accessible (non-critical warning)."""
+    config_file = Path('/app/config/repositories.json')
+
+    if not config_file.exists():
+        return True
+
+    try:
+        with open(config_file) as f:
+            config = json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return True
+
+    repos = config.get('repositories', [])
+    inaccessible = []
+
+    for repo in repos:
+        name = repo.get('name', '')
+        url = repo.get('url', '')
+
+        # Extract owner/repo from URL for gh command
+        # Handles: https://github.com/owner/repo.git or git@github.com:owner/repo.git
+        github_https = re.match(r'^https://github\.com/([\w.-]+)/([\w.-]+?)(?:\.git)?$', url)
+        github_ssh = re.match(r'^git@github\.com:([\w.-]+)/([\w.-]+?)(?:\.git)?$', url)
+
+        if github_https:
+            owner, repo_name = github_https.groups()
+        elif github_ssh:
+            owner, repo_name = github_ssh.groups()
+        else:
+            # Non-GitHub URL, skip accessibility check
+            continue
+
+        # Check if repository is accessible
+        success, _, _ = run_cmd(f"gh repo view {owner}/{repo_name} --json name -q '.name'", timeout=15)
+        if not success:
+            inaccessible.append(name)
+
+    if inaccessible:
+        warn(f"Cannot access {len(inaccessible)} repository(ies): {', '.join(inaccessible)}")
+        print("  Check:")
+        print("    - Repository exists and is not deleted")
+        print("    - GITHUB_TOKEN has 'repo' scope")
+        print("    - Repository URLs are correct")
+        return True  # Non-critical warning
+
+    if repos:
+        ok(f"All {len(repos)} repositories accessible")
+    return True
+
+
 def main():
     print()
     print(f"{Colors.BOLD}Barbossa Startup Validation{Colors.END}")
@@ -381,9 +507,14 @@ def main():
     if not validate_spec_mode():
         critical_ok = False
 
+    # Notification configuration (critical if enabled)
+    if not validate_notifications():
+        critical_ok = False
+
     # Non-critical checks (warnings only)
     validate_git()
     validate_ssh()
+    validate_repository_access()
 
     print()
     print("=" * 40)
