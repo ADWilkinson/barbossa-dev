@@ -49,7 +49,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "1.8.2"
+    VERSION = "1.8.3"
     ROLE = "auditor"
 
     def __init__(self, work_dir: Optional[Path] = None):
@@ -1753,27 +1753,66 @@ class BarbossaAuditor:
     # =========================================================================
 
     def _calculate_health_score(self, pr_stats: Dict, log_analysis: Dict, patterns: List[Dict]) -> int:
-        """Calculate overall system health score (0-100)"""
+        """Calculate overall SYSTEM health score (0-100)
+
+        IMPORTANT: This score reflects Barbossa's operational health, NOT code quality.
+        Code quality issues (missing tests, UI problems) are Discovery's domain.
+
+        System health factors:
+        - Session success rate (are agents running successfully?)
+        - Error rate (API failures, auth issues, network problems)
+        - Merge rate (is the pipeline producing usable PRs?)
+        - Timeouts (are tasks completing in time?)
+        """
         score = 100
 
-        # PR merge rate impact (max -30)
+        # SYSTEM PATTERNS ONLY - filter out code quality patterns
+        system_pattern_types = {
+            'high_session_failure_rate',
+            'high_error_rate', 'moderate_error_rate',
+            'parse_failures',
+            'timeouts',
+            'low_merge_rate',  # System issue: prompts may need tuning
+        }
+
+        system_patterns = [p for p in patterns if p.get('type') in system_pattern_types]
+
+        # PR merge rate impact (max -20) - indicates prompt/system effectiveness
         avg_merge_rate = sum(s.get('merge_rate', 0) for s in pr_stats.values()) / len(pr_stats) if pr_stats else 0
-        if avg_merge_rate < 80:
-            score -= min(30, (80 - avg_merge_rate))
+        if avg_merge_rate < 70:
+            score -= min(20, int((70 - avg_merge_rate) * 0.5))
 
-        # Error impact (max -20)
+        # Error impact (max -25)
         error_count = log_analysis.get('error_count', 0)
-        score -= min(20, error_count * 2)
+        if error_count > 20:
+            score -= 25
+        elif error_count > 10:
+            score -= 15
+        elif error_count > 5:
+            score -= 10
+        elif error_count > 0:
+            score -= min(5, error_count)
 
-        # Pattern severity impact (max -30)
-        high_severity = sum(1 for p in patterns if p.get('severity') == 'high')
-        medium_severity = sum(1 for p in patterns if p.get('severity') == 'medium')
-        score -= high_severity * 10
-        score -= medium_severity * 5
+        # Session failure impact (max -30) - critical system issue
+        failed_sessions = log_analysis.get('failed_sessions', 0)
+        successful_sessions = log_analysis.get('successful_sessions', 0)
+        total_sessions = failed_sessions + successful_sessions
+        if total_sessions > 0:
+            failure_rate = failed_sessions / total_sessions * 100
+            if failure_rate > 50:
+                score -= 30
+            elif failure_rate > 20:
+                score -= 20
+            elif failure_rate > 10:
+                score -= 10
 
-        # Timeout impact (max -10)
+        # Timeout impact (max -15)
         timeout_count = log_analysis.get('timeout_count', 0)
-        score -= min(10, timeout_count * 3)
+        score -= min(15, timeout_count * 5)
+
+        # Parse failure impact (max -10) - indicates prompt issues
+        parse_failures = log_analysis.get('parse_failure_count', 0)
+        score -= min(10, parse_failures * 3)
 
         return max(0, min(100, score))
 
@@ -1945,10 +1984,11 @@ class BarbossaAuditor:
         # Execute self-healing actions
         self_healing_actions = self._execute_self_healing()
 
-        # Create GitHub issues for CRITICAL quality problems
-        created_issues = self._create_quality_issues(patterns, recommendations)
+        # NOTE: Quality issues are NOT created here - that's Discovery's job
+        # The auditor focuses on system health monitoring and self-healing
+        # Quality patterns are still logged and saved in insights for Tech Lead
 
-        # Calculate health score
+        # Calculate health score (based on SYSTEM metrics only)
         health_score = self._calculate_health_score(pr_stats, log_analysis, patterns)
 
         # Summarize self-healing results
@@ -1958,9 +1998,6 @@ class BarbossaAuditor:
         for action in self_healing_actions:
             status_icon = "✅" if action.get('status') == 'ok' or action.get('cleaned', 0) > 0 or action.get('deleted', 0) > 0 else "⚠️" if action.get('status') == 'warning' else "❌" if action.get('status') in ['error', 'expired'] else "➖"
             self.logger.info(f"  {status_icon} {action['action']}: {action['message']}")
-
-        if created_issues:
-            self.logger.info(f"\n📋 Created {created_issues} quality improvement issues")
 
         self.logger.info(f"\n{'='*70}")
         self.logger.info(f"SYSTEM HEALTH SCORE: {health_score}/100")
@@ -1998,7 +2035,10 @@ class BarbossaAuditor:
             'health_score': health_score,
             'status': 'healthy' if health_score >= 80 else 'fair' if health_score >= 60 else 'needs_attention',
             'recommendations': recommendations,
-            'system_issues': [p['message'] for p in patterns if p['severity'] == 'high'],
+            # Only actual system issues, not code quality issues
+            'system_issues': [p['message'] for p in patterns
+                             if p.get('type') in {'high_session_failure_rate', 'high_error_rate',
+                                                  'parse_failures', 'timeouts'} and p.get('severity') == 'high'],
             'merge_rates': {repo: stats.get('merge_rate', 0) for repo, stats in pr_stats.items()},
             'error_count': log_analysis.get('error_count', 0),
             'timeout_count': log_analysis.get('timeout_count', 0),
@@ -2037,8 +2077,14 @@ class BarbossaAuditor:
         track_run_end("auditor", run_session_id, success=True, pr_created=False)
 
         # Send audit summary notification
+        # Only count SYSTEM issues as critical, not code quality issues
+        system_issue_types = {
+            'high_session_failure_rate', 'high_error_rate',
+            'parse_failures', 'timeouts'
+        }
+        system_issue_count = sum(1 for p in patterns
+                                  if p.get('type') in system_issue_types and p.get('severity') == 'high')
         status_text = 'healthy' if health_score >= 80 else 'fair' if health_score >= 60 else 'needs attention'
-        high_severity_count = sum(1 for p in patterns if p['severity'] == 'high')
         notify_agent_run_complete(
             agent='auditor',
             success=(health_score >= 60),
@@ -2046,7 +2092,7 @@ class BarbossaAuditor:
             details={
                 'Health Score': f"{health_score}/100",
                 'Status': status_text.title(),
-                'Critical Issues': high_severity_count,
+                'System Issues': system_issue_count,
                 'Recommendations': len(recommendations)
             }
         )

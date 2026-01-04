@@ -49,7 +49,7 @@ class Barbossa:
     Supports both GitHub Issues and Linear for issue tracking.
     """
 
-    VERSION = "1.8.2"
+    VERSION = "1.8.3"
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths

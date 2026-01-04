@@ -5,6 +5,29 @@ All notable changes to Barbossa are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.3] - 2026-01-04
+
+### Changed
+- **Auditor Refocus: System Health Only** 🎯
+  - Auditor now focuses purely on **system health**, not code quality
+  - Health score reflects Barbossa's operational status, not managed code quality
+  - **Rationale:** Code quality is Discovery/Product's domain; Auditor should monitor the pipeline itself
+
+### Removed
+- **Quality Issue Creation** - Auditor no longer creates backlog issues for code quality
+  - Discovery agent handles code quality issue creation (missing tests, TODOs, etc.)
+  - Prevents duplicate/overlapping responsibilities between agents
+  - Quality patterns still logged and saved for Tech Lead insights
+
+### Fixed
+- **Health Score Calculation** - Now based only on system metrics:
+  - Session success/failure rate (are agents running?)
+  - Error rate (API failures, auth issues)
+  - Merge rate (is the pipeline producing usable PRs?)
+  - Timeouts (are tasks completing?)
+  - **NOT** penalized for: missing integration tests, UI issues, code bloat (quality issues)
+- **Discord Notifications** - "Critical Issues" renamed to "System Issues", only counts actual system problems
+
 ## [1.8.2] - 2026-01-04
 
 ### Fixed
