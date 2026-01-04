@@ -28,6 +28,7 @@ from barbossa.utils.notifications import (
     _save_retry_queue,
     _queue_for_retry,
     _get_retry_queue_path,
+    _parse_iso_timestamp,
     process_retry_queue,
     get_retry_queue_status,
     _send_discord_webhook,
@@ -36,6 +37,55 @@ from barbossa.utils.notifications import (
     BASE_DELAY_SECONDS,
     MAX_RETENTION_HOURS,
 )
+
+
+class TestParseIsoTimestamp(unittest.TestCase):
+    """Test the _parse_iso_timestamp helper function."""
+
+    def test_valid_iso_timestamp(self):
+        """Valid ISO timestamp is parsed correctly."""
+        result = _parse_iso_timestamp('2026-01-03T12:00:00')
+        self.assertIsNotNone(result)
+        self.assertEqual(result.year, 2026)
+        self.assertEqual(result.month, 1)
+        self.assertEqual(result.day, 3)
+        self.assertEqual(result.hour, 12)
+
+    def test_valid_iso_timestamp_with_z_suffix(self):
+        """ISO timestamp with Z suffix is handled correctly."""
+        result = _parse_iso_timestamp('2026-01-03T12:00:00Z')
+        self.assertIsNotNone(result)
+        self.assertEqual(result.year, 2026)
+
+    def test_empty_string_returns_none(self):
+        """Empty string returns None."""
+        result = _parse_iso_timestamp('')
+        self.assertIsNone(result)
+
+    def test_none_input_returns_none(self):
+        """None input returns None."""
+        result = _parse_iso_timestamp(None)
+        self.assertIsNone(result)
+
+    def test_invalid_format_returns_none(self):
+        """Invalid format returns None instead of raising exception."""
+        result = _parse_iso_timestamp('not-a-date')
+        self.assertIsNone(result)
+
+    def test_partial_date_returns_none(self):
+        """Partial date format returns None."""
+        result = _parse_iso_timestamp('2026-01')
+        self.assertIsNone(result)
+
+    def test_malformed_iso_returns_none(self):
+        """Malformed ISO string returns None."""
+        result = _parse_iso_timestamp('2026-01-03T')
+        self.assertIsNone(result)
+
+    def test_non_string_returns_none(self):
+        """Non-string input returns None."""
+        result = _parse_iso_timestamp(12345)
+        self.assertIsNone(result)
 
 
 class TestRetryQueuePersistence(unittest.TestCase):
@@ -330,6 +380,85 @@ class TestProcessRetryQueue(unittest.TestCase):
         self.assertEqual(stats['expired'], 1)
         self.assertEqual(stats['processed'], 0)
 
+    def test_malformed_created_at_skipped(self):
+        """Entries with malformed created_at are skipped and counted."""
+        valid_time = datetime.utcnow().isoformat() + 'Z'
+        entries = [
+            {
+                'payload': {'embeds': [{'title': 'Malformed'}]},
+                'attempt': 1,
+                'created_at': 'not-a-date',
+                'next_retry_at': valid_time,
+            },
+        ]
+        _save_retry_queue(entries)
+
+        stats = process_retry_queue()
+
+        self.assertEqual(stats['malformed'], 1)
+        self.assertEqual(stats['processed'], 0)
+
+    def test_malformed_next_retry_at_skipped(self):
+        """Entries with malformed next_retry_at are skipped and counted."""
+        valid_time = datetime.utcnow().isoformat() + 'Z'
+        entries = [
+            {
+                'payload': {'embeds': [{'title': 'Malformed'}]},
+                'attempt': 1,
+                'created_at': valid_time,
+                'next_retry_at': 'invalid',
+            },
+        ]
+        _save_retry_queue(entries)
+
+        stats = process_retry_queue()
+
+        self.assertEqual(stats['malformed'], 1)
+        self.assertEqual(stats['processed'], 0)
+
+    def test_missing_timestamp_fields_skipped(self):
+        """Entries missing timestamp fields are skipped and counted."""
+        entries = [
+            {
+                'payload': {'embeds': [{'title': 'Missing fields'}]},
+                'attempt': 1,
+            },
+        ]
+        _save_retry_queue(entries)
+
+        stats = process_retry_queue()
+
+        self.assertEqual(stats['malformed'], 1)
+        self.assertEqual(stats['processed'], 0)
+
+    @patch('barbossa.utils.notifications._send_discord_webhook_sync')
+    def test_malformed_entries_dont_block_valid_ones(self, mock_send):
+        """Malformed entries are skipped but valid entries are still processed."""
+        mock_send.return_value = True
+
+        past_time = (datetime.utcnow() - timedelta(seconds=1)).isoformat() + 'Z'
+        entries = [
+            {
+                'payload': {'embeds': [{'title': 'Malformed'}]},
+                'attempt': 1,
+                'created_at': 'bad-date',
+                'next_retry_at': past_time,
+            },
+            {
+                'payload': {'embeds': [{'title': 'Valid'}]},
+                'attempt': 1,
+                'created_at': past_time,
+                'next_retry_at': past_time,
+            },
+        ]
+        _save_retry_queue(entries)
+
+        stats = process_retry_queue()
+
+        self.assertEqual(stats['malformed'], 1)
+        self.assertEqual(stats['processed'], 1)
+        self.assertEqual(stats['succeeded'], 1)
+
 
 class TestGetRetryQueueStatus(unittest.TestCase):
     """Test the get_retry_queue_status function."""
@@ -385,6 +514,56 @@ class TestGetRetryQueueStatus(unittest.TestCase):
         self.assertAlmostEqual(status['oldest_age_minutes'], 30, delta=1)
         self.assertIsNotNone(status['next_retry_in_seconds'])
         self.assertGreater(status['next_retry_in_seconds'], 0)
+
+    def test_malformed_entries_counted_in_status(self):
+        """Malformed entries are counted in status report."""
+        now = datetime.utcnow()
+        valid_time = now.isoformat() + 'Z'
+        future_time = (now + timedelta(seconds=120)).isoformat() + 'Z'
+
+        entries = [
+            {
+                'payload': {'embeds': [{'title': 'Malformed'}]},
+                'attempt': 1,
+                'created_at': 'invalid-date',
+                'next_retry_at': future_time,
+            },
+            {
+                'payload': {'embeds': [{'title': 'Valid'}]},
+                'attempt': 1,
+                'created_at': valid_time,
+                'next_retry_at': future_time,
+            },
+        ]
+        _save_retry_queue(entries)
+
+        status = get_retry_queue_status()
+
+        self.assertEqual(status['size'], 2)
+        self.assertEqual(status['malformed'], 1)
+
+    def test_all_malformed_entries(self):
+        """Queue with all malformed entries returns correct status."""
+        entries = [
+            {
+                'payload': {'embeds': [{'title': 'Malformed 1'}]},
+                'attempt': 1,
+                'created_at': 'bad',
+                'next_retry_at': 'also-bad',
+            },
+            {
+                'payload': {'embeds': [{'title': 'Malformed 2'}]},
+                'attempt': 1,
+            },
+        ]
+        _save_retry_queue(entries)
+
+        status = get_retry_queue_status()
+
+        self.assertEqual(status['size'], 2)
+        self.assertEqual(status['malformed'], 2)
+        self.assertEqual(status['oldest_age_minutes'], 0)
+        self.assertIsNone(status['next_retry_in_seconds'])
 
 
 class TestWebhookQueueingOnFailure(unittest.TestCase):
