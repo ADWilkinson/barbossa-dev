@@ -21,7 +21,7 @@ Barbossa is an autonomous development pipeline powered by Claude. It turns backl
 - Self-hosted via Docker; your code stays in your repos
 
 ```bash
-docker pull ghcr.io/adwilkinson/barbossa-dev:1.8.1
+docker pull ghcr.io/adwilkinson/barbossa-dev:latest
 ```
 
 ## Project Status
