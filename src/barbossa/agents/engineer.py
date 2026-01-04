@@ -658,14 +658,31 @@ See: {output_file}
                 continue
 
             # PRIORITY 4: Check if PR has failing checks
+            # Handle both CheckRun and StatusContext types from GitHub API
+            # CheckRun uses 'conclusion', StatusContext uses 'state'
             checks = pr.get('statusCheckRollup', [])
             has_failure = False
             for check in (checks or []):
-                conclusion = check.get('conclusion', '')
-                state = check.get('state', '')
-                if conclusion == 'FAILURE' or state == 'FAILURE':
-                    has_failure = True
-                    break
+                check_type = check.get('__typename', 'Unknown')
+                if check_type == 'CheckRun':
+                    # CheckRun uses 'conclusion' field
+                    conclusion = (check.get('conclusion') or '').upper()
+                    if conclusion in ('FAILURE', 'ERROR'):
+                        has_failure = True
+                        break
+                elif check_type == 'StatusContext':
+                    # StatusContext uses 'state' field
+                    state = (check.get('state') or '').upper()
+                    if state in ('FAILURE', 'ERROR'):
+                        has_failure = True
+                        break
+                else:
+                    # Fallback: check both fields for unknown types
+                    conclusion = (check.get('conclusion') or '').upper()
+                    state = (check.get('state') or '').upper()
+                    if conclusion in ('FAILURE', 'ERROR') or state in ('FAILURE', 'ERROR'):
+                        has_failure = True
+                        break
 
             if has_failure:
                 self.logger.info(f"  PR #{pr_number}: Failing CI checks")
