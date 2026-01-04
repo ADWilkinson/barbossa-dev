@@ -1294,7 +1294,18 @@ class BarbossaAuditor:
                 creds = json.load(f)
 
             oauth = creds.get('claudeAiOauth', {})
-            expires_at = oauth.get('expiresAt', 0)
+            if not oauth:
+                result['status'] = 'error'
+                result['message'] = 'No claudeAiOauth data in credentials file'
+                self.logger.warning("⚠️ Credentials file exists but has no claudeAiOauth data")
+                return result
+
+            expires_at = oauth.get('expiresAt')
+            if expires_at is None or expires_at == 0:
+                result['status'] = 'error'
+                result['message'] = 'OAuth token has no expiration timestamp'
+                self.logger.warning("⚠️ OAuth token missing expiresAt field")
+                return result
 
             # Convert ms to seconds
             expires_ts = expires_at / 1000 if expires_at > 1e12 else expires_at
