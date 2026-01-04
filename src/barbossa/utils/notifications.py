@@ -117,6 +117,20 @@ def _save_retry_queue(queue: List[Dict]) -> bool:
         return False
 
 
+def _parse_iso_timestamp(value: str) -> Optional[datetime]:
+    """Safely parse an ISO timestamp string, returning None on failure.
+
+    Handles timestamps with or without trailing 'Z' suffix.
+    """
+    if not value or not isinstance(value, str):
+        return None
+
+    try:
+        return datetime.fromisoformat(value.rstrip('Z'))
+    except (ValueError, AttributeError):
+        return None
+
+
 def _queue_for_retry(payload: Dict, attempt: int = 1) -> bool:
     """
     Add a failed webhook payload to the retry queue.
@@ -168,9 +182,9 @@ def process_retry_queue() -> Dict[str, int]:
     any webhooks that failed on previous runs.
 
     Returns:
-        Dict with 'processed', 'succeeded', 'failed', 'requeued' counts
+        Dict with 'processed', 'succeeded', 'failed', 'requeued', 'malformed' counts
     """
-    stats = {'processed': 0, 'succeeded': 0, 'failed': 0, 'requeued': 0, 'expired': 0}
+    stats = {'processed': 0, 'succeeded': 0, 'failed': 0, 'requeued': 0, 'expired': 0, 'malformed': 0}
 
     with _retry_queue_lock:
         queue = _load_retry_queue()
@@ -183,8 +197,14 @@ def process_retry_queue() -> Dict[str, int]:
 
         # Separate items ready to retry from those still waiting
         for entry in queue:
-            created_at = datetime.fromisoformat(entry['created_at'].rstrip('Z'))
-            next_retry = datetime.fromisoformat(entry['next_retry_at'].rstrip('Z'))
+            created_at = _parse_iso_timestamp(entry.get('created_at', ''))
+            next_retry = _parse_iso_timestamp(entry.get('next_retry_at', ''))
+
+            # Skip malformed entries with invalid timestamps
+            if created_at is None or next_retry is None:
+                stats['malformed'] += 1
+                logger.warning(f"Skipping malformed retry queue entry: invalid timestamps")
+                continue
 
             # Check if expired (older than MAX_RETENTION_HOURS)
             if created_at < now - timedelta(hours=MAX_RETENTION_HOURS):
@@ -220,11 +240,12 @@ def process_retry_queue() -> Dict[str, int]:
                 stats['failed'] += 1
                 logger.warning(f"Webhook failed after {MAX_RETRIES + 1} attempts")
 
-    if stats['processed'] > 0:
+    if stats['processed'] > 0 or stats['malformed'] > 0:
         logger.info(
             f"Retry queue: {stats['processed']} processed, "
             f"{stats['succeeded']} succeeded, {stats['requeued']} requeued, "
-            f"{stats['failed']} failed, {stats['expired']} expired"
+            f"{stats['failed']} failed, {stats['expired']} expired, "
+            f"{stats['malformed']} malformed"
         )
 
     return stats
@@ -235,21 +256,28 @@ def get_retry_queue_status() -> Dict[str, Any]:
     Get the current status of the retry queue.
 
     Returns:
-        Dict with queue size, oldest entry age, next retry time, etc.
+        Dict with queue size, oldest entry age, next retry time, malformed count, etc.
     """
     with _retry_queue_lock:
         queue = _load_retry_queue()
 
     if not queue:
-        return {'size': 0, 'oldest_age_minutes': 0, 'next_retry_in_seconds': None}
+        return {'size': 0, 'oldest_age_minutes': 0, 'next_retry_in_seconds': None, 'malformed': 0}
 
     now = datetime.utcnow()
     ages = []
     next_retries = []
+    malformed_count = 0
 
     for entry in queue:
-        created_at = datetime.fromisoformat(entry['created_at'].rstrip('Z'))
-        next_retry = datetime.fromisoformat(entry['next_retry_at'].rstrip('Z'))
+        created_at = _parse_iso_timestamp(entry.get('created_at', ''))
+        next_retry = _parse_iso_timestamp(entry.get('next_retry_at', ''))
+
+        # Skip malformed entries
+        if created_at is None or next_retry is None:
+            malformed_count += 1
+            continue
+
         ages.append((now - created_at).total_seconds() / 60)
         if next_retry > now:
             next_retries.append((next_retry - now).total_seconds())
@@ -258,6 +286,7 @@ def get_retry_queue_status() -> Dict[str, Any]:
         'size': len(queue),
         'oldest_age_minutes': max(ages) if ages else 0,
         'next_retry_in_seconds': min(next_retries) if next_retries else None,
+        'malformed': malformed_count,
     }
 
 
