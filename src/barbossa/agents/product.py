@@ -207,11 +207,26 @@ class BarbossaProduct:
         return None
 
     def _read_claude_md(self, repo_path: Path) -> str:
-        """Read CLAUDE.md for project context."""
+        """Read CLAUDE.md for project context.
+
+        Uses explicit UTF-8 encoding to handle files with emoji, unicode quotes,
+        and international characters. Falls back gracefully on encoding errors.
+        """
         claude_md = repo_path / 'CLAUDE.md'
         if claude_md.exists():
-            with open(claude_md, 'r') as f:
-                return f.read()[:15000]  # Limit size
+            try:
+                with open(claude_md, 'r', encoding='utf-8') as f:
+                    return f.read()[:15000]  # Limit size
+            except UnicodeDecodeError as e:
+                self.logger.warning(f"Could not decode CLAUDE.md (encoding error): {e}")
+                # Try with error handling to salvage what we can
+                try:
+                    with open(claude_md, 'r', encoding='utf-8', errors='replace') as f:
+                        return f.read()[:15000]
+                except Exception:
+                    pass
+            except IOError as e:
+                self.logger.warning(f"Could not read CLAUDE.md: {e}")
         return ""
 
     def _create_issue(self, repo_name: str, title: str, body: str, labels: List[str] = None) -> bool:
