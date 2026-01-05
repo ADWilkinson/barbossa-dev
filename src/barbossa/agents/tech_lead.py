@@ -579,7 +579,7 @@ class BarbossaTechLead:
         prompt = prompt.replace("{{pr_author}}", pr.get('author', {}).get('login', 'unknown'))
         prompt = prompt.replace("{{pr_created}}", pr.get('createdAt', 'unknown'))
         prompt = prompt.replace("{{pr_updated}}", pr.get('updatedAt', 'unknown'))
-        prompt = prompt.replace("{{pr_branch}}", pr.get('headRefName', 'unknown'))
+        prompt = prompt.replace("{{pr_branch}}", pr.get('headRefName') or 'unknown')
         prompt = prompt.replace("{{pr_additions}}", str(pr.get('additions', 0)))
         prompt = prompt.replace("{{pr_deletions}}", str(pr.get('deletions', 0)))
         prompt = prompt.replace("{{pr_files_changed}}", str(pr.get('changedFiles', 0)))
@@ -1205,7 +1205,7 @@ _Senior Engineer: Please address the above feedback and push updates._"""
             except ValueError:
                 age_days = 0  # Invalid date format, assume not stale
 
-            branch = pr.get('headRefName', '')
+            branch = pr.get('headRefName') or ''
             is_barbossa_pr = branch.startswith('barbossa/')
 
             if is_barbossa_pr and age_days >= STALE_DAYS:
@@ -1283,7 +1283,7 @@ _Senior Engineer: Please address the above feedback and push updates._"""
 
             # Filter to only Barbossa-created PRs (branch starts with 'barbossa/')
             # This prevents reviewing/modifying human contributor PRs
-            barbossa_prs = [pr for pr in open_prs if pr.get('headRefName', '').startswith('barbossa/')]
+            barbossa_prs = [pr for pr in open_prs if (pr.get('headRefName') or '').startswith('barbossa/')]
             skipped_count = len(open_prs) - len(barbossa_prs)
 
             if skipped_count > 0:

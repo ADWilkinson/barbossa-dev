@@ -602,7 +602,7 @@ See: {output_file}
         for pr in prs:
             # CRITICAL: Only work on Barbossa-created PRs
             # This prevents modifying human contributor PRs
-            branch = pr.get('headRefName', '')
+            branch = pr.get('headRefName') or ''
             if not branch.startswith('barbossa/'):
                 self.logger.debug(f"  PR #{pr.get('number')}: Skipping - not a Barbossa PR (branch: {branch})")
                 continue
@@ -736,7 +736,7 @@ See: {output_file}
         owner = self.owner
         repo_name = repo['name']
         pr_number = pr['number']
-        pr_branch = pr['headRefName']
+        pr_branch = pr.get('headRefName') or 'unknown'
         attention_reason = pr.get('attention_reason', 'needs_review')
 
         pkg_manager = repo.get('package_manager', 'npm')
