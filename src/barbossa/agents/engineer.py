@@ -415,7 +415,11 @@ If there ARE issues labeled "backlog":
             self.logger.warning(f"Could not update session status: {e}")
 
     def _cleanup_stale_sessions(self):
-        """Mark sessions that have been running for too long as timeout"""
+        """Mark sessions that have been running for too long as timeout.
+
+        Also handles sessions with missing or malformed timestamps by marking
+        them as 'error' to prevent them from being stuck in 'running' state.
+        """
         sessions_file = self.work_dir / 'sessions.json'
 
         if not sessions_file.exists():
@@ -431,6 +435,16 @@ If there ARE issues labeled "backlog":
             for session in sessions:
                 if session.get('status') == 'running':
                     started_str = session.get('started', '')
+
+                    # Handle missing or empty timestamp
+                    if not started_str:
+                        session['status'] = 'error'
+                        session['completed'] = now.isoformat()
+                        session['error_reason'] = 'Session missing start timestamp'
+                        modified = True
+                        self.logger.warning(f"Marked session with missing timestamp as error: {session.get('session_id')}")
+                        continue
+
                     try:
                         started = datetime.fromisoformat(started_str)
                         age_hours = (now - started).total_seconds() / 3600
@@ -442,8 +456,13 @@ If there ARE issues labeled "backlog":
                             session['timeout_reason'] = f'Session exceeded 2 hour limit (ran for {age_hours:.1f}h)'
                             modified = True
                             self.logger.info(f"Marked stale session as timeout: {session.get('session_id')} ({age_hours:.1f}h old)")
-                    except (ValueError, TypeError):
-                        pass
+                    except (ValueError, TypeError) as e:
+                        # Mark sessions with malformed timestamps as error
+                        session['status'] = 'error'
+                        session['completed'] = now.isoformat()
+                        session['error_reason'] = f'Session has malformed start timestamp: {started_str}'
+                        modified = True
+                        self.logger.warning(f"Marked session with malformed timestamp as error: {session.get('session_id')} (timestamp: {started_str})")
 
             if modified:
                 with open(sessions_file, 'w') as f:
