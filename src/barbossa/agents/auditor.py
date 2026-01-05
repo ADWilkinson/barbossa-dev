@@ -164,7 +164,7 @@ class BarbossaAuditor:
             barbossa_prs = []
 
             for pr in prs:
-                if not pr.get('headRefName', '').startswith('barbossa/'):
+                if not (pr.get('headRefName') or '').startswith('barbossa/'):
                     continue
 
                 created_str = pr.get('createdAt', '')
