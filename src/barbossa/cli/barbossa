@@ -490,6 +490,82 @@ def cmd_logs(args):
 
 
 # =============================================================================
+# METRICS
+# =============================================================================
+
+def cmd_metrics(args):
+    """View and manage execution metrics."""
+    from barbossa.utils.metrics import get_metrics_summary, rotate_metrics
+    from barbossa.dashboard.metrics_dashboard import generate_dashboard_html
+
+    header("Barbossa Metrics")
+
+    if args.action == 'summary':
+        summary = get_metrics_summary(days=args.days)
+
+        if summary['total_runs'] == 0:
+            warn(f"No metrics found for the last {args.days} days")
+            info("Metrics are collected automatically when agents run")
+            return 0
+
+        print(f"\n{Colors.BOLD}Summary (Last {args.days} days){Colors.END}")
+        print("-" * 40)
+        print(f"Total Runs:     {summary['total_runs']}")
+        print(f"Successful:     {summary['successful_runs']}")
+        print(f"Failed:         {summary['failed_runs']}")
+
+        # Color code success rate
+        rate = summary['success_rate']
+        if rate >= 80:
+            color = Colors.GREEN
+        elif rate >= 60:
+            color = Colors.YELLOW
+        else:
+            color = Colors.RED
+        print(f"Success Rate:   {color}{rate}%{Colors.END}")
+
+        print(f"\nTotal Cost:     ${summary['total_cost_usd']:.2f}")
+        print(f"Avg Cost/Run:   ${summary['avg_cost_per_run']:.4f}")
+        print(f"Total Tokens:   {summary['total_tokens']:,}")
+        print(f"Avg Duration:   {summary['avg_duration_seconds']:.1f}s")
+
+        if summary['by_agent']:
+            print(f"\n{Colors.BOLD}By Agent{Colors.END}")
+            print("-" * 40)
+            for agent, stats in summary['by_agent'].items():
+                success_pct = round(stats['successes'] / stats['runs'] * 100) if stats['runs'] > 0 else 0
+                print(f"  {agent:12} {stats['runs']:4} runs, {success_pct:3}% success, ${stats['cost_usd']:.2f}")
+
+        if summary['error_breakdown']:
+            print(f"\n{Colors.BOLD}Errors{Colors.END}")
+            print("-" * 40)
+            for error_type, count in summary['error_breakdown'].items():
+                print(f"  {error_type}: {count}")
+
+        return 0
+
+    elif args.action == 'dashboard':
+        info(f"Generating dashboard for last {args.days} days...")
+        output_path = generate_dashboard_html(days=args.days)
+        ok(f"Dashboard generated: {output_path}")
+
+        if args.open:
+            import webbrowser
+            webbrowser.open(f'file://{output_path}')
+            info("Opening dashboard in browser...")
+
+        return 0
+
+    elif args.action == 'rotate':
+        info("Rotating metrics file (removing entries older than 30 days)...")
+        removed = rotate_metrics()
+        ok(f"Removed {removed} old entries")
+        return 0
+
+    return 0
+
+
+# =============================================================================
 # MAIN
 # =============================================================================
 
@@ -504,12 +580,15 @@ Commands:
   run [agent]   Run an agent manually
   status        Show current status
   logs [agent]  View agent logs
+  metrics       View execution metrics and cost tracking
 
 Examples:
   barbossa init                 # Set up Barbossa
   barbossa health               # Check everything works
   barbossa run engineer         # Run engineer now
   barbossa logs tech-lead -f    # Follow tech lead logs
+  barbossa metrics              # View metrics summary
+  barbossa metrics dashboard    # Generate HTML dashboard
         """
     )
 
@@ -539,6 +618,15 @@ Examples:
     logs_parser.add_argument('-f', '--follow', action='store_true', help='Follow log output')
     logs_parser.add_argument('-n', '--lines', type=int, help='Number of lines to show')
     logs_parser.set_defaults(func=cmd_logs)
+
+    # metrics
+    metrics_parser = subparsers.add_parser('metrics', help='View execution metrics')
+    metrics_parser.add_argument('action', nargs='?', default='summary',
+                                choices=['summary', 'dashboard', 'rotate'],
+                                help='Action: summary (default), dashboard, rotate')
+    metrics_parser.add_argument('--days', type=int, default=7, help='Number of days to include')
+    metrics_parser.add_argument('--open', action='store_true', help='Open dashboard in browser')
+    metrics_parser.set_defaults(func=cmd_metrics)
 
     args = parser.parse_args()
 

@@ -41,6 +41,7 @@ from barbossa.utils.notifications import (
     wait_for_pending,
     process_retry_queue
 )
+from barbossa.utils.metrics import MetricsCollector, rotate_metrics
 
 
 class BarbossaTechLead:
@@ -1079,6 +1080,14 @@ _Senior Engineer: Please address the above feedback and push updates._"""
 
         cmd = f"cat {prompt_file} | claude --dangerously-skip-permissions -p --model opus > {output_file} 2>&1"
 
+        # Start metrics collection for Claude invocation
+        metrics = MetricsCollector(
+            agent='tech_lead',
+            repo_name=repo_name,
+            session_id=session_id,
+            model='opus'
+        ).start()
+
         try:
             result = subprocess.run(
                 cmd,
@@ -1104,6 +1113,18 @@ _Senior Engineer: Please address the above feedback and push updates._"""
                 }
 
             executed = self._execute_decision(repo_name, pr, decision)
+
+            # Complete metrics with success
+            metrics.complete(
+                success=True,
+                output_text=output,
+                pr_number=pr_number,
+                custom_data={
+                    'decision': decision['decision'],
+                    'value_score': decision['value_score'],
+                    'quality_score': decision['quality_score']
+                }
+            )
 
             decision_record = {
                 'session_id': session_id,
@@ -1138,6 +1159,12 @@ _Senior Engineer: Please address the above feedback and push updates._"""
 
         except subprocess.TimeoutExpired:
             self.logger.error("Claude timed out during review")
+            # Complete metrics with timeout
+            metrics.complete(
+                success=False,
+                error_type='timeout',
+                error_message='Claude timed out during PR review'
+            )
             return {
                 'session_id': session_id,
                 'repository': repo_name,
@@ -1147,6 +1174,12 @@ _Senior Engineer: Please address the above feedback and push updates._"""
             }
         except Exception as e:
             self.logger.error(f"Error during review: {e}")
+            # Complete metrics with error
+            metrics.complete(
+                success=False,
+                error_type=type(e).__name__,
+                error_message=str(e)
+            )
             return {
                 'session_id': session_id,
                 'repository': repo_name,
