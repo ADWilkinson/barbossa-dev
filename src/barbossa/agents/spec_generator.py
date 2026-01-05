@@ -163,14 +163,30 @@ class BarbossaSpecGenerator:
         return None
 
     def _read_claude_md(self, repo_path: Path) -> str:
-        """Read CLAUDE.md for project context."""
+        """Read CLAUDE.md for project context.
+
+        Uses explicit UTF-8 encoding to handle files with emoji, unicode quotes,
+        and international characters. Falls back gracefully on encoding errors.
+        """
         claude_md = repo_path / 'CLAUDE.md'
         if claude_md.exists():
-            with open(claude_md, 'r') as f:
-                content = f.read()
-                if len(content) > self.MAX_CLAUDE_MD_SIZE:
-                    self.logger.info(f"Truncating CLAUDE.md from {len(content)} to {self.MAX_CLAUDE_MD_SIZE} bytes")
-                return content[:self.MAX_CLAUDE_MD_SIZE]
+            try:
+                with open(claude_md, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    if len(content) > self.MAX_CLAUDE_MD_SIZE:
+                        self.logger.info(f"Truncating CLAUDE.md from {len(content)} to {self.MAX_CLAUDE_MD_SIZE} bytes")
+                    return content[:self.MAX_CLAUDE_MD_SIZE]
+            except UnicodeDecodeError as e:
+                self.logger.warning(f"Could not decode CLAUDE.md (encoding error): {e}")
+                # Try with error handling to salvage what we can
+                try:
+                    with open(claude_md, 'r', encoding='utf-8', errors='replace') as f:
+                        content = f.read()
+                        return content[:self.MAX_CLAUDE_MD_SIZE]
+                except Exception:
+                    pass
+            except IOError as e:
+                self.logger.warning(f"Could not read CLAUDE.md: {e}")
         return ""
 
     def _get_repo_config(self, repo_name: str) -> Optional[Dict]:
