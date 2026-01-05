@@ -40,6 +40,7 @@ from barbossa.utils.notifications import (
     wait_for_pending,
     process_retry_queue
 )
+from barbossa.utils.metrics import MetricsCollector, rotate_metrics
 
 
 class Barbossa:
@@ -939,6 +940,14 @@ Begin your work now."""
         self.logger.info(f"Session ID: {session_id}")
         self.logger.info(f"{'='*60}\n")
 
+        # Start metrics collection
+        metrics = MetricsCollector(
+            agent='engineer',
+            repo_name=repo_name,
+            session_id=session_id,
+            model='opus'
+        ).start()
+
         # Get recently closed PRs to avoid repeating failed attempts
         closed_pr_titles = self._get_recent_closed_prs(repo)
         if closed_pr_titles:
@@ -976,16 +985,25 @@ Begin your work now."""
                 timeout=1800  # 30 minute timeout per repo
             )
 
+            # Read output for metrics extraction
+            output_text = output_file.read_text() if output_file.exists() else ''
+
             # Extract PR URL and summary from output
             pr_url = self._extract_pr_url(output_file)
             summary = self._extract_summary(output_file)
+            pr_number = int(pr_url.split('/')[-1]) if pr_url else None
 
             if result.returncode == 0:
                 self.logger.info(f"Claude completed for {repo_name}")
+                # Complete metrics with success
+                metrics.complete(
+                    success=True,
+                    output_text=output_text,
+                    pr_url=pr_url,
+                    pr_number=pr_number
+                )
                 if pr_url:
                     self.logger.info(f"PR created: {pr_url}")
-                    # Extract PR number from URL for notification
-                    pr_number = int(pr_url.split('/')[-1]) if pr_url else None
                     notify_pr_created(
                         repo_name=repo_name,
                         pr_number=pr_number,
@@ -997,6 +1015,13 @@ Begin your work now."""
                 return True
             else:
                 self.logger.error(f"Claude failed for {repo_name} with code {result.returncode}")
+                # Complete metrics with failure
+                metrics.complete(
+                    success=False,
+                    output_text=output_text,
+                    error_type='exit_code',
+                    error_message=f"Claude exited with code {result.returncode}"
+                )
                 self._update_session_status(session_id, 'failed', summary=summary)
                 notify_error(
                     agent='engineer',
@@ -1008,6 +1033,12 @@ Begin your work now."""
 
         except subprocess.TimeoutExpired:
             self.logger.error(f"Claude timed out for {repo_name}")
+            # Complete metrics with timeout
+            metrics.complete(
+                success=False,
+                error_type='timeout',
+                error_message="Claude timed out after 30 minutes"
+            )
             self._update_session_status(session_id, 'timeout')
             notify_error(
                 agent='engineer',
@@ -1018,6 +1049,12 @@ Begin your work now."""
             return False
         except Exception as e:
             self.logger.error(f"Error executing Claude for {repo_name}: {e}")
+            # Complete metrics with error
+            metrics.complete(
+                success=False,
+                error_type=type(e).__name__,
+                error_message=str(e)
+            )
             self._update_session_status(session_id, 'error')
             notify_error(
                 agent='engineer',
@@ -1038,6 +1075,9 @@ Begin your work now."""
 
         # Process any pending webhook retries from previous runs
         process_retry_queue()
+
+        # Rotate metrics file to remove old entries (30-day retention)
+        rotate_metrics()
 
         # Track run start (fire-and-forget, never blocks)
         track_run_start("engineer", run_session_id, len(self.repositories))
