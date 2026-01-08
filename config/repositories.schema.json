@@ -143,6 +143,44 @@
               "description": "Signal precision for discovery heuristics"
             }
           }
+        },
+        "failure_analyzer": {
+          "type": "object",
+          "description": "Configuration for the failure analysis system that tracks PR failures and prevents repeated mistakes",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable failure tracking and analysis (default: true)"
+            },
+            "retention_days": {
+              "type": "integer",
+              "default": 90,
+              "minimum": 7,
+              "maximum": 365,
+              "description": "Number of days to retain failure records (default: 90)"
+            },
+            "backoff_policy": {
+              "type": "object",
+              "description": "Policy for skipping issues that have repeatedly failed",
+              "properties": {
+                "skip_runs_after_failures": {
+                  "type": "integer",
+                  "default": 1,
+                  "minimum": 1,
+                  "maximum": 24,
+                  "description": "Base number of hours to skip after consecutive failures (default: 1)"
+                },
+                "consecutive_failures_threshold": {
+                  "type": "integer",
+                  "default": 2,
+                  "minimum": 2,
+                  "maximum": 10,
+                  "description": "Number of consecutive failures before backoff activates (default: 2)"
+                }
+              }
+            }
+          }
         }
       }
     },

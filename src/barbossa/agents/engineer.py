@@ -41,6 +41,7 @@ from barbossa.utils.notifications import (
     process_retry_queue
 )
 from barbossa.utils.metrics import MetricsCollector, rotate_metrics
+from barbossa.utils.failure_analyzer import get_failure_analyzer
 
 
 class Barbossa:
@@ -86,6 +87,9 @@ class Barbossa:
         if not self.owner:
             raise ValueError("'owner' is required in config/repositories.json")
         self.pr_history = self._load_pr_history()
+
+        # Failure analyzer for querying past failures
+        self.failure_analyzer = get_failure_analyzer(self.work_dir)
 
         self.logger.info("=" * 60)
         self.logger.info(f"BARBOSSA v{self.VERSION} - Personal Dev Assistant")
@@ -168,11 +172,25 @@ class Barbossa:
         """Generate unique session ID"""
         return datetime.now().strftime('%Y%m%d-%H%M%S') + '-' + str(uuid.uuid4())[:8]
 
-    def _create_prompt(self, repo: Dict, session_id: str, closed_pr_titles: List[str] = None) -> str:
+    def _create_prompt(
+        self,
+        repo: Dict,
+        session_id: str,
+        closed_pr_titles: List[str] = None,
+        issue_title: Optional[str] = None,
+        issue_labels: Optional[List[str]] = None,
+    ) -> str:
         """Create a context-rich Claude prompt for a repository.
 
         First attempts to fetch the prompt template from Firebase cloud.
         Falls back to local template if cloud is unavailable.
+
+        Args:
+            repo: Repository configuration dict
+            session_id: Unique session identifier
+            closed_pr_titles: List of recently closed PR titles to avoid
+            issue_title: Optional issue title for failure matching
+            issue_labels: Optional issue labels for failure matching
         """
         timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
 
@@ -320,6 +338,23 @@ KNOWN GAPS & PRIORITY AREAS:
             else:
                 focus_guidance = "CRITICAL: Address items from KNOWN GAPS & PRIORITY AREAS when possible."
 
+        # Build failure warnings section from past failures
+        failure_warnings_section = ""
+        if issue_title or issue_labels:
+            warnings = self.failure_analyzer.get_failure_warnings(
+                issue_title=issue_title,
+                issue_labels=issue_labels,
+                repository=repo_name,
+            )
+            if warnings:
+                failure_warnings_section = f"""
+================================================================================
+FAILURE HISTORY WARNING
+================================================================================
+{warnings}
+================================================================================
+"""
+
         # Replace template variables
         prompt = template
         prompt = prompt.replace("{{session_id}}", session_id)
@@ -344,6 +379,7 @@ KNOWN GAPS & PRIORITY AREAS:
         prompt = prompt.replace("{{test_cmd}}", test_cmd)
         prompt = prompt.replace("{{env_file}}", env_file)
         prompt = prompt.replace("{{min_lines_for_tests}}", str(min_lines_for_tests))
+        prompt = prompt.replace("{{failure_warnings_section}}", failure_warnings_section)
         return prompt
 
     def _get_github_backlog_section(self, owner: str, repo_name: str) -> str:

@@ -41,6 +41,7 @@ from barbossa.utils.notifications import (
     wait_for_pending,
     process_retry_queue
 )
+from barbossa.utils.failure_analyzer import get_failure_analyzer
 
 
 class BarbossaAuditor:
@@ -79,6 +80,9 @@ class BarbossaAuditor:
         self.owner = self.config.get('owner')
         if not self.owner:
             raise ValueError("'owner' is required in config/repositories.json")
+
+        # Failure analyzer for pattern analysis
+        self.failure_analyzer = get_failure_analyzer(self.work_dir)
 
         self.logger.info("=" * 70)
         self.logger.info(f"BARBOSSA AUDITOR v{self.VERSION}")
@@ -1862,6 +1866,27 @@ class BarbossaAuditor:
             self.logger.info(f"  Merge rate: {decision_analysis.get('merge_rate', 0)}%")
             self.logger.info(f"  Avg value score: {decision_analysis.get('avg_value_score', 0)}/10")
 
+        # ===== FAILURE PATTERN ANALYSIS =====
+        self.logger.info("\nAnalyzing PR failure patterns...")
+        failure_patterns = self.failure_analyzer.analyze_failure_patterns(days=days)
+        if failure_patterns.get('total_failures', 0) > 0:
+            self.logger.info(f"  Total failures: {failure_patterns['total_failures']}")
+            if failure_patterns.get('top_categories'):
+                self.logger.info("  Top failure categories:")
+                for cat in failure_patterns['top_categories'][:3]:
+                    self.logger.info(f"    - {cat['category']}: {cat['count']} ({cat['percentage']}%)")
+            if failure_patterns.get('recurring_issues'):
+                self.logger.info(f"  Recurring issues (failed 2+ times): {len(failure_patterns['recurring_issues'])}")
+                for issue in failure_patterns['recurring_issues'][:3]:
+                    self.logger.info(f"    - {issue['issue_id']} in {issue['repository']}: {issue['failure_count']} failures")
+        else:
+            self.logger.info("  No PR failures recorded in this period")
+
+        # Rotate old failure records
+        rotated = self.failure_analyzer.rotate_failures()
+        if rotated > 0:
+            self.logger.info(f"  Rotated {rotated} old failure records")
+
         # ===== QUALITY ASSURANCE CHECKS (NEW) =====
         self.logger.info("\n" + "="*70)
         self.logger.info("QUALITY ASSURANCE ANALYSIS")
@@ -2070,6 +2095,13 @@ class BarbossaAuditor:
                 p['message'] for p in patterns
                 if p.get('type', '').startswith(('low_test', 'no_integration', 'no_e2e', 'problematic_ui', 'poor_cross'))
             ],
+            # NEW: Failure pattern analysis for Engineer awareness
+            'failure_patterns': {
+                'total_failures': failure_patterns.get('total_failures', 0),
+                'top_categories': failure_patterns.get('top_categories', []),
+                'recurring_issues': failure_patterns.get('recurring_issues', [])[:5],
+                'by_repository': failure_patterns.get('by_repository', {}),
+            },
         }
         self._save_insights(insights)
 
