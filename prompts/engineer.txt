@@ -81,7 +81,7 @@ If you cannot confirm the issue:
   - Output NO_VALUABLE_WORK_FOUND and EXIT.
 
 {{closed_pr_section}}
-
+{{failure_warnings_section}}
 DUPLICATE DETECTION - READ CAREFULLY:
 If you find that your proposed work:
   - Overlaps with an OPEN PR → You MUST pick something else

@@ -42,6 +42,11 @@ from barbossa.utils.notifications import (
     process_retry_queue
 )
 from barbossa.utils.metrics import MetricsCollector, rotate_metrics
+from barbossa.utils.failure_analyzer import (
+    get_failure_analyzer,
+    _infer_category_from_reasoning,
+    FAILURE_CATEGORIES,
+)
 
 
 class BarbossaTechLead:
@@ -111,6 +116,9 @@ class BarbossaTechLead:
             'max_files_for_auto_review',
             settings.get('max_files_per_pr', self.DEFAULT_MAX_FILES_FOR_AUTO_REVIEW)
         )
+
+        # Failure analyzer for recording PR failures
+        self.failure_analyzer = get_failure_analyzer(self.work_dir)
 
         self.logger.info("=" * 70)
         self.logger.info(f"BARBOSSA TECH LEAD v{self.VERSION}")
@@ -741,8 +749,25 @@ class BarbossaTechLead:
             return result
         return None
 
-    def _execute_decision(self, repo_name: str, pr: Dict, decision: Dict) -> bool:
-        """Execute the merge/close/request-changes decision"""
+    def _execute_decision(
+        self,
+        repo_name: str,
+        pr: Dict,
+        decision: Dict,
+        issue_id: Optional[str] = None,
+        issue_title: Optional[str] = None,
+        issue_labels: Optional[List[str]] = None,
+    ) -> bool:
+        """Execute the merge/close/request-changes decision.
+
+        Args:
+            repo_name: Repository name
+            pr: PR data dict
+            decision: Decision dict with 'decision', 'reasoning', scores, etc.
+            issue_id: Optional issue identifier for failure tracking
+            issue_title: Optional issue title for failure matching
+            issue_labels: Optional issue labels for failure matching
+        """
         pr_number = pr['number']
         action = decision['decision']
 
@@ -821,13 +846,53 @@ _Auto-merge is disabled. Please merge manually when ready._"""
                 if not success:
                     self.logger.error(f"Close failed: {result.stderr}")
                 else:
-                    # Send close notification
+                    # Record failure for pattern analysis
+                    category = _infer_category_from_reasoning(reason)
+                    if decision.get('three_strikes'):
+                        category = 'three_strikes'
+                    elif decision.get('auto_rejected'):
+                        # Use more specific category based on auto-rejection reason
+                        if 'lockfile' in reason.lower():
+                            category = 'lockfile_undisclosed'
+                        elif 'evidence' in reason.lower():
+                            category = 'missing_evidence'
+                        elif 'major' in reason.lower() and 'upgrade' in reason.lower():
+                            category = 'major_upgrade_unjustified'
+
+                    # Extract issue info from PR body if not provided
+                    pr_body = pr.get('body', '') or ''
+                    if not issue_id:
+                        # Try to extract from "Closes #XX" pattern
+                        import re
+                        close_match = re.search(r'(?:closes|fixes|resolves)\s+#(\d+)', pr_body, re.IGNORECASE)
+                        if close_match:
+                            issue_id = f"#{close_match.group(1)}"
+
+                    self.failure_analyzer.record_failure(
+                        issue_id=issue_id or f"PR-{pr_number}",
+                        repository=repo_name,
+                        pr_number=pr_number,
+                        pr_url=pr.get('url', ''),
+                        category=category,
+                        root_cause=reason[:200],
+                        evidence=f"PR closed by Tech Lead. Value: {decision.get('value_score', '?')}/10, Quality: {decision.get('quality_score', '?')}/10",
+                        tech_lead_reasoning=reason,
+                        issue_title=issue_title or pr.get('title', ''),
+                        issue_labels=issue_labels or [],
+                    )
+
+                    # Get failure insights for notification
+                    failure_insight = self.failure_analyzer.get_failure_insights_for_notification(
+                        repo_name, category
+                    )
+
+                    # Send close notification (with insight if available)
                     notify_pr_closed(
                         repo_name=repo_name,
                         pr_number=pr_number,
                         pr_title=pr.get('title', 'Unknown'),
                         pr_url=pr.get('url', ''),
-                        reason=reason
+                        reason=f"{reason}\n\n{failure_insight}" if failure_insight else reason
                     )
                 return success
 
