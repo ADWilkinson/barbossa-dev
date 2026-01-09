@@ -5,6 +5,23 @@ All notable changes to Barbossa are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-01-09
+
+### Added
+- **Stale Issue Cleanup (Optional)** 🔧
+  - Auditor can close stale issues by label (GitHub only)
+  - Configurable via `settings.auditor.stale_issue_days` and `stale_issue_labels`
+- **Failure Backoff Visibility** 🧠
+  - Engineer prompt now surfaces issues currently in backoff to prevent retry loops
+
+### Changed
+- **Pending CI Timeout** ⏳
+  - Tech Lead can request changes if checks stay pending past a configurable timeout
+- **Stale PR Detection** 🧹
+  - Tech Lead closes stale PRs based on last update time (not just creation time)
+- **Docs Updated** 📚
+  - Configuration docs now include pending CI timeout, failure analyzer, and stale issue cleanup
+
 ## [1.8.3] - 2026-01-04
 
 ### Changed

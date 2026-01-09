@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Barbossa Engineer v5.8 - Autonomous Development Agent
+Barbossa Engineer v2.0.0 - Autonomous Development Agent
 Creates PRs from the backlog every hour at :00.
 Picks from GitHub Issues first, invents work only if backlog empty.
 
@@ -51,7 +51,7 @@ class Barbossa:
     Supports both GitHub Issues and Linear for issue tracking.
     """
 
-    VERSION = "1.8.3"
+    VERSION = "2.0.0"
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths
@@ -281,6 +281,7 @@ class Barbossa:
         # Build issue tracker sections based on config
         tracker_type = self.config.get('issue_tracker', {}).get('type', 'github')
         repo_name = repo['name']
+        backoff_section = ""
 
         if tracker_type == 'linear':
             # For Linear, we inject issues directly into the prompt
@@ -298,11 +299,12 @@ class Barbossa:
 {tracker.get_issues_context(state="Backlog", limit=5)}
 
 If there ARE backlog issues above:
-  1. Pick the FIRST one (already prioritized)
+  1. Pick the FIRST eligible one (skip any listed in ISSUE BACKOFF)
   2. Implement exactly what's requested
   3. Name your branch: barbossa/<issue-identifier>-description
   4. The branch name auto-links to the Linear issue
 """
+                    backoff_section = self._build_backoff_section(tracker, repo_name)
                 else:
                     # Fallback to GitHub commands
                     issue_list_command = f"  gh issue list --state open --repo {owner}/{repo_name} --limit 10"
@@ -315,6 +317,11 @@ If there ARE backlog issues above:
             # GitHub - use CLI commands
             issue_list_command = f"  gh issue list --state open --repo {owner}/{repo_name} --limit 10"
             backlog_section = self._get_github_backlog_section(owner, repo_name)
+            try:
+                tracker = get_issue_tracker(self.config, repo_name, self.logger)
+                backoff_section = self._build_backoff_section(tracker, repo_name)
+            except Exception as e:
+                self.logger.warning(f"Failed to build backoff section: {e}")
 
         # Build focus and known_gaps sections
         focus_section = ""
@@ -373,6 +380,7 @@ FAILURE HISTORY WARNING
         prompt = prompt.replace("{{closed_pr_section}}", closed_pr_section)
         prompt = prompt.replace("{{issue_list_command}}", issue_list_command)
         prompt = prompt.replace("{{backlog_section}}", backlog_section)
+        prompt = prompt.replace("{{backoff_section}}", backoff_section)
         prompt = prompt.replace("{{pkg_manager}}", pkg_manager.upper())
         prompt = prompt.replace("{{install_cmd}}", install_cmd)
         prompt = prompt.replace("{{build_cmd}}", build_cmd)
@@ -389,11 +397,43 @@ FAILURE HISTORY WARNING
   gh issue list --repo {owner}/{repo_name} --label backlog --state open --limit 5
 
 If there ARE issues labeled "backlog":
-  1. Pick the FIRST one (already prioritized)
+  1. Pick the FIRST eligible one (skip any listed in ISSUE BACKOFF)
   2. Read the issue description carefully
   3. Implement exactly what's requested
   4. Link your PR to the issue: "Closes #XX" in PR description
 """
+
+    def _build_backoff_section(self, tracker: IssueTracker, repo_name: str) -> str:
+        """Generate a section listing backlog issues currently in backoff."""
+        try:
+            if isinstance(tracker, LinearIssueTracker):
+                issues = tracker.list_issues(state=tracker.backlog_state, limit=10)
+            else:
+                issues = tracker.list_issues(labels=["backlog"], state="open", limit=10)
+        except Exception as e:
+            self.logger.warning(f"Could not list backlog issues for backoff check: {e}")
+            return ""
+
+        skipped = []
+        for issue in issues:
+            should_skip, reason = self.failure_analyzer.should_skip_issue(issue.identifier, repo_name)
+            if should_skip:
+                skipped.append((issue, reason))
+
+        if not skipped:
+            return ""
+
+        lines = [
+            "================================================================================",
+            "ISSUE BACKOFF (SKIP THESE FOR NOW)",
+            "================================================================================",
+        ]
+        for issue, reason in skipped:
+            lines.append(f"- {issue.identifier}: {issue.title}")
+            lines.append(f"  Reason: {reason}")
+        lines.append("Pick a different backlog issue that is NOT listed above.")
+        lines.append("================================================================================")
+        return "\n".join(lines)
 
     def _save_session(self, repo_name: str, session_id: str, prompt: str, output_file: Path):
         """Save session details for web portal"""
@@ -776,12 +816,15 @@ See: {output_file}
         attention_reason = pr.get('attention_reason', 'needs_review')
 
         pkg_manager = repo.get('package_manager', 'npm')
+        # Prefer frozen/immutable installs to avoid unintended lockfile changes.
         if pkg_manager == 'pnpm':
-            install_cmd, build_cmd, test_cmd = 'pnpm install', 'pnpm run build', 'pnpm run test'
+            install_cmd, build_cmd, test_cmd = 'pnpm install --frozen-lockfile', 'pnpm run build', 'pnpm run test'
         elif pkg_manager == 'yarn':
-            install_cmd, build_cmd, test_cmd = 'yarn install', 'yarn build', 'yarn test'
+            install_cmd, build_cmd, test_cmd = 'yarn install --immutable', 'yarn build', 'yarn test'
+        elif pkg_manager == 'bun':
+            install_cmd, build_cmd, test_cmd = 'bun install --frozen-lockfile', 'bun run build', 'bun test'
         else:
-            install_cmd, build_cmd, test_cmd = 'npm install', 'npm run build', 'npm test'
+            install_cmd, build_cmd, test_cmd = 'npm ci', 'npm run build', 'npm test'
 
         # Format comment history
         comments = pr.get('comments', [])
@@ -859,6 +902,12 @@ Phase 2 - Investigate:
   # View any review comments
   gh pr view {pr_number} --repo {owner}/{repo_name} --comments
 
+  # If checks are stuck pending or failing in GitHub Actions, re-run the latest workflow
+  gh run list --repo {owner}/{repo_name} --branch {pr_branch} --limit 5
+  # Re-run the latest run if it is stuck/failed (adjust RUN_ID as needed)
+  gh run rerun RUN_ID --repo {owner}/{repo_name}
+  # If this repo does not use GitHub Actions, skip the rerun steps.
+
   # Run tests/build locally to see the errors
   {build_cmd}
   {test_cmd}
@@ -906,6 +955,18 @@ This is the comment history on this PR. Use this to understand:
 {conversation}
 
 ================================================================================
+PR BODY REQUIREMENTS (DO NOT SKIP)
+================================================================================
+Before pushing updates or commenting "Feedback Addressed", verify the PR body includes:
+- Evidence section with an issue link, repro steps, logs, or file:line references
+- "Lockfile changes: YES/NO" (YES if any lockfile changed)
+- "Dependency changes:" list package versions if lockfile/manifest changed
+  (Use NONE only when there are NO dependency or lockfile changes)
+
+If any of these are missing or incorrect, update the PR description:
+  gh pr edit {pr_number} --repo {owner}/{repo_name} --body "<updated body>"
+
+================================================================================
 WORKFLOW
 ================================================================================
 Phase 1 - Setup:
@@ -918,7 +979,8 @@ Phase 1 - Setup:
   # Fetch and checkout the PR branch
   git fetch origin
   git checkout {pr_branch}
-  git pull origin {pr_branch} || true  # May fail if conflicts exist
+  git reset --hard origin/{pr_branch}
+  git clean -fd
 
   {install_cmd}
 {issue_instructions}

@@ -98,10 +98,18 @@
       "auto_merge": true,
       "min_lines_for_tests": 50,
       "stale_days": 5
+      // "block_on_pending_checks": true,
+      // "pending_checks_timeout_hours": 6 // request changes if checks pending too long
     },
 
     "discovery": {
       "precision_mode": "high"
+    },
+
+    "auditor": {
+      // Optional: close stale Barbossa-created issues (0 disables)
+      // "stale_issue_days": 30,
+      // "stale_issue_labels": ["discovery", "product", "feature"]
     },
 
     // -------------------------------------------------------------------------

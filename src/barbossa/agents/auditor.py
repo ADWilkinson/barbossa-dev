@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Barbossa Auditor v1.2.0 - Self-Improving System Audit Agent
+Barbossa Auditor v2.0.0 - Self-Improving System Audit Agent
 Runs daily at 06:30 to analyze logs, PR outcomes, and system health.
 Identifies patterns, issues, and opportunities for improvement.
 Enhanced with code bloat detection and architecture consistency checks.
@@ -50,8 +50,10 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "1.8.3"
+    VERSION = "2.0.0"
     ROLE = "auditor"
+    DEFAULT_STALE_ISSUE_DAYS = 0
+    DEFAULT_STALE_ISSUE_LABELS = ["discovery", "product", "feature"]
 
     def __init__(self, work_dir: Optional[Path] = None):
         default_dir = Path(os.environ.get('BARBOSSA_DIR', '/app'))
@@ -83,11 +85,20 @@ class BarbossaAuditor:
 
         # Failure analyzer for pattern analysis
         self.failure_analyzer = get_failure_analyzer(self.work_dir)
+        # Stale issue cleanup settings (optional)
+        auditor_settings = self.config.get('settings', {}).get('auditor', {})
+        self.stale_issue_days = auditor_settings.get('stale_issue_days', self.DEFAULT_STALE_ISSUE_DAYS)
+        self.stale_issue_labels = auditor_settings.get('stale_issue_labels', self.DEFAULT_STALE_ISSUE_LABELS)
 
         self.logger.info("=" * 70)
         self.logger.info(f"BARBOSSA AUDITOR v{self.VERSION}")
         self.logger.info("Role: System Health & Self-Improvement")
         self.logger.info(f"Repositories: {len(self.repositories)}")
+        self.logger.info(
+            "Settings: stale_issue_days=%s, stale_issue_labels=%s",
+            self.stale_issue_days,
+            ",".join(self.stale_issue_labels) if self.stale_issue_labels else "(none)"
+        )
         self.logger.info("=" * 70)
 
     def _setup_logging(self):
@@ -1419,6 +1430,105 @@ class BarbossaAuditor:
         result['message'] = f'Deleted {deleted} logs older than {days} days'
         return result
 
+    def _cleanup_stale_issues(self) -> Dict:
+        """Optionally close stale backlog issues created by Barbossa."""
+        result = {
+            'action': 'stale_issue_cleanup',
+            'closed': 0,
+            'scanned': 0,
+            'message': '',
+            'status': 'ok',
+        }
+
+        if not self.stale_issue_days or self.stale_issue_days <= 0:
+            result['status'] = 'skipped'
+            result['message'] = 'Stale issue cleanup disabled'
+            return result
+
+        tracker_type = self.config.get('issue_tracker', {}).get('type', 'github')
+        if tracker_type != 'github':
+            result['status'] = 'skipped'
+            result['message'] = f'Stale issue cleanup only supported for GitHub (current: {tracker_type})'
+            return result
+
+        labels = [l.lower() for l in (self.stale_issue_labels or [])]
+        if not labels:
+            result['status'] = 'skipped'
+            result['message'] = 'No stale_issue_labels configured'
+            return result
+
+        cutoff = datetime.now() - timedelta(days=self.stale_issue_days)
+        closed = 0
+        scanned = 0
+
+        for repo in self.repositories:
+            repo_name = repo['name']
+            try:
+                cmd = (
+                    f"gh issue list --repo {self.owner}/{repo_name} --state open --limit 200 "
+                    f"--json number,title,updatedAt,labels,url"
+                )
+                gh_result = subprocess.run(
+                    cmd,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+                if gh_result.returncode != 0 or not gh_result.stdout.strip():
+                    continue
+
+                issues = json.loads(gh_result.stdout)
+            except Exception as e:
+                self.logger.warning(f"Failed to list issues for {repo_name}: {e}")
+                continue
+
+            for issue in issues:
+                scanned += 1
+                updated_at = issue.get('updatedAt', '')
+                try:
+                    updated_dt = datetime.fromisoformat(updated_at.replace('Z', '+00:00'))
+                except ValueError:
+                    continue
+
+                # Only target issues with configured labels (keep scope narrow)
+                issue_labels = [l.get('name', '').lower() for l in issue.get('labels', [])]
+                if not any(l in issue_labels for l in labels):
+                    continue
+
+                if updated_dt.replace(tzinfo=None) >= cutoff:
+                    continue
+
+                issue_number = issue.get('number')
+                if not issue_number:
+                    continue
+
+                age_days = (datetime.now(updated_dt.tzinfo) - updated_dt).days
+                comment = f"Auto-closed by Auditor: issue stale for {age_days} days."
+                close_cmd = f'gh issue close {issue_number} --repo {self.owner}/{repo_name} --comment "{comment}"'
+
+                try:
+                    close_result = subprocess.run(
+                        close_cmd,
+                        shell=True,
+                        capture_output=True,
+                        text=True,
+                        timeout=30
+                    )
+                    if close_result.returncode == 0:
+                        closed += 1
+                    else:
+                        self.logger.warning(
+                            f"Failed to close issue {repo_name}#{issue_number}: {close_result.stderr.strip()}"
+                        )
+                except Exception as e:
+                    self.logger.warning(f"Failed to close issue {repo_name}#{issue_number}: {e}")
+
+        result['closed'] = closed
+        result['scanned'] = scanned
+        result['message'] = f'Closed {closed} stale issues (scanned {scanned})'
+        return result
+
     def _reset_pending_feedback(self) -> Dict:
         """Reset broken pending feedback file"""
         result = {'action': 'feedback_reset', 'reset': False, 'message': ''}
@@ -1491,6 +1601,11 @@ class BarbossaAuditor:
         self.logger.info("Checking pending feedback...")
         feedback_result = self._reset_pending_feedback()
         actions.append(feedback_result)
+
+        # 5. Close stale issues (optional)
+        self.logger.info("Cleaning stale issues (if enabled)...")
+        stale_issue_result = self._cleanup_stale_issues()
+        actions.append(stale_issue_result)
 
         return actions
 
@@ -2139,7 +2254,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Barbossa Auditor v1.2.0 - System Health & Self-Improvement'
+        description='Barbossa Auditor v2.0.0 - System Health & Self-Improvement'
     )
     parser.add_argument(
         '--days',

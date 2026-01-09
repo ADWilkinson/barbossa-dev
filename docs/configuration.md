@@ -43,11 +43,16 @@ That's it. Barbossa auto-detects everything else.
       "max_files_for_auto_review": 30,
       "stale_days": 5,
       "block_on_pending_checks": true,
+      "pending_checks_timeout_hours": 6,
       "require_evidence": true,
       "require_lockfile_disclosure": true
     },
     "discovery": { "enabled": true, "precision_mode": "high" },
-    "product_manager": { "enabled": true }
+    "product_manager": { "enabled": true },
+    "auditor": {
+      "stale_issue_days": 0,
+      "stale_issue_labels": ["discovery", "product", "feature"]
+    }
   }
 }
 ```
@@ -62,14 +67,62 @@ That's it. Barbossa auto-detects everything else.
 | `max_files_for_auto_review` | Maximum files for automated review (default: 30) |
 | `stale_days` | Days before PR considered stale (default: 5) |
 | `block_on_pending_checks` | Defer review while CI is pending (default: true) |
+| `pending_checks_timeout_hours` | If CI stays pending longer than this, request changes instead of waiting (default: 6; set 0 to disable) |
 | `require_evidence` | Require evidence in PR description (default: true) |
 | `require_lockfile_disclosure` | Require lockfile disclosure in PR body (default: true) |
 | `precision_mode` | Discovery signal quality: `high`, `balanced`, `experimental` (default: high) |
+| `stale_issue_days` | Auto-close stale issues older than this many days (default: 0 = disabled) |
+| `stale_issue_labels` | Only close stale issues that have one of these labels |
 | `enabled` | Enable/disable individual agents |
 
 ---
 
 Legacy keys (still supported): `min_lines_for_tests_required`, `max_files_per_pr`, `stale_pr_threshold`
+
+---
+
+## Failure Analyzer (Backoff)
+
+Barbossa tracks repeated PR failures and can back off on retrying the same issue.
+
+```json
+{
+  "settings": {
+    "failure_analyzer": {
+      "enabled": true,
+      "retention_days": 90,
+      "backoff_policy": {
+        "skip_runs_after_failures": 1,
+        "consecutive_failures_threshold": 2
+      }
+    }
+  }
+}
+```
+
+- `enabled`: Toggle failure tracking and backoff logic.
+- `retention_days`: How long to keep failure history.
+- `backoff_policy.skip_runs_after_failures`: Base skip period after consecutive failures (hours, exponential).
+- `backoff_policy.consecutive_failures_threshold`: Failures required to activate backoff.
+
+---
+
+## Stale Issue Cleanup (Optional)
+
+The Auditor can close stale issues to keep the backlog tidy. It only applies to issues
+with labels in `stale_issue_labels`, so you can keep scope narrow (e.g., only Barbossa-created issues).
+Currently supported for GitHub Issues only (skipped when using Linear).
+
+```json
+{
+  "settings": {
+    "auditor": {
+      "stale_issue_days": 30,
+      "stale_issue_labels": ["discovery", "product", "feature"]
+    }
+  }
+}
+```
 
 ## Repository-Specific Guidance
 

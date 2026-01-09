@@ -95,6 +95,7 @@ The goal is UNIQUE, HIGH-VALUE work. Not duplicating effort.
 PRIORITY 1: CHECK THE BACKLOG FIRST
 ================================================================================
 {{backlog_section}}
+{{backoff_section}}
 
 If there are NO backlog issues:
   → Then and ONLY then, proceed to discover your own work below.
@@ -182,6 +183,10 @@ DEPENDENCY & LOCKFILE RULES
   - Mention it clearly in the PR summary
   - Explain why it is necessary
   - Keep the change minimal and scoped
+- If any dependency manifest or lockfile changes:
+  - Set "Lockfile changes: YES" in the PR body
+  - List each dependency + version under "Dependency changes"
+  - "NONE" is only valid when there are NO dependency or lockfile changes
 
 ================================================================================
 ERROR HANDLING RULES
@@ -299,7 +304,7 @@ What this PR does and why.
 
 ## Dependencies
 - Lockfile changes: YES/NO
-- Dependency changes: list versions (or NONE)
+- Dependency changes: list versions (required if lockfile/manifest changed; use NONE only if no dependency/lockfile changes)
 
 ## Changes
 - Bullet points of specific changes

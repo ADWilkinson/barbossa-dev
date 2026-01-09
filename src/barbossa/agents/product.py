@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Barbossa Product Manager v1.2.0 - Autonomous Feature Discovery Agent
+Barbossa Product Manager v2.0.0 - Autonomous Feature Discovery Agent
 Runs daily to analyze products and create feature Issues for the backlog.
 
 Part of the Pipeline:
@@ -49,7 +49,7 @@ from barbossa.utils.notifications import (
 class BarbossaProduct:
     """Product Manager agent that creates feature Issues for the pipeline."""
 
-    VERSION = "1.8.3"
+    VERSION = "2.0.0"
     DEFAULT_MAX_ISSUES_PER_RUN = 3
     DEFAULT_FEATURE_BACKLOG_THRESHOLD = 20
 

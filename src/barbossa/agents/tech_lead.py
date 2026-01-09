@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Barbossa Tech Lead v5.8 - PR Review & Governance Agent
+Barbossa Tech Lead v2.0.0 - PR Review & Governance Agent
 A strict, critical reviewer that manages PRs created by the Senior Engineer.
 Runs hourly at :35 (after Engineer completes) for fast feedback loops.
 
@@ -56,7 +56,7 @@ class BarbossaTechLead:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "1.8.3"
+    VERSION = "2.0.0"
     ROLE = "tech_lead"
 
     # Default review criteria (can be overridden in config)
@@ -68,6 +68,7 @@ class BarbossaTechLead:
     DEFAULT_REQUIRE_LOCKFILE_DISCLOSURE = True
     DEFAULT_MAX_DIFF_CHARS = 50000
     DEFAULT_MAX_FILES_FOR_AUTO_REVIEW = 30
+    DEFAULT_PENDING_CHECKS_TIMEOUT_HOURS = 6
 
     def __init__(self, work_dir: Optional[Path] = None):
         default_dir = Path(os.environ.get('BARBOSSA_DIR', '/app'))
@@ -109,6 +110,9 @@ class BarbossaTechLead:
             settings.get('stale_pr_days', settings.get('stale_pr_threshold', self.DEFAULT_STALE_DAYS))
         )
         self.block_on_pending_checks = settings.get('block_on_pending_checks', self.DEFAULT_BLOCK_ON_PENDING_CHECKS)
+        self.pending_checks_timeout_hours = settings.get(
+            'pending_checks_timeout_hours', self.DEFAULT_PENDING_CHECKS_TIMEOUT_HOURS
+        )
         self.require_evidence = settings.get('require_evidence', self.DEFAULT_REQUIRE_EVIDENCE)
         self.require_lockfile_disclosure = settings.get('require_lockfile_disclosure', self.DEFAULT_REQUIRE_LOCKFILE_DISCLOSURE)
         self.max_diff_chars = settings.get('max_diff_chars', self.DEFAULT_MAX_DIFF_CHARS)
@@ -128,10 +132,12 @@ class BarbossaTechLead:
         self.logger.info("Mode: GitHub as single source of truth")
         self.logger.info(
             "Settings: min_lines_for_tests=%s, stale_days=%s, block_on_pending_checks=%s, "
-            "require_evidence=%s, require_lockfile_disclosure=%s, max_diff_chars=%s, max_files_for_auto_review=%s",
+            "pending_checks_timeout_hours=%s, require_evidence=%s, require_lockfile_disclosure=%s, "
+            "max_diff_chars=%s, max_files_for_auto_review=%s",
             self.MIN_LINES_FOR_TESTS,
             self.STALE_DAYS,
             self.block_on_pending_checks,
+            self.pending_checks_timeout_hours,
             self.require_evidence,
             self.require_lockfile_disclosure,
             self.max_diff_chars,
@@ -339,6 +345,18 @@ class BarbossaTechLead:
         except Exception as e:
             self.logger.warning(f"Could not get checks for PR #{pr_number}: {e}")
         return {'checks': [], 'all_passing': False, 'any_failing': False, 'pending': True}
+
+    def _get_pr_age_hours(self, pr: Dict) -> Optional[float]:
+        """Return hours since last PR update (falls back to createdAt)."""
+        timestamp = pr.get('updatedAt') or pr.get('createdAt')
+        if not timestamp:
+            return None
+        try:
+            dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+        except ValueError:
+            return None
+        now = datetime.now(dt.tzinfo)
+        return (now - dt).total_seconds() / 3600
 
     def _get_pr_files(self, repo_name: str, pr_number: int) -> List[Dict]:
         """Get list of files changed in a PR"""
@@ -982,24 +1000,36 @@ _Senior Engineer: Please address the above feedback and push updates._"""
 
         self.logger.info(f"Fetched {len(comments)} comments for context")
 
-        # Gate: pending CI checks
+        # Gate: pending CI checks (with timeout fallback)
+        pending_too_long = False
+        pending_age_hours = None
         if self.block_on_pending_checks and checks.get('pending'):
-            self.logger.info("Skipping review - CI checks pending")
-            decision_record = {
-                'session_id': session_id,
-                'timestamp': datetime.now().isoformat(),
-                'repository': repo_name,
-                'pr_number': pr_number,
-                'pr_title': pr['title'],
-                'pr_url': pr['url'],
-                'pr_author': pr.get('author', {}).get('login', 'unknown'),
-                'decision': 'PENDING_CHECKS',
-                'reasoning': 'CI checks are still pending. Automated review deferred.',
-                'auto_rejected': False,
-                'executed': False
-            }
-            self._save_decision(decision_record)
-            return decision_record
+            pending_age_hours = self._get_pr_age_hours(pr)
+            if self.pending_checks_timeout_hours and pending_age_hours is not None:
+                if pending_age_hours >= self.pending_checks_timeout_hours:
+                    pending_too_long = True
+                    self.logger.info(
+                        "Pending checks exceeded timeout (%.1fh >= %sh)",
+                        pending_age_hours,
+                        self.pending_checks_timeout_hours
+                    )
+            if not pending_too_long:
+                self.logger.info("Skipping review - CI checks pending")
+                decision_record = {
+                    'session_id': session_id,
+                    'timestamp': datetime.now().isoformat(),
+                    'repository': repo_name,
+                    'pr_number': pr_number,
+                    'pr_title': pr['title'],
+                    'pr_url': pr['url'],
+                    'pr_author': pr.get('author', {}).get('login', 'unknown'),
+                    'decision': 'PENDING_CHECKS',
+                    'reasoning': 'CI checks are still pending. Automated review deferred.',
+                    'auto_rejected': False,
+                    'executed': False
+                }
+                self._save_decision(decision_record)
+                return decision_record
 
         # Gate: diff too large for automated review
         if len(diff) > self.max_diff_chars or pr.get('changedFiles', 0) > self.max_files_for_auto_review:
@@ -1028,6 +1058,20 @@ _Senior Engineer: Please address the above feedback and push updates._"""
 
         # Quick rejection checks (before Claude review)
         quick_reject = None
+
+        if not quick_reject and pending_too_long:
+            hours = pending_age_hours if pending_age_hours is not None else 0
+            quick_reject = {
+                'decision': 'REQUEST_CHANGES',
+                'reasoning': (
+                    f'CI checks have been pending for {hours:.1f} hours. '
+                    'Please re-run or investigate the stuck checks and update the PR.'
+                ),
+                'value_score': 0,
+                'quality_score': 0,
+                'bloat_risk': 'HIGH',
+                'auto_rejected': True
+            }
 
         # Check for repeated REQUEST_CHANGES (3-strikes rule)
         tech_lead_change_requests = [
@@ -1263,10 +1307,10 @@ _Senior Engineer: Please address the above feedback and push updates._"""
         remaining = []
 
         for pr in prs:
-            created_at = pr.get('createdAt', '')
+            updated_at = pr.get('updatedAt') or pr.get('createdAt', '')
             try:
-                created_date = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                age_days = (datetime.now(created_date.tzinfo) - created_date).days
+                updated_date = datetime.fromisoformat(updated_at.replace('Z', '+00:00'))
+                age_days = (datetime.now(updated_date.tzinfo) - updated_date).days
             except ValueError:
                 age_days = 0  # Invalid date format, assume not stale
 
@@ -1314,7 +1358,7 @@ _Senior Engineer: Please address the above feedback and push updates._"""
             return []
 
         self.logger.info(f"\n{'#'*70}")
-        self.logger.info("BARBOSSA TECH LEAD v2.0 - PR REVIEW SESSION")
+        self.logger.info("BARBOSSA TECH LEAD v2.0.0 - PR REVIEW SESSION")
         self.logger.info("Mode: GitHub as single source of truth (no file-based state)")
         self.logger.info(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         self.logger.info(f"{'#'*70}\n")
@@ -1448,7 +1492,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Barbossa Tech Lead v2.0 - PR Review & Governance'
+        description='Barbossa Tech Lead v2.0.0 - PR Review & Governance'
     )
     parser.add_argument(
         '--status',

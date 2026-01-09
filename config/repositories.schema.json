@@ -97,6 +97,12 @@
               "default": true,
               "description": "Defer review while CI checks are pending"
             },
+            "pending_checks_timeout_hours": {
+              "type": "integer",
+              "default": 6,
+              "minimum": 0,
+              "description": "If CI checks stay pending longer than this, request changes instead of waiting (0 disables)"
+            },
             "require_evidence": {
               "type": "boolean",
               "default": true,
@@ -179,6 +185,24 @@
                   "description": "Number of consecutive failures before backoff activates (default: 2)"
                 }
               }
+            }
+          }
+        },
+        "auditor": {
+          "type": "object",
+          "description": "Auditor settings for optional cleanup tasks",
+          "properties": {
+            "stale_issue_days": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0,
+              "description": "Auto-close stale issues older than this many days (0 disables)"
+            },
+            "stale_issue_labels": {
+              "type": "array",
+              "items": { "type": "string" },
+              "default": ["discovery", "product", "feature"],
+              "description": "Only close stale issues that have one of these labels"
             }
           }
         }

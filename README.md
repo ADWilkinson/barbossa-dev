@@ -26,7 +26,7 @@ docker pull ghcr.io/adwilkinson/barbossa-dev:latest
 
 ## Project Status
 
-Barbossa is in beta. Expect some breaking changes between minor versions while the API and workflows stabilize.
+Barbossa is in beta. v2.0.0 focuses on stability and simpler defaults (optional hygiene tasks are opt-in).
 
 ---
 
@@ -59,7 +59,7 @@ Discovery + Product Manager
 | **Tech Lead** | 8-dimension quality review, auto-merge or request changes, 3-strikes close |
 | **Discovery** | Finds TODOs, missing tests, accessibility issues, tech debt |
 | **Product Manager** | Proposes features with acceptance criteria |
-| **Auditor** | Health scoring, creates issues for critical problems |
+| **Auditor** | Health scoring, system checks, optional cleanup (logs, stale sessions/issues) |
 
 ---
 
@@ -177,6 +177,9 @@ docker exec barbossa barbossa health
 | `focus` | Development priority (e.g., "Quality and resilience") |
 | `known_gaps` | Priority issues for agents to address |
 | `auto_merge` | `true` = merge automatically, `false` = approval only |
+| `pending_checks_timeout_hours` | If CI stays pending too long, request changes instead of waiting |
+| `stale_issue_days` | Auto-close stale issues older than this many days (0 = disabled) |
+| `stale_issue_labels` | Only close stale issues that have one of these labels |
 
 ---
 

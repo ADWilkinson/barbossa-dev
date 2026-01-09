@@ -390,18 +390,66 @@
       "max_files_for_auto_review": 30,
       "stale_days": 5,
       "block_on_pending_checks": true,
+      "pending_checks_timeout_hours": 6,
       "require_evidence": true,
       "require_lockfile_disclosure": true
     },
     "discovery": { "enabled": true, "precision_mode": "high" },
-    "product_manager": { "enabled": true }
+    "product_manager": { "enabled": true },
+    "auditor": {
+      "stale_issue_days": 0,
+      "stale_issue_labels": ["discovery", "product", "feature"]
+    }
   }
 }</code></pre>
 
-<table><tr><th>Field</th><th>Description</th></tr><tr><td><code>package_manager</code></td><td><code>npm</code>, <code>yarn</code>, <code>pnpm</code>, or <code>bun</code> (auto-detected if omitted)</td></tr><tr><td><code>do_not_touch</code></td><td>Files/directories agents should never modify</td></tr><tr><td><code>telemetry</code></td><td><code>true</code> (default) or <code>false</code> to disable anonymous usage tracking</td></tr><tr><td><code>auto_merge</code></td><td>Enabled by default. Set to <code>false</code> for manual merge control</td></tr><tr><td><code>min_lines_for_tests</code></td><td>Minimum lines changed to require tests (default: 50)</td></tr><tr><td><code>max_files_for_auto_review</code></td><td>Maximum files for automated review (default: 30)</td></tr><tr><td><code>stale_days</code></td><td>Days before PR considered stale (default: 5)</td></tr><tr><td><code>block_on_pending_checks</code></td><td>Defer review while CI is pending (default: true)</td></tr><tr><td><code>require_evidence</code></td><td>Require evidence in PR description (default: true)</td></tr><tr><td><code>require_lockfile_disclosure</code></td><td>Require lockfile disclosure in PR body (default: true)</td></tr><tr><td><code>precision_mode</code></td><td>Discovery signal quality: <code>high</code>, <code>balanced</code>, <code>experimental</code> (default: high)</td></tr><tr><td><code>enabled</code></td><td>Enable/disable individual agents</td></tr></table>
+<table><tr><th>Field</th><th>Description</th></tr><tr><td><code>package_manager</code></td><td><code>npm</code>, <code>yarn</code>, <code>pnpm</code>, or <code>bun</code> (auto-detected if omitted)</td></tr><tr><td><code>do_not_touch</code></td><td>Files/directories agents should never modify</td></tr><tr><td><code>telemetry</code></td><td><code>true</code> (default) or <code>false</code> to disable anonymous usage tracking</td></tr><tr><td><code>auto_merge</code></td><td>Enabled by default. Set to <code>false</code> for manual merge control</td></tr><tr><td><code>min_lines_for_tests</code></td><td>Minimum lines changed to require tests (default: 50)</td></tr><tr><td><code>max_files_for_auto_review</code></td><td>Maximum files for automated review (default: 30)</td></tr><tr><td><code>stale_days</code></td><td>Days before PR considered stale (default: 5)</td></tr><tr><td><code>block_on_pending_checks</code></td><td>Defer review while CI is pending (default: true)</td></tr><tr><td><code>pending_checks_timeout_hours</code></td><td>If CI stays pending longer than this, request changes instead of waiting (default: 6; set 0 to disable)</td></tr><tr><td><code>require_evidence</code></td><td>Require evidence in PR description (default: true)</td></tr><tr><td><code>require_lockfile_disclosure</code></td><td>Require lockfile disclosure in PR body (default: true)</td></tr><tr><td><code>precision_mode</code></td><td>Discovery signal quality: <code>high</code>, <code>balanced</code>, <code>experimental</code> (default: high)</td></tr><tr><td><code>stale_issue_days</code></td><td>Auto-close stale issues older than this many days (default: 0 = disabled)</td></tr><tr><td><code>stale_issue_labels</code></td><td>Only close stale issues that have one of these labels</td></tr><tr><td><code>enabled</code></td><td>Enable/disable individual agents</td></tr></table>
 <hr>
 
 <p>Legacy keys (still supported): <code>min_lines_for_tests_required</code>, <code>max_files_per_pr</code>, <code>stale_pr_threshold</code></p>
+
+<hr>
+
+<h2 id="failure-analyzer-backoff">Failure Analyzer (Backoff)</h2>
+
+<p>Barbossa tracks repeated PR failures and can back off on retrying the same issue.</p>
+
+<pre class="language-json"><code class="language-json">{
+  "settings": {
+    "failure_analyzer": {
+      "enabled": true,
+      "retention_days": 90,
+      "backoff_policy": {
+        "skip_runs_after_failures": 1,
+        "consecutive_failures_threshold": 2
+      }
+    }
+  }
+}</code></pre>
+
+<ul>
+<li><code>enabled</code>: Toggle failure tracking and backoff logic.</li>
+<li><code>retention_days</code>: How long to keep failure history.</li>
+<li><code>backoff_policy.skip_runs_after_failures</code>: Base skip period after consecutive failures (hours, exponential).</li>
+<li><code>backoff_policy.consecutive_failures_threshold</code>: Failures required to activate backoff.</li>
+</ul>
+
+<hr>
+
+<h2 id="stale-issue-cleanup-optional">Stale Issue Cleanup (Optional)</h2>
+
+<p>The Auditor can close stale issues to keep the backlog tidy. It only applies to issues
+with labels in <code>stale_issue_labels</code>, so you can keep scope narrow (e.g., only Barbossa-created issues).
+Currently supported for GitHub Issues only (skipped when using Linear).</p>
+
+<pre class="language-json"><code class="language-json">{
+  "settings": {
+    "auditor": {
+      "stale_issue_days": 30,
+      "stale_issue_labels": ["discovery", "product", "feature"]
+    }
+  }
+}</code></pre>
 
 <h2 id="repository-specific-guidance">Repository-Specific Guidance</h2>
 
