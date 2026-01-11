@@ -332,7 +332,7 @@ On container startup, `validate.py` checks:
 
 ## Version History
 
-**Current Version:** v1.8.3 (2026-01-04)
+**Current Version:** v2.0.1 (2026-01-11)
 
 For detailed release notes, see [CHANGELOG.md](CHANGELOG.md).
 

@@ -26,7 +26,7 @@ docker pull ghcr.io/adwilkinson/barbossa-dev:latest
 
 ## Project Status
 
-Barbossa is in beta. v2.0.0 focuses on stability and simpler defaults (optional hygiene tasks are opt-in).
+Barbossa is in beta. v2.0.1 is the latest stable release.
 
 ---
 

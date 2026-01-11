@@ -38,7 +38,7 @@ from typing import Dict, List, Optional, Any
 from collections import defaultdict
 
 # Current version
-VERSION = "2.0.0"
+VERSION = "2.0.1"
 
 logger = logging.getLogger('barbossa.failure_analyzer')
 

@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
     ca-certificates \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Install supercronic (cron for containers)

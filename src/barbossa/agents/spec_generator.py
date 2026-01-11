@@ -39,7 +39,7 @@ from barbossa.utils.notifications import (
 class BarbossaSpecGenerator:
     """Cross-repo product specification generator."""
 
-    VERSION = "2.0.0"
+    VERSION = "2.0.1"
     DEFAULT_MAX_SPECS_PER_RUN = 2
     DEFAULT_DEDUP_DAYS = 14
     DEFAULT_MIN_VALUE_SCORE = 7
