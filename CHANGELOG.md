@@ -5,6 +5,23 @@ All notable changes to Barbossa are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2026-01-16
+
+### Removed
+- **Linear Integration** - Removed all Linear support in favor of GitHub Issues only
+  - Deleted `linear_client.py` and associated tests (~900 lines)
+  - Simplified `issue_tracker.py` to GitHub-only (~200 lines removed)
+  - Removed Linear config from schema, env files, and docker-compose
+  - **Why:** Simplifies codebase, GitHub Issues works out of the box with zero config
+
+### Changed
+- **README Rewrite** - Clearer value proposition with "Why Barbossa?" section
+- **Docs Simplification** - Removed Linear references from all documentation pages
+
+### Added
+- **OG Meta Tags** - Social preview cards for docs site (Twitter, Open Graph)
+- **GitHub Stars Badge** - Added to README
+
 ## [2.0.1] - 2026-01-11
 
 ### Fixed

@@ -2,7 +2,7 @@
 
 > AI engineers that ship code while you sleep.
 
-Barbossa is an autonomous development pipeline powered by Claude. Version 2.0.1.
+Barbossa is an autonomous development pipeline powered by Claude. Version 2.0.2.
 
 ## Two Modes
 
@@ -126,9 +126,9 @@ Opt out: `"settings": { "telemetry": false }`
 
 ## Version
 
-**Current:** 2.0.1 (2026-01-11)
+**Current:** 2.0.2 (2026-01-11)
 
-- v2.0.1: Docker fix for missing procps package
+- v2.0.2: Docker fix for missing procps package
 - v2.0.0: Failure backoff visibility, stale issue cleanup, pending CI timeout
 - v1.8.3: Auditor focuses on system health only (code quality is Discovery's domain)
 - v1.8.2: Fix auditor session detection causing false 0/100 health scores

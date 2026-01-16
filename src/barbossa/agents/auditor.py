@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Barbossa Auditor v2.0.1 - Self-Improving System Audit Agent
+Barbossa Auditor v2.0.2 - Self-Improving System Audit Agent
 Runs daily at 06:30 to analyze logs, PR outcomes, and system health.
 Identifies patterns, issues, and opportunities for improvement.
 Enhanced with code bloat detection and architecture consistency checks.
@@ -50,7 +50,7 @@ class BarbossaAuditor:
     and identifies opportunities for optimization.
     """
 
-    VERSION = "2.0.1"
+    VERSION = "2.0.2"
     ROLE = "auditor"
     DEFAULT_STALE_ISSUE_DAYS = 0
     DEFAULT_STALE_ISSUE_LABELS = ["discovery", "product", "feature"]
@@ -2254,7 +2254,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Barbossa Auditor v2.0.1 - System Health & Self-Improvement'
+        description='Barbossa Auditor v2.0.2 - System Health & Self-Improvement'
     )
     parser.add_argument(
         '--days',

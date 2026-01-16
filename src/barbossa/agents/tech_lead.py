@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Barbossa Tech Lead v2.0.1 - PR Review & Governance Agent
+Barbossa Tech Lead v2.0.2 - PR Review & Governance Agent
 A strict, critical reviewer that manages PRs created by the Senior Engineer.
 Runs hourly at :35 (after Engineer completes) for fast feedback loops.
 
@@ -56,7 +56,7 @@ class BarbossaTechLead:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "2.0.1"
+    VERSION = "2.0.2"
     ROLE = "tech_lead"
 
     # Default review criteria (can be overridden in config)
@@ -1358,7 +1358,7 @@ _Senior Engineer: Please address the above feedback and push updates._"""
             return []
 
         self.logger.info(f"\n{'#'*70}")
-        self.logger.info("BARBOSSA TECH LEAD v2.0.1 - PR REVIEW SESSION")
+        self.logger.info("BARBOSSA TECH LEAD v2.0.2 - PR REVIEW SESSION")
         self.logger.info("Mode: GitHub as single source of truth (no file-based state)")
         self.logger.info(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         self.logger.info(f"{'#'*70}\n")
@@ -1492,7 +1492,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Barbossa Tech Lead v2.0.1 - PR Review & Governance'
+        description='Barbossa Tech Lead v2.0.2 - PR Review & Governance'
     )
     parser.add_argument(
         '--status',

@@ -1,8 +1,7 @@
 # Barbossa Engineer - Claude Context
 
 **Last Updated:** 2026-01-16
-**Version:** v2.0.1
-**Linear Support:** Removed in v2.0.2 - GitHub Issues only
+**Version:** v2.0.2
 
 ## Project Overview
 
@@ -284,7 +283,7 @@ On container startup, `validate.py` checks:
 
 ## Version History
 
-**Current Version:** v2.0.1 (2026-01-11)
+**Current Version:** v2.0.2 (2026-01-16)
 
 For detailed release notes, see [CHANGELOG.md](CHANGELOG.md).
 

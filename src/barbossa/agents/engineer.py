@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Barbossa Engineer v2.0.1 - Autonomous Development Agent
+Barbossa Engineer v2.0.2 - Autonomous Development Agent
 Creates PRs from the backlog every hour at :00.
 Picks from GitHub Issues first, invents work only if backlog empty.
 
@@ -50,7 +50,7 @@ class Barbossa:
     Uses GitHub as the single source of truth - no file-based state.
     """
 
-    VERSION = "2.0.1"
+    VERSION = "2.0.2"
 
     def __init__(self, work_dir: Optional[Path] = None):
         # Support Docker (/app) and local paths

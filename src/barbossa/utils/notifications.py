@@ -40,7 +40,7 @@ from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
 # Current version
-VERSION = "2.0.1"
+VERSION = "2.0.2"
 
 # Timeout for webhook calls (short - we never want to block)
 WEBHOOK_TIMEOUT = 10

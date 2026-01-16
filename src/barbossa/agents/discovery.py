@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Barbossa Discovery v2.0.1 - Autonomous Feature Discovery Agent
+Barbossa Discovery v2.0.2 - Autonomous Feature Discovery Agent
 Runs 3x daily (06:00, 14:00, 22:00) to find improvements and create Issues.
 Keeps the backlog fed so Engineers always have work to pick from.
 
@@ -48,7 +48,7 @@ from barbossa.utils.notifications import (
 class BarbossaDiscovery:
     """Autonomous discovery agent that creates issues for the pipeline."""
 
-    VERSION = "2.0.1"
+    VERSION = "2.0.2"
     DEFAULT_BACKLOG_THRESHOLD = 20
     DEFAULT_PRECISION_MODE = "high"
 
