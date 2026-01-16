@@ -1,3 +1,29 @@
+Metadata-Version: 2.4
+Name: barbossa
+Version: 2.0.1
+Summary: Autonomous AI development team powered by Claude
+Author-email: Andy Wilkinson <andywilkinson1993@gmail.com>
+License: MIT
+Project-URL: Homepage, https://github.com/ADWilkinson/barbossa-dev
+Project-URL: Documentation, https://github.com/ADWilkinson/barbossa-dev#readme
+Project-URL: Repository, https://github.com/ADWilkinson/barbossa-dev
+Project-URL: Issues, https://github.com/ADWilkinson/barbossa-dev/issues
+Keywords: ai,automation,development,github,claude
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Software Development :: Code Generators
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests>=2.31.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.1.0; extra == "dev"
+Dynamic: license-file
+
 # Barbossa
 
 [![CI](https://github.com/ADWilkinson/barbossa-dev/actions/workflows/ci.yml/badge.svg)](https://github.com/ADWilkinson/barbossa-dev/actions/workflows/ci.yml)

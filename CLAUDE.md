@@ -2,6 +2,7 @@
 
 **Last Updated:** 2026-01-16
 **Version:** v2.0.1
+**Linear Support:** Removed in v2.0.2 - GitHub Issues only
 
 ## Project Overview
 
@@ -23,9 +24,8 @@ barbossa-engineer/
 │       │   └── firebase.py  # Firebase sync (future)
 │       ├── utils/           # Shared utilities
 │       │   ├── prompts.py   # Prompt templates loader
-│       │   ├── issue_tracker.py  # GitHub/Linear abstraction
-│       │   ├── linear_client.py  # Linear API client
-│       │   └── notifications.py  # Discord/Slack webhook notifications
+│       │   ├── issue_tracker.py  # GitHub Issues integration
+│       │   └── notifications.py  # Discord webhook notifications
 │       └── cli/
 │           └── barbossa     # CLI tool for manual operations
 ├── scripts/                 # Build and deployment scripts
@@ -34,8 +34,7 @@ barbossa-engineer/
 │   ├── run.sh               # Agent runner script
 │   └── install.sh           # Installation script
 ├── tests/                   # Test suite
-│   ├── test_issue_tracker.py
-│   └── test_linear_client.py
+│   └── test_issue_tracker.py
 ├── config/                  # Configuration files
 │   ├── repositories.json    # Repository configuration
 │   ├── repositories.json.example
@@ -78,56 +77,11 @@ barbossa-engineer/
 
 ## Issue Tracking
 
-### Supported Systems
-Barbossa supports both **GitHub Issues** (default) and **Linear** for issue tracking. All agents work with either system through a unified abstraction layer.
-
-### GitHub Issues (Default)
+Barbossa uses GitHub Issues for tracking work:
 - No configuration needed; works out of the box
 - Uses `gh` CLI for issue operations
 - Agents reference issues as `#123`
 - PRs linked via "Closes #123" in PR description
-
-### Linear Integration
-Configure Linear in `config/repositories.json`:
-
-```json
-{
-  "owner": "your-github-username",
-  "issue_tracker": {
-    "type": "linear",
-    "linear": {
-      "team_key": "MUS",
-      "backlog_state": "Backlog",
-      "api_key": "lin_api_xxx"  // Optional - prefer LINEAR_API_KEY env var
-    }
-  },
-  "repositories": [...]
-}
-```
-
-**Environment Variable (Recommended):**
-```bash
-export LINEAR_API_KEY="lin_api_xxx"
-# Get your API key from: https://linear.app/settings/api
-```
-
-**Linear Features:**
-- ✅ Discovery/Product agents create issues in Linear team
-- ✅ Engineer agent fetches backlog from Linear
-- ✅ Auto-linking via branch naming: `barbossa/MUS-14-description`
-- ✅ All agents use unified Issue abstraction (no code changes needed)
-- ✅ Validation on startup checks Linear connectivity
-
-**Behavioral Differences:**
-- **GitHub:** Engineer uses `gh issue list` at runtime (real-time state)
-- **Linear:** Issues pre-fetched and injected into prompt (snapshot)
-
-**Startup Validation:**
-When Linear is configured, `validate.py` checks:
-- ✅ `team_key` is set in config
-- ✅ `LINEAR_API_KEY` environment variable is set
-- ✅ API connectivity to `api.linear.app`
-- ✅ Team exists and user has access
 
 ## Webhook Notifications
 
@@ -209,7 +163,6 @@ Add to `config/repositories.json`:
 - **Claude:** `ANTHROPIC_API_KEY` environment variable (supports both):
   - Option 1 (Recommended): Claude Pro/Max subscription token (long-lasting, up to 1 year)
   - Option 2: Pay-as-you-go Anthropic API key
-- **Linear:** `LINEAR_API_KEY` environment variable (optional, only if using Linear)
 - **Git:** User name/email from mounted `~/.gitconfig` (read-only)
 - All tokens configured in `.env` file
 - No credential files mounted (resolves macOS Keychain issues)
@@ -320,8 +273,7 @@ On container startup, `validate.py` checks:
 1. ✅ Config file exists and valid JSON
 2. ✅ `GITHUB_TOKEN` environment variable set and valid
 3. ✅ `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` environment variable set
-4. ✅ `LINEAR_API_KEY` set and valid (if Linear is configured)
-5. ✅ Spec mode configuration valid (if enabled)
+4. ✅ Spec mode configuration valid (if enabled)
    - Products array must exist with at least one product
    - All product repositories exist in `repositories` array
    - Each product has `primary_repo` set
@@ -386,9 +338,6 @@ docker logs barbossa | head -50
 # Fix Option 1 (Recommended): Generate Claude Pro token
 #   claude setup-token  # Follow prompts
 # Fix Option 2: Get API key from https://console.anthropic.com/settings/keys
-
-# LINEAR_API_KEY invalid (if using Linear)
-# Fix: Get from https://linear.app/settings/api
 ```
 
 ## Contact & Support

@@ -18,9 +18,6 @@
       },
       "description": "List of repositories for Barbossa to work on"
     },
-    "issue_tracker": {
-      "$ref": "#/definitions/issue_tracker"
-    },
     "settings": {
       "$ref": "#/definitions/settings"
     }
@@ -205,40 +202,6 @@
               "description": "Only close stale issues that have one of these labels"
             }
           }
-        }
-      }
-    },
-    "issue_tracker": {
-      "type": "object",
-      "description": "Configure which issue tracking system to use (GitHub Issues or Linear)",
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": ["github", "linear"],
-          "default": "github",
-          "description": "Issue tracker type: 'github' for GitHub Issues, 'linear' for Linear"
-        },
-        "linear": {
-          "type": "object",
-          "description": "Linear-specific configuration (required when type is 'linear')",
-          "properties": {
-            "team_key": {
-              "type": "string",
-              "description": "Linear team key (e.g., 'MUS', 'ENG')",
-              "pattern": "^[A-Z]{2,10}$"
-            },
-            "api_key": {
-              "type": "string",
-              "description": "Linear API key (or set LINEAR_API_KEY env var)",
-              "pattern": "^lin_api_.*$"
-            },
-            "backlog_state": {
-              "type": "string",
-              "default": "Backlog",
-              "description": "Name of the workflow state for backlog issues"
-            }
-          },
-          "required": ["team_key"]
         }
       }
     }

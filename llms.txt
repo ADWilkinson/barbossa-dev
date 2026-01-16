@@ -98,19 +98,6 @@ docker exec barbossa barbossa run spec         # Run spec generator (spec mode)
 docker exec barbossa barbossa status           # View activity
 ```
 
-## Linear Integration (Optional)
-
-```json
-{
-  "issue_tracker": {
-    "type": "linear",
-    "linear": { "team_key": "ENG", "backlog_state": "Backlog" }
-  }
-}
-```
-
-Set: `export LINEAR_API_KEY="lin_api_xxx"`
-
 ## Discord Notifications
 
 ```json

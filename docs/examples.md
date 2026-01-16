@@ -184,43 +184,6 @@ Multiple repos, aggressive schedule, protected files:
 
 ---
 
-## Issue Tracking
-
-### GitHub Issues (Default)
-
-No configuration needed. Issues are created and tracked in GitHub.
-
-### Linear Integration
-
-```json
-{
-  "owner": "yourname",
-  "issue_tracker": {
-    "type": "linear",
-    "linear": {
-      "team_key": "ENG",
-      "backlog_state": "Backlog"
-    }
-  },
-  "repositories": [
-    {
-      "name": "app",
-      "url": "https://github.com/yourname/app.git"
-    }
-  ]
-}
-```
-
-Set the API key:
-
-```bash
-export LINEAR_API_KEY="lin_api_xxxx"
-```
-
-Linear issues automatically link to PRs via branch naming: `barbossa/ENG-42-fix-login-bug`
-
----
-
 ## Scheduling Patterns
 
 ### Business Hours Only
@@ -415,7 +378,7 @@ Restart Barbossa after changing modes.
 
 1. Create `config/repositories.json` with your repo
 2. Add `CLAUDE.md` to your repository root with project context
-3. Create `backlog` label in GitHub (or use Linear)
+3. Create `backlog` label in GitHub
 4. Start Barbossa
 
 Initial issues will be created by Discovery agent. Engineer picks them up automatically.

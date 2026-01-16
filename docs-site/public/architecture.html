@@ -393,19 +393,19 @@
 |                       |                          |
 +--------------------------------------------------+
                         |
-        +---------------+---------------+
-        |               |               |
-        v               v               v
-   +--------+      +--------+      +--------+
-   | GitHub |      | Claude |      | Linear |
-   |  API   |      |  API   |      |  API   |
-   +--------+      +--------+      +--------+
-                        |
-                        v
-                   +--------+
-                   |Discord |
-                   |Webhook |
-                   +--------+</code></pre>
+                +-------+-------+
+                |               |
+                v               v
+           +--------+      +--------+
+           | GitHub |      | Claude |
+           |  API   |      |  API   |
+           +--------+      +--------+
+                |
+                v
+           +--------+
+           |Discord |
+           |Webhook |
+           +--------+</code></pre>
 
 <hr>
 
@@ -469,7 +469,7 @@
 
 <strong>Workflow:</strong>
 <ol>
-<li>Fetches issues labeled <code>backlog</code> from GitHub/Linear</li>
+<li>Fetches issues labeled <code>backlog</code> from GitHub</li>
 <li>Sorts by priority (explicit priority labels or creation date)</li>
 <li>Creates feature branch: <code>barbossa/{issue-id}-{slug}</code></li>
 <li>Invokes Claude CLI with issue context + CLAUDE.md</li>
@@ -595,8 +595,7 @@
 │   │   └── spec_generator.py  # Cross-repo spec generator (Spec Mode)
 │   ├── utils/
 │   │   ├── prompts.py         # Prompt template loader
-│   │   ├── issue_tracker.py   # GitHub/Linear abstraction
-│   │   ├── linear_client.py   # Linear API wrapper
+│   │   ├── issue_tracker.py   # GitHub Issues integration
 │   │   └── notifications.py   # Discord webhook notifications
 │   └── cli/
 │       └── barbossa           # CLI entrypoint
@@ -626,7 +625,6 @@
 <ul>
 <li>GitHub token: <code>GITHUB_TOKEN</code> (repo, workflow scopes)</li>
 <li>Claude token: <code>CLAUDE_CODE_OAUTH_TOKEN</code> or <code>ANTHROPIC_API_KEY</code></li>
-<li>Linear token: <code>LINEAR_API_KEY</code> (optional)</li>
 </ul>
 
 <h3 id="what-agents-can-do">What Agents Can Do</h3>
@@ -688,10 +686,6 @@
 }</code></pre>
 
 <p>Restart the container to apply changes.</p>
-
-<h3 id="linear-integration">Linear Integration</h3>
-
-<p>See <a href="configuration.html#linear-integration">Configuration</a> for Linear setup.</p>
 
     </main>
 

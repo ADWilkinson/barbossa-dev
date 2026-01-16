@@ -347,7 +347,7 @@
     </nav>
 
     <main>
-        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#minimal-config">Minimal Config</a></li><li><a href="#common-options">Common Options</a></li><li><a href="#repository-specific-guidance">Repository-Specific Guidance</a></li><li><a href="#scheduling">Scheduling</a></li><li><a href="#issue-tracking">Issue Tracking</a></li><li><a href="#webhook-notifications">Webhook Notifications</a></li><li><a href="#multiple-repos">Multiple Repos</a></li><li><a href="#spec-mode-product-specifications">Spec Mode (Product Specifications)</a></li><li><a href="#timezone">Timezone</a></li><li><a href="#privacy-telemetry">Privacy & Telemetry</a></li></ul></div>
+        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#minimal-config">Minimal Config</a></li><li><a href="#common-options">Common Options</a></li><li><a href="#failure-analyzer-backoff">Failure Analyzer (Backoff)</a></li><li><a href="#stale-issue-cleanup-optional">Stale Issue Cleanup (Optional)</a></li><li><a href="#repository-specific-guidance">Repository-Specific Guidance</a></li><li><a href="#scheduling">Scheduling</a></li><li><a href="#webhook-notifications">Webhook Notifications</a></li><li><a href="#multiple-repos">Multiple Repos</a></li><li><a href="#spec-mode-product-specifications">Spec Mode (Product Specifications)</a></li><li><a href="#timezone">Timezone</a></li><li><a href="#privacy-telemetry">Privacy & Telemetry</a></li></ul></div>
         <h1 id="configuration">Configuration</h1>
 
 <p>All configuration is in <code>config/repositories.json</code>.</p>
@@ -438,9 +438,8 @@
 
 <h2 id="stale-issue-cleanup-optional">Stale Issue Cleanup (Optional)</h2>
 
-<p>The Auditor can close stale issues to keep the backlog tidy. It only applies to issues
-with labels in <code>stale_issue_labels</code>, so you can keep scope narrow (e.g., only Barbossa-created issues).
-Currently supported for GitHub Issues only (skipped when using Linear).</p>
+<p>The Auditor can close stale issues to keep the backlog tidy. It only applies to issues</p>
+<p>with labels in <code>stale_issue_labels</code>, so you can keep scope narrow (e.g., only Barbossa-created issues).</p>
 
 <pre class="language-json"><code class="language-json">{
   "settings": {
@@ -547,54 +546,6 @@ Currently supported for GitHub Issues only (skipped when using Linear).</p>
     "product_manager": "disabled"
   }
 }</code></pre>
-
-<hr>
-
-<h2 id="issue-tracking">Issue Tracking</h2>
-
-<p>Barbossa supports both <strong>GitHub Issues</strong> (default) and <strong>Linear</strong> for issue tracking.</p>
-
-<h3 id="github-issues-default">GitHub Issues (Default)</h3>
-
-<p>No configuration needed. Works out of the box with your GitHub repositories.</p>
-
-<h3 id="linear-integration">Linear Integration</h3>
-
-<p>Use Linear instead of GitHub Issues for managing backlog and feature requests:</p>
-
-<pre class="language-json"><code class="language-json">{
-  "owner": "your-github-username",
-  "issue_tracker": {
-    "type": "linear",
-    "linear": {
-      "team_key": "MUS",
-      "backlog_state": "Backlog"
-    }
-  },
-  "repositories": [...]
-}</code></pre>
-
-<p>Set your Linear API key as an environment variable:</p>
-
-<pre class="language-bash"><code class="language-bash">export LINEAR_API_KEY="lin_api_xxx"</code></pre>
-
-<p>Get your API key from <a href="https://linear.app/settings/api">Linear Settings → API</a>.</p>
-
-<strong>What happens with Linear:</strong>
-<ul>
-<li>Discovery agent creates issues in your Linear team</li>
-<li>Product Manager proposes features in Linear</li>
-<li>Engineer pulls backlog from Linear workspace</li>
-<li>PRs auto-link to Linear issues via branch naming: <code>barbossa/MUS-14-feature</code></li>
-</ul>
-
-<table><tr><th>Field</th><th>Description</th></tr><tr><td><code>team_key</code></td><td>Your Linear team key (e.g., "MUS", "ENG")</td></tr><tr><td><code>backlog_state</code></td><td>Workflow state name for backlog (default: "Backlog")</td></tr></table>
-<strong>Startup validation:</strong> Barbossa verifies Linear connectivity on startup and will fail fast if:
-<ul>
-<li><code>LINEAR_API_KEY</code> is not set</li>
-<li>Team doesn't exist</li>
-<li>API is unreachable</li>
-</ul>
 
 <hr>
 

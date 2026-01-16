@@ -39,9 +39,6 @@ services:
       # Option 2: Pay-as-you-go API key
       #   Generate: https://console.anthropic.com/settings/keys
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      # Linear API key (optional - only if using Linear for issue tracking)
-      # Generate: https://linear.app/settings/api
-      - LINEAR_API_KEY=${LINEAR_API_KEY:-}
       # Disable analytics in dev
       - BARBOSSA_ANALYTICS_OPT_OUT=true
     # Override entrypoint for dev - don't start cron

@@ -9,7 +9,7 @@ Test suite for Barbossa components.
 python -m pytest tests/
 
 # Run specific test file
-python -m pytest tests/test_linear_client.py
+python -m pytest tests/test_issue_tracker.py
 
 # Run with coverage
 python -m pytest --cov=src/barbossa tests/
@@ -17,8 +17,7 @@ python -m pytest --cov=src/barbossa tests/
 
 ## Test Files
 
-- `test_linear_client.py` - Linear API integration tests
-- `test_issue_tracker.py` - Issue tracker abstraction tests
+- `test_issue_tracker.py` - GitHub issue tracker tests
 
 ## Writing Tests
 
@@ -26,7 +25,7 @@ When adding new functionality:
 
 1. Create test file: `test_<module_name>.py`
 2. Use pytest fixtures for setup/teardown
-3. Mock external API calls (GitHub, Linear, Anthropic)
+3. Mock external API calls (GitHub, Anthropic)
 4. Test both success and error cases
 
 ## Test Coverage

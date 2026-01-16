@@ -26,7 +26,7 @@ from barbossa.agents.firebase import (
     track_run_end,
     configure_telemetry
 )
-from barbossa.utils.issue_tracker import get_issue_tracker, Issue, IssueTracker
+from barbossa.utils.issue_tracker import get_issue_tracker, Issue
 from barbossa.utils.notifications import (
     notify_agent_run_complete,
     notify_error,
@@ -196,8 +196,8 @@ class BarbossaSpecGenerator:
                 return repo
         return None
 
-    def _get_issue_tracker(self, repo_name: str) -> IssueTracker:
-        """Get the issue tracker for a repository (GitHub or Linear)."""
+    def _get_issue_tracker(self, repo_name: str):
+        """Get the issue tracker for a repository."""
         return get_issue_tracker(self.config, repo_name, self.logger)
 
     def _get_existing_specs(self, product: Dict) -> List[Dict]:
@@ -730,19 +730,7 @@ This ticket covers the **{repo_name}** portion of: **{spec.get('title', 'Feature
         return parent_issue, child_tickets
 
     def _update_issue_body(self, repo_name: str, issue_number: str, body: str):
-        """
-        Update an issue's body to add child ticket references.
-
-        Note: This uses gh CLI directly (GitHub-specific). For Linear,
-        this operation is skipped gracefully since Linear has native
-        parent/child relationships that don't need body updates.
-        """
-        # Check if using Linear - skip update (Linear uses native relationships)
-        issue_tracker_config = self.config.get('issue_tracker', {})
-        if issue_tracker_config.get('type') == 'linear':
-            self.logger.debug("Skipping issue body update for Linear (uses native relationships)")
-            return
-
+        """Update an issue's body to add child ticket references."""
         with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
             f.write(body)
             body_file = f.name

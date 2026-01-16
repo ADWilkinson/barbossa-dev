@@ -30,7 +30,6 @@ Repository-specific environment files. These are automatically loaded if they ex
 ## Configuration Options
 
 See `repositories.json.example` for detailed documentation on:
-- Issue tracker setup (GitHub Issues vs Linear)
 - Repository settings and `do_not_touch` patterns
 - Agent enable/disable toggles
 - Auto-merge and PR thresholds

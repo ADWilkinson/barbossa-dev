@@ -28,7 +28,7 @@ jobs:
           python -m py_compile src/barbossa/agents/firebase.py
           python -m py_compile src/barbossa/utils/prompts.py
           python -m py_compile src/barbossa/utils/issue_tracker.py
-          python -m py_compile src/barbossa/utils/linear_client.py
+          python -m py_compile src/barbossa/agents/spec_generator.py
           python -m py_compile src/barbossa/cli/barbossa
           python -m py_compile scripts/validate.py
           python -m py_compile scripts/generate_crontab.py

@@ -44,19 +44,19 @@ Barbossa runs AI agents in a Docker container. Each agent has a specific role an
 |                       |                          |
 +--------------------------------------------------+
                         |
-        +---------------+---------------+
-        |               |               |
-        v               v               v
-   +--------+      +--------+      +--------+
-   | GitHub |      | Claude |      | Linear |
-   |  API   |      |  API   |      |  API   |
-   +--------+      +--------+      +--------+
-                        |
-                        v
-                   +--------+
-                   |Discord |
-                   |Webhook |
-                   +--------+
+                +-------+-------+
+                |               |
+                v               v
+           +--------+      +--------+
+           | GitHub |      | Claude |
+           |  API   |      |  API   |
+           +--------+      +--------+
+                |
+                v
+           +--------+
+           |Discord |
+           |Webhook |
+           +--------+
 ```
 
 ---
@@ -122,7 +122,7 @@ Agents work together in a continuous pipeline:
 The workhorse. Picks issues and implements them.
 
 **Workflow:**
-1. Fetches issues labeled `backlog` from GitHub/Linear
+1. Fetches issues labeled `backlog` from GitHub
 2. Sorts by priority (explicit priority labels or creation date)
 3. Creates feature branch: `barbossa/{issue-id}-{slug}`
 4. Invokes Claude CLI with issue context + CLAUDE.md
@@ -226,8 +226,7 @@ barbossa-engineer/
 │   │   └── spec_generator.py  # Cross-repo spec generator (Spec Mode)
 │   ├── utils/
 │   │   ├── prompts.py         # Prompt template loader
-│   │   ├── issue_tracker.py   # GitHub/Linear abstraction
-│   │   ├── linear_client.py   # Linear API wrapper
+│   │   ├── issue_tracker.py   # GitHub Issues integration
 │   │   └── notifications.py   # Discord webhook notifications
 │   └── cli/
 │       └── barbossa           # CLI entrypoint
@@ -255,7 +254,6 @@ barbossa-engineer/
 
 - GitHub token: `GITHUB_TOKEN` (repo, workflow scopes)
 - Claude token: `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY`
-- Linear token: `LINEAR_API_KEY` (optional)
 
 ### What Agents Can Do
 
@@ -334,7 +332,3 @@ Edit `config/repositories.json`:
 ```
 
 Restart the container to apply changes.
-
-### Linear Integration
-
-See [Configuration](configuration.html#linear-integration) for Linear setup.

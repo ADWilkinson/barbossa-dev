@@ -192,77 +192,6 @@ def validate_git():
     return True
 
 
-def validate_linear():
-    """Validate Linear configuration and connectivity if Linear is configured."""
-    config_file = Path('/app/config/repositories.json')
-
-    if not config_file.exists():
-        return True  # Config validation will catch this
-
-    try:
-        with open(config_file) as f:
-            config = json.load(f)
-    except (json.JSONDecodeError, IOError):
-        return True  # Config validation will catch this
-
-    # Check if Linear is configured
-    tracker_config = config.get('issue_tracker', {})
-    if tracker_config.get('type') != 'linear':
-        # Not using Linear - no validation needed
-        return True
-
-    linear_config = tracker_config.get('linear', {})
-
-    # Check for team_key
-    team_key = linear_config.get('team_key')
-    if not team_key:
-        err("Linear configured but 'team_key' missing")
-        print("  Add 'team_key' to issue_tracker.linear config")
-        print("  Example: 'team_key': 'MUS'")
-        return False
-
-    # Check for API key (env var or config)
-    api_key = os.environ.get('LINEAR_API_KEY') or linear_config.get('api_key')
-    if not api_key:
-        err("Linear configured but LINEAR_API_KEY not set")
-        print("  Either:")
-        print("    1. Set LINEAR_API_KEY environment variable, OR")
-        print("    2. Add 'api_key' to issue_tracker.linear config")
-        print()
-        print("  Get your API key from: https://linear.app/settings/api")
-        return False
-
-    # Test Linear API connectivity
-    try:
-        # Import here to avoid issues if linear_client doesn't exist yet
-        from linear_client import LinearClient
-
-        client = LinearClient(api_key=api_key)
-
-        # Try to fetch team to verify API key and team access
-        team_id = client._get_team_id(team_key)
-
-        if not team_id:
-            err(f"Linear team '{team_key}' not found or not accessible")
-            print(f"  Verify team key '{team_key}' exists in Linear")
-            print("  Check API key has access to this team")
-            return False
-
-        ok(f"Linear authenticated (team: {team_key})")
-        return True
-
-    except ImportError:
-        warn("Could not import linear_client module")
-        return True  # Non-critical if module doesn't exist
-    except Exception as e:
-        err(f"Linear API connection failed: {e}")
-        print("  Check:")
-        print("    - API key is valid")
-        print("    - Network connectivity to api.linear.app")
-        print(f"    - Team '{team_key}' exists and is accessible")
-        return False
-
-
 def validate_spec_mode():
     """Validate spec mode configuration (global system switch)."""
     config_file = Path('/app/config/repositories.json')
@@ -497,10 +426,6 @@ def main():
         critical_ok = False
 
     if not validate_claude():
-        critical_ok = False
-
-    # Linear validation (critical if configured)
-    if not validate_linear():
         critical_ok = False
 
     # Spec mode validation (global system switch)

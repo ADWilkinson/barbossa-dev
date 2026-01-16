@@ -347,7 +347,7 @@
     </nav>
 
     <main>
-        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#basic-setup">Basic Setup</a></li><li><a href="#team-configurations">Team Configurations</a></li><li><a href="#framework-specific">Framework-Specific</a></li><li><a href="#issue-tracking">Issue Tracking</a></li><li><a href="#scheduling-patterns">Scheduling Patterns</a></li><li><a href="#notifications">Notifications</a></li><li><a href="#privacy-options">Privacy Options</a></li><li><a href="#spec-mode">Spec Mode</a></li><li><a href="#common-workflows">Common Workflows</a></li></ul></div>
+        <div class="toc"><div class="toc-title">On this page</div><ul><li><a href="#basic-setup">Basic Setup</a></li><li><a href="#team-configurations">Team Configurations</a></li><li><a href="#framework-specific">Framework-Specific</a></li><li><a href="#scheduling-patterns">Scheduling Patterns</a></li><li><a href="#notifications">Notifications</a></li><li><a href="#privacy-options">Privacy Options</a></li><li><a href="#spec-mode">Spec Mode</a></li><li><a href="#common-workflows">Common Workflows</a></li></ul></div>
         <h1 id="examples">Examples</h1>
 
 <p>Real-world usage scenarios and configurations.</p>
@@ -519,39 +519,6 @@
     }
   ]
 }</code></pre>
-
-<hr>
-
-<h2 id="issue-tracking">Issue Tracking</h2>
-
-<h3 id="github-issues-default">GitHub Issues (Default)</h3>
-
-<p>No configuration needed. Issues are created and tracked in GitHub.</p>
-
-<h3 id="linear-integration">Linear Integration</h3>
-
-<pre class="language-json"><code class="language-json">{
-  "owner": "yourname",
-  "issue_tracker": {
-    "type": "linear",
-    "linear": {
-      "team_key": "ENG",
-      "backlog_state": "Backlog"
-    }
-  },
-  "repositories": [
-    {
-      "name": "app",
-      "url": "https://github.com/yourname/app.git"
-    }
-  ]
-}</code></pre>
-
-<p>Set the API key:</p>
-
-<pre class="language-bash"><code class="language-bash">export LINEAR_API_KEY="lin_api_xxxx"</code></pre>
-
-<p>Linear issues automatically link to PRs via branch naming: <code>barbossa/ENG-42-fix-login-bug</code></p>
 
 <hr>
 
@@ -736,7 +703,7 @@
 <ol>
 <li>Create <code>config/repositories.json</code> with your repo</li>
 <li>Add <code>CLAUDE.md</code> to your repository root with project context</li>
-<li>Create <code>backlog</code> label in GitHub (or use Linear)</li>
+<li>Create <code>backlog</code> label in GitHub</li>
 <li>Start Barbossa</li>
 </ol>
 

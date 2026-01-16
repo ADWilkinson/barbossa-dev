@@ -32,7 +32,7 @@ from barbossa.agents.firebase import (
     track_run_start,
     track_run_end
 )
-from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker, LinearIssueTracker
+from barbossa.utils.issue_tracker import get_issue_tracker, GitHubIssueTracker
 from barbossa.utils.notifications import (
     notify_agent_run_complete,
     notify_pr_created,
@@ -48,7 +48,6 @@ class Barbossa:
     """
     Simple personal dev assistant that creates PRs on configured repositories.
     Uses GitHub as the single source of truth - no file-based state.
-    Supports both GitHub Issues and Linear for issue tracking.
     """
 
     VERSION = "2.0.1"
@@ -278,50 +277,17 @@ class Barbossa:
 
         self.logger.info("Using local prompt template")
 
-        # Build issue tracker sections based on config
-        tracker_type = self.config.get('issue_tracker', {}).get('type', 'github')
+        # Build issue tracker sections
         repo_name = repo['name']
         backoff_section = ""
 
-        if tracker_type == 'linear':
-            # For Linear, we inject issues directly into the prompt
-            try:
-                tracker = get_issue_tracker(self.config, repo_name, self.logger)
-                if isinstance(tracker, LinearIssueTracker):
-                    # Get Linear issues and inject them
-                    issue_list_command = f"  [Linear Issues for team {tracker.team_key}]\n"
-                    issues_context = tracker.get_issues_context(limit=10)
-                    issue_list_command += issues_context
-
-                    # Backlog section with actual issues
-                    backlog_section = f"""Before inventing work, check if there are Issues ready to implement:
-
-{tracker.get_issues_context(state="Backlog", limit=5)}
-
-If there ARE backlog issues above:
-  1. Pick the FIRST eligible one (skip any listed in ISSUE BACKOFF)
-  2. Implement exactly what's requested
-  3. Name your branch: barbossa/<issue-identifier>-description
-  4. The branch name auto-links to the Linear issue
-"""
-                    backoff_section = self._build_backoff_section(tracker, repo_name)
-                else:
-                    # Fallback to GitHub commands
-                    issue_list_command = f"  gh issue list --state open --repo {owner}/{repo_name} --limit 10"
-                    backlog_section = self._get_github_backlog_section(owner, repo_name)
-            except Exception as e:
-                self.logger.warning(f"Failed to get Linear issues, falling back to GitHub: {e}")
-                issue_list_command = f"  gh issue list --state open --repo {owner}/{repo_name} --limit 10"
-                backlog_section = self._get_github_backlog_section(owner, repo_name)
-        else:
-            # GitHub - use CLI commands
-            issue_list_command = f"  gh issue list --state open --repo {owner}/{repo_name} --limit 10"
-            backlog_section = self._get_github_backlog_section(owner, repo_name)
-            try:
-                tracker = get_issue_tracker(self.config, repo_name, self.logger)
-                backoff_section = self._build_backoff_section(tracker, repo_name)
-            except Exception as e:
-                self.logger.warning(f"Failed to build backoff section: {e}")
+        issue_list_command = f"  gh issue list --state open --repo {owner}/{repo_name} --limit 10"
+        backlog_section = self._get_github_backlog_section(owner, repo_name)
+        try:
+            tracker = get_issue_tracker(self.config, repo_name, self.logger)
+            backoff_section = self._build_backoff_section(tracker, repo_name)
+        except Exception as e:
+            self.logger.warning(f"Failed to build backoff section: {e}")
 
         # Build focus and known_gaps sections
         focus_section = ""
@@ -403,13 +369,10 @@ If there ARE issues labeled "backlog":
   4. Link your PR to the issue: "Closes #XX" in PR description
 """
 
-    def _build_backoff_section(self, tracker: IssueTracker, repo_name: str) -> str:
+    def _build_backoff_section(self, tracker: GitHubIssueTracker, repo_name: str) -> str:
         """Generate a section listing backlog issues currently in backoff."""
         try:
-            if isinstance(tracker, LinearIssueTracker):
-                issues = tracker.list_issues(state=tracker.backlog_state, limit=10)
-            else:
-                issues = tracker.list_issues(labels=["backlog"], state="open", limit=10)
+            issues = tracker.list_issues(labels=["backlog"], state="open", limit=10)
         except Exception as e:
             self.logger.warning(f"Could not list backlog issues for backoff check: {e}")
             return ""

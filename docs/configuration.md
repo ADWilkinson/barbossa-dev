@@ -111,7 +111,6 @@ Barbossa tracks repeated PR failures and can back off on retrying the same issue
 
 The Auditor can close stale issues to keep the backlog tidy. It only applies to issues
 with labels in `stale_issue_labels`, so you can keep scope narrow (e.g., only Barbossa-created issues).
-Currently supported for GitHub Issues only (skipped when using Linear).
 
 ```json
 {
@@ -233,58 +232,6 @@ Or use **custom cron expressions**:
   }
 }
 ```
-
----
-
-## Issue Tracking
-
-Barbossa supports both **GitHub Issues** (default) and **Linear** for issue tracking.
-
-### GitHub Issues (Default)
-
-No configuration needed. Works out of the box with your GitHub repositories.
-
-### Linear Integration
-
-Use Linear instead of GitHub Issues for managing backlog and feature requests:
-
-```json
-{
-  "owner": "your-github-username",
-  "issue_tracker": {
-    "type": "linear",
-    "linear": {
-      "team_key": "MUS",
-      "backlog_state": "Backlog"
-    }
-  },
-  "repositories": [...]
-}
-```
-
-Set your Linear API key as an environment variable:
-
-```bash
-export LINEAR_API_KEY="lin_api_xxx"
-```
-
-Get your API key from [Linear Settings → API](https://linear.app/settings/api).
-
-**What happens with Linear:**
-- Discovery agent creates issues in your Linear team
-- Product Manager proposes features in Linear
-- Engineer pulls backlog from Linear workspace
-- PRs auto-link to Linear issues via branch naming: `barbossa/MUS-14-feature`
-
-| Field | Description |
-|-------|-------------|
-| `team_key` | Your Linear team key (e.g., "MUS", "ENG") |
-| `backlog_state` | Workflow state name for backlog (default: "Backlog") |
-
-**Startup validation:** Barbossa verifies Linear connectivity on startup and will fail fast if:
-- `LINEAR_API_KEY` is not set
-- Team doesn't exist
-- API is unreachable
 
 ---
 
