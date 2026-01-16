@@ -79,3 +79,9 @@ changelogs/*.txt
 config/firebase-service-account.json
 .firebase/
 .backup/
+
+# MkDocs build output
+site/
+
+# Virtual environment
+.venv/

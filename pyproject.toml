@@ -32,6 +32,11 @@ dev = [
     "pytest-cov>=4.1.0",
 ]
 
+[dependency-groups]
+docs = [
+    "mkdocs-material>=9.5",
+]
+
 [project.urls]
 Homepage = "https://github.com/ADWilkinson/barbossa-dev"
 Documentation = "https://github.com/ADWilkinson/barbossa-dev#readme"

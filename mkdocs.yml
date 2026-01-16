@@ -1,0 +1,59 @@
+site_name: Barbossa
+site_description: "AI engineers that ship code while you sleep"
+site_url: https://barbossa.dev
+repo_url: https://github.com/ADWilkinson/barbossa-dev
+repo_name: ADWilkinson/barbossa-dev
+docs_dir: docs
+site_dir: site
+
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Configuration: configuration.md
+  - How It Works: how-it-works.md
+  - Examples: examples.md
+  - FAQ: faq.md
+  - Troubleshooting: troubleshooting.md
+
+theme:
+  name: material
+  favicon: assets/favicon.svg
+  font:
+    text: IBM Plex Sans
+    code: IBM Plex Mono
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: white
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.footer
+    - toc.integrate
+    - content.code.copy
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - attr_list
+  - tables
+  - toc:
+      permalink: true

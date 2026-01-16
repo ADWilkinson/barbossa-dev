@@ -1,83 +1,56 @@
-# Quick Start
-
-Get Barbossa running in 5 minutes.
-
----
+# Quickstart
 
 ## Requirements
 
-- **Docker** - [Install](https://docs.docker.com/get-docker/)
-- **GitHub account** with personal access token
-- **Claude authentication** (choose one):
-  - [Claude Pro/Max subscription](https://claude.ai) (recommended - long-lasting tokens)
-  - [Anthropic API account](https://console.anthropic.com) (pay-as-you-go)
-- **Platform:** Linux (x86_64), macOS (Intel/Apple Silicon), Windows (WSL2)
+- Docker
+- GitHub account + token
+- Claude Pro/Max subscription or Anthropic API key
 
----
-
-## Setup
+## Install
 
 ```bash
-# 1. Generate authentication tokens
+# Get tokens ready
+gh auth token                    # GitHub token
+claude setup-token               # Claude token (recommended)
+# Or use Anthropic API key from console.anthropic.com
 
-# GitHub token
-gh auth token  # OR create at https://github.com/settings/tokens
-
-# Claude token (Option 1 - Recommended)
-claude setup-token   # Follow prompts to generate long-lived token
-# Claude API key (Option 2)
-# Get from: https://console.anthropic.com/settings/keys
-
-# 2. Run install script (will prompt for tokens)
+# Install
 curl -fsSL https://raw.githubusercontent.com/ADWilkinson/barbossa-dev/main/install.sh | bash
 
-# 3. Start
+# Start
 cd barbossa && docker compose up -d
 
-# 4. Verify
+# Verify
 docker exec barbossa barbossa health
 ```
 
-The install script will:
-- Prompt for your GitHub username and repository
-- Ask for your GitHub token
-- Ask for your Claude token/API key
-- Create a `.env` file with your authentication
-- Configure everything automatically
-
-To add more repositories later, edit `config/repositories.json`. See [Configuration](configuration.html) for all options.
-
-**Tip:** Use Claude to help configure! Give it [llms.txt](https://github.com/ADWilkinson/barbossa-dev/blob/main/llms.txt) for context.
-
-**Note:** Add a `CLAUDE.md` file to your repository with project-specific context. This dramatically improves the quality of generated code.
-
----
+The installer prompts for your GitHub username, repository, and tokens.
 
 ## Commands
 
 ```bash
-docker exec barbossa barbossa health          # Check status
-docker exec barbossa barbossa run engineer    # Run now
-docker exec barbossa barbossa status          # Activity
-docker compose logs -f                        # Logs
+docker exec barbossa barbossa health         # Status
+docker exec barbossa barbossa run engineer   # Run agent manually
+docker exec barbossa barbossa logs           # View logs
+docker compose logs -f                       # Container logs
 ```
 
----
+## What happens next
 
-## What Happens Next
+Agents run on schedule:
 
-Barbossa runs automatically:
-- **Discovery** finds issues and adds them to backlog
-- **Engineer** picks from backlog and creates PRs
-- **Tech Lead** reviews PRs and merges good ones
+1. **Discovery** scans your code, creates issues labeled `backlog`
+2. **Engineer** picks issues, implements fixes, creates PRs
+3. **Tech Lead** reviews PRs, merges good ones
 
-You wake up to PRs already merged. Set `auto_merge: false` in config if you prefer to merge manually.
+Set `auto_merge: false` in config if you want to merge manually.
 
----
+## Tips
 
-## Next Steps
+Add a `CLAUDE.md` file to your repository with project context. This dramatically improves code quality.
 
-- [Configuration](configuration.html) - All config options
-- [Webhook Notifications](configuration.html#webhook-notifications) - Discord alerts
-- [Agents](agents.html) - How agents work
-- [Troubleshooting](troubleshooting.html) - Common issues
+## Next
+
+- [Configuration](configuration.md) — All options
+- [How It Works](how-it-works.md) — Agent details
+- [Examples](examples.md) — Sample configs

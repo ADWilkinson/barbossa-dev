@@ -1,60 +1,47 @@
 # Troubleshooting
 
-### Authentication failures
+## Auth failures
 
-**Check tokens in .env file:**
 ```bash
-cat .env  # Verify GITHUB_TOKEN and CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY are set
-```
+# Check tokens
+cat .env
 
-**Generate new GitHub token:**
-```bash
-gh auth token  # OR create at https://github.com/settings/tokens
-# Add to .env: GITHUB_TOKEN=ghp_your_token_here
-```
+# New GitHub token
+gh auth token
+# Add to .env: GITHUB_TOKEN=ghp_...
 
-**Generate new Claude token:**
-```bash
-# Option 1: Claude Pro/Max subscription token (recommended)
-claude setup-token  # Follow prompts to generate long-lived token
-# Add to .env: CLAUDE_CODE_OAUTH_TOKEN=<your_token>
+# New Claude token
+claude setup-token
+# Add to .env: CLAUDE_CODE_OAUTH_TOKEN=...
 
-# Option 2: Pay-as-you-go API key
-# Get from: https://console.anthropic.com/settings/keys
-# Add to .env: ANTHROPIC_API_KEY=sk-ant-api03-your_key_here
-```
-
-**Apply changes:**
-```bash
-vim .env  # Edit tokens
+# Restart
 docker compose restart
 ```
 
-### Container keeps restarting
+## Container keeps restarting
 
 ```bash
 docker compose logs barbossa
 ```
 
-Check for missing config or invalid JSON.
+Usually missing config or invalid JSON.
 
-### No PRs created
+## No PRs created
 
 1. Check for issues labeled `backlog`
 2. Run: `docker exec barbossa barbossa run engineer`
-3. Check: `docker exec barbossa barbossa logs engineer`
+3. Logs: `docker exec barbossa barbossa logs engineer`
 
-### Tech Lead rejects everything
+## Tech Lead rejects everything
 
 - CI must pass
-- Tests needed for significant changes (50+ lines)
-- PRs should be focused (max 15 files)
-- Code must meet 8-dimension quality standards
-- Note: PRs auto-close after 3 failed review cycles (3-strikes rule)
+- Tests required for 50+ line changes
+- Max 30 files per PR
+- PRs close after 3 failed reviews
 
-Check logs: `docker exec barbossa barbossa logs tech-lead`
+Logs: `docker exec barbossa barbossa logs tech-lead`
 
-### View logs
+## View logs
 
 ```bash
 docker compose logs -f
@@ -62,15 +49,12 @@ docker exec barbossa barbossa logs
 docker exec barbossa barbossa logs engineer
 ```
 
-### Webhook notifications not working
+## Notifications not working
 
-1. Verify `notifications.enabled: true` in config
-2. Check webhook URL is correct
-3. Test manually:
-```bash
-docker exec barbossa python3 -c "from barbossa.utils.notifications import test_webhook; test_webhook()"
-```
+1. Check `notifications.enabled: true` in config
+2. Verify webhook URL
+3. Test: `docker exec barbossa python3 -c "from barbossa.utils.notifications import test_webhook; test_webhook()"`
 
-### Still stuck?
+## Still stuck?
 
 [Open an issue](https://github.com/ADWilkinson/barbossa-dev/issues)

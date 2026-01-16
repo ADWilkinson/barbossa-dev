@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
-      - 'docs-site/**'
+      - 'mkdocs.yml'
       - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
@@ -24,6 +24,11 @@ jobs:
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -33,7 +38,9 @@ jobs:
         run: npm install -g firebase-tools
 
       - name: Build docs
-        run: python3 docs-site/build.py
+        run: |
+          pip install mkdocs-material
+          mkdocs build
 
       - name: Deploy to Firebase Hosting
         run: firebase deploy --only hosting --project barbossa-dev

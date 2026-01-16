@@ -2,50 +2,39 @@
 
 > AI engineers that ship code while you sleep.
 
-Barbossa is an autonomous development pipeline powered by Claude. Version 2.0.2.
+Barbossa runs AI agents on a schedule to find issues, implement fixes, create PRs, and review code. You wake up to merged PRs.
 
-## Two Modes
+## Modes
 
-| Mode | What It Does |
-|------|--------------|
-| **Autonomous** (default) | AI implements code from backlog, reviews PRs, merges |
-| **Spec Mode** | AI generates cross-repo feature specs, no code changes |
+| Mode | Description |
+|------|-------------|
+| **Autonomous** (default) | Agents implement, review, and merge code |
+| **Spec Mode** | Generates cross-repo feature specs, no code changes |
 
-## Autonomous Mode - Five Agents
+## Agents
 
-| Agent | Purpose | Frequency |
-|-------|---------|-----------|
-| **Engineer** | Picks tasks from backlog, creates PRs | 12x daily |
-| **Tech Lead** | Reviews PRs (8-dimension quality), merges or requests changes | 12x daily |
-| **Discovery** | Finds TODOs, missing tests, issues | 6x daily |
-| **Product Manager** | Proposes high-value features | 3x daily |
-| **Auditor** | System health checks | Daily |
+| Agent | Role | Frequency |
+|-------|------|-----------|
+| Engineer | Implements issues from backlog | 12x daily |
+| Tech Lead | Reviews PRs, merges or requests changes | 12x daily |
+| Discovery | Finds TODOs, missing tests, tech debt | 6x daily |
+| Product | Suggests high-value features | 3x daily |
+| Auditor | Weekly health check | Daily |
+| Spec Generator | Cross-repo feature specs (Spec Mode only) | Configurable |
 
-**Pipeline:** Discovery/Product → GitHub Issues → Engineer → PR → Tech Lead → Merge
+## Pipeline
 
-## Spec Mode - Product AI
-
-When `spec_mode.enabled = true`, all autonomous agents are disabled. Only the Spec Generator runs.
-
-| Agent | Purpose |
-|-------|---------|
-| **Spec Generator** | Creates cross-repo feature specs with distributed tickets |
-
-**Use when:** You want detailed feature specifications spanning multiple repos instead of autonomous code changes.
-
-**Output:** Parent spec ticket (in primary_repo) + child implementation tickets (in each affected repo).
-
-**Two-Pass Quality:** Specs go through critique before ticket creation:
-1. Pass 1: Generate raw specs from product context
-2. Pass 2: Critique for precision - reject vague specs, refine unclear ones
+```
+Discovery + Product → GitHub Issues (backlog) → Engineer → PR → Tech Lead → Merge
+```
 
 ## Requirements
 
 - Docker
 - GitHub token (`gh auth token`)
-- Claude token (`claude setup-token`) OR Anthropic API key
+- Claude token (`claude setup-token`) or Anthropic API key
 
-## Quick Start
+## Install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ADWilkinson/barbossa-dev/main/install.sh | bash
@@ -55,33 +44,86 @@ docker exec barbossa barbossa health
 
 ## Configuration
 
-**Autonomous Mode (minimal):**
+File: `config/repositories.json`
+
+### Minimal
+
 ```json
 {
-  "owner": "your-username",
-  "repositories": [{ "name": "my-app", "url": "https://github.com/you/my-app.git" }]
+  "owner": "username",
+  "repositories": [
+    { "name": "my-app", "url": "https://github.com/username/my-app.git" }
+  ]
 }
 ```
 
-**Spec Mode:**
+### Full
+
 ```json
 {
-  "owner": "your-username",
+  "owner": "username",
   "repositories": [
-    { "name": "backend-api", "url": "..." },
-    { "name": "frontend-web", "url": "..." }
-  ],
-  "products": [{
-    "name": "my-platform",
-    "repositories": ["backend-api", "frontend-web"],
-    "primary_repo": "frontend-web",
-    "context": {
-      "vision": "Leading platform for X",
-      "current_phase": "MVP hardening",
-      "constraints": ["API < 200ms"],
-      "strategy_notes": ["Users want faster onboarding"]
+    {
+      "name": "my-app",
+      "url": "https://github.com/username/my-app.git",
+      "package_manager": "pnpm",
+      "do_not_touch": ["src/auth/**", "prisma/migrations/"],
+      "focus": "Bug fixes only, no new features"
     }
-  }],
+  ],
+  "settings": {
+    "tech_lead": {
+      "auto_merge": true,
+      "min_lines_for_tests": 50
+    },
+    "schedule": {
+      "engineer": "every_2_hours",
+      "tech_lead": "every_2_hours",
+      "discovery": "4x_daily",
+      "product_manager": "2x_daily"
+    },
+    "notifications": {
+      "enabled": true,
+      "discord_webhook": "https://discord.com/api/webhooks/..."
+    }
+  }
+}
+```
+
+### Schedule presets
+
+```
+every_hour, every_2_hours, every_3_hours, every_4_hours, every_6_hours
+4x_daily, 3x_daily, 2x_daily
+daily_morning, daily_evening
+disabled
+```
+
+Or cron: `"0 9,17 * * *"`
+
+### Disable agents
+
+```json
+{ "settings": { "discovery": { "enabled": false } } }
+```
+
+Or: `"discovery": "disabled"` in schedule.
+
+### Spec Mode
+
+```json
+{
+  "products": [
+    {
+      "name": "my-platform",
+      "repositories": ["backend", "frontend"],
+      "primary_repo": "frontend",
+      "context": {
+        "vision": "Leading platform for X",
+        "constraints": ["API < 200ms"]
+      }
+    }
+  ],
   "settings": {
     "spec_mode": { "enabled": true }
   }
@@ -91,14 +133,37 @@ docker exec barbossa barbossa health
 ## Commands
 
 ```bash
-docker exec barbossa barbossa health           # Check status
-docker exec barbossa barbossa run engineer     # Run engineer now
-docker exec barbossa barbossa run tech-lead    # Run tech lead now
-docker exec barbossa barbossa run spec         # Run spec generator (spec mode)
-docker exec barbossa barbossa status           # View activity
+docker exec barbossa barbossa health         # Status
+docker exec barbossa barbossa run engineer   # Run agent
+docker exec barbossa barbossa run tech-lead
+docker exec barbossa barbossa run discovery
+docker exec barbossa barbossa run product
+docker exec barbossa barbossa run auditor
+docker exec barbossa barbossa run spec       # Spec Mode only
+docker exec barbossa barbossa status         # Activity
+docker exec barbossa barbossa logs engineer  # Logs
+docker compose stop                          # Pause
+docker compose start                         # Resume
 ```
 
-## Discord Notifications
+## Security
+
+- Container runs as non-root (`barbossa`, UID 1000)
+- Branch prefix: `barbossa/`
+- One PR at a time per repo
+- No force push
+- No access to other repos
+- Protected files via `do_not_touch`
+
+## Tech Lead Review
+
+8 dimensions: code quality, tests, security, performance, complexity, UI/UX, integration, bloat.
+
+3-strikes rule: PR closes after 3 failed reviews.
+
+## Notifications
+
+Discord webhooks:
 
 ```json
 {
@@ -106,36 +171,27 @@ docker exec barbossa barbossa status           # View activity
     "notifications": {
       "enabled": true,
       "discord_webhook": "https://discord.com/api/webhooks/...",
-      "notify_on": { "pr_created": true, "pr_merged": true, "error": true }
+      "notify_on": {
+        "pr_created": true,
+        "pr_merged": true,
+        "pr_closed": false,
+        "error": true
+      }
     }
   }
 }
 ```
 
-## Privacy
+## Telemetry
 
-Anonymous telemetry (run counts, success rates). No code, repo names, or identifying info collected.
+Anonymous (run counts, success rates). No code or repo names.
 
 Opt out: `"settings": { "telemetry": false }`
 
+Or: `export BARBOSSA_ANALYTICS_OPT_OUT=true`
+
 ## Links
 
-- **Docs:** https://barbossa.dev
-- **GitHub:** https://github.com/ADWilkinson/barbossa-dev
-- **Issues:** https://github.com/ADWilkinson/barbossa-dev/issues
-
-## Version
-
-**Current:** 2.0.2 (2026-01-11)
-
-- v2.0.2: Docker fix for missing procps package
-- v2.0.0: Failure backoff visibility, stale issue cleanup, pending CI timeout
-- v1.8.3: Auditor focuses on system health only (code quality is Discovery's domain)
-- v1.8.2: Fix auditor session detection causing false 0/100 health scores
-- v1.8.1: Spec Generator prompt loading fix
-- v1.8.0: Spec Mode with two-pass quality review
-- v1.7.0: Discord webhook notifications
-- v1.6.4: Repository focus and known_gaps config
-- v1.3.0: Enhanced UI/UX review, external dependency detection
-- v1.2.0: Product Manager and Auditor fixes
-- v1.1.0: Engineer detects Tech Lead feedback properly
+- Docs: https://barbossa.dev
+- GitHub: https://github.com/ADWilkinson/barbossa-dev
+- Issues: https://github.com/ADWilkinson/barbossa-dev/issues
