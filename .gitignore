@@ -85,3 +85,6 @@ site/
 
 # Virtual environment
 .venv/
+
+# Build artifacts
+*.egg-info/

@@ -25,7 +25,7 @@ const db = admin.firestore();
 // ============================================================================
 
 const MINIMUM_VERSION = "1.0.0";
-const LATEST_VERSION = "1.6.3";
+const LATEST_VERSION = "2.1.0";
 
 /**
  * Check if client version is compatible
