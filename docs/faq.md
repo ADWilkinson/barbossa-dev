@@ -28,9 +28,17 @@ docker compose start  # Resume
 ```
 
 **No PRs being created?**
-1. Check for issues with `backlog` label
-2. Run: `docker exec barbossa barbossa run engineer`
-3. Check: `docker exec barbossa barbossa logs engineer`
+1. Run `barbossa doctor` to check system health
+2. Check for issues with `backlog` label
+3. Run `barbossa engineer` to trigger manually
+4. Check `barbossa logs engineer` for errors
+
+**How do I see what's happening?**
+```bash
+barbossa watch      # Tail all logs
+barbossa status     # Recent activity
+barbossa metrics    # Cost and performance
+```
 
 **Still stuck?**
 [Open an issue](https://github.com/ADWilkinson/barbossa-dev/issues)

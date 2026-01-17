@@ -2,18 +2,13 @@
 
 ## Requirements
 
-- Docker (Linux, macOS, or Windows WSL2)
-- GitHub account + token
-- Claude Pro/Max subscription or Anthropic API key
+- Docker
+- GitHub CLI (`gh`)
+- Claude Pro/Max or Anthropic API key
 
 ## Install
 
 ```bash
-# Get tokens ready
-gh auth token                    # GitHub token
-claude setup-token               # Claude token (recommended)
-# Or use Anthropic API key from console.anthropic.com
-
 # Install
 curl -fsSL https://raw.githubusercontent.com/ADWilkinson/barbossa-dev/main/install.sh | bash
 
@@ -21,33 +16,37 @@ curl -fsSL https://raw.githubusercontent.com/ADWilkinson/barbossa-dev/main/insta
 cd barbossa && docker compose up -d
 
 # Verify
-docker exec barbossa barbossa health
+docker exec barbossa barbossa doctor
 ```
 
-The installer prompts for your GitHub username, repository, and tokens.
+The installer prompts for GitHub username, repo, and tokens.
 
 ## Commands
 
 ```bash
-docker exec barbossa barbossa health         # Status
-docker exec barbossa barbossa run engineer   # Run agent manually
-docker exec barbossa barbossa logs           # View logs
-docker compose logs -f                       # Container logs
+barbossa doctor       # Full diagnostics
+barbossa watch        # Tail all logs
+barbossa engineer     # Run engineer now
+barbossa tl           # Run tech lead now
+barbossa status       # Current activity
+barbossa metrics      # Cost and performance
 ```
+
+Run inside container: `docker exec barbossa <command>`
 
 ## What happens next
 
-Agents run on schedule:
+1. **Discovery** scans code, creates `backlog` issues
+2. **Engineer** picks issues, creates PRs
+3. **Tech Lead** reviews and merges
 
-1. **Discovery** scans your code, creates issues labeled `backlog`
-2. **Engineer** picks issues, implements fixes, creates PRs
-3. **Tech Lead** reviews PRs, merges good ones
+First PR typically appears within 2 hours.
 
-Set `auto_merge: false` in config if you want to merge manually.
+Set `auto_merge: false` to review PRs manually.
 
 ## Tips
 
-Add a `CLAUDE.md` file to your repository with project context. This dramatically improves code quality.
+Add `CLAUDE.md` to your repo with project context. Dramatically improves code quality.
 
 ## Next
 

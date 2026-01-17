@@ -37,7 +37,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 # Current version
-VERSION = "2.0.2"
+VERSION = "2.1.0"
 
 # Claude API pricing (per 1M tokens) as of January 2025
 # Source: https://www.anthropic.com/pricing

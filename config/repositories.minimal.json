@@ -1,0 +1,9 @@
+{
+  "owner": "YOUR_GITHUB_USERNAME",
+  "repositories": [
+    {
+      "name": "your-repo-name",
+      "url": "https://github.com/YOUR_GITHUB_USERNAME/your-repo-name.git"
+    }
+  ]
+}

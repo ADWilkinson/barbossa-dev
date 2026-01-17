@@ -1,5 +1,15 @@
 # Troubleshooting
 
+## First step
+
+Run diagnostics:
+
+```bash
+docker exec barbossa barbossa doctor
+```
+
+This checks config, auth, and recent activity.
+
 ## Auth failures
 
 ```bash
@@ -44,9 +54,9 @@ Logs: `docker exec barbossa barbossa logs tech-lead`
 ## View logs
 
 ```bash
-docker compose logs -f
-docker exec barbossa barbossa logs
-docker exec barbossa barbossa logs engineer
+barbossa watch                # All agent logs
+barbossa logs engineer        # Specific agent
+docker compose logs -f        # Container logs
 ```
 
 ## Notifications not working

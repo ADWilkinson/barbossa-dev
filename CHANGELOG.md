@@ -5,6 +5,37 @@ All notable changes to Barbossa are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-01-17
+
+### Added
+- **CLI Improvements** - Better discoverability and usability
+  - `barbossa doctor` - Comprehensive system diagnostics in one command
+  - `barbossa watch` - Tail all agent logs in real-time
+  - **Command aliases**: `barbossa engineer`, `barbossa tl`, `barbossa disco`, `barbossa prod`
+  - Agent descriptions in `barbossa run` help output
+  - Better post-run guidance ("Logs: barbossa logs engineer")
+
+- **Minimal Config Template** - `config/repositories.minimal.json` for quick setup (7 lines)
+
+### Changed
+- **Prompts Overhauled** - Tightened and unified all agent prompts
+  - Engineer: 326 → 199 lines (-39%)
+  - Tech Lead: 360 → 171 lines (-52%)
+  - All prompts now include "Team Context" section explaining agent roles
+  - Consistent GitHub CLI usage across all agents
+  - Clear handoff documentation (Discovery → Engineer → Tech Lead)
+
+- **GitHub Integration** - All agents now fully integrated
+  - Consistent labeling: `backlog`, `discovery`, `product`, `feature`, `spec`
+  - Product Manager now creates GitHub issues directly (was JSON-only)
+  - Auditor checks GitHub PRs/issues via `gh` CLI
+  - Discovery checks for duplicates before creating issues
+
+- **Docs Updated** - Quickstart, FAQ, troubleshooting reference new commands
+
+### Fixed
+- **Product Manager** - Now creates GitHub issues instead of just outputting JSON
+
 ## [2.0.2] - 2026-01-16
 
 ### Removed

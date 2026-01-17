@@ -2,12 +2,20 @@
 """
 Barbossa CLI - Simple interface for managing your autonomous dev team.
 
-Usage:
-    barbossa init          - Interactive setup wizard
-    barbossa health        - Check system health
-    barbossa run [agent]   - Run an agent manually
-    barbossa status        - Show current status
-    barbossa logs [agent]  - View agent logs
+Commands:
+    barbossa init              Interactive setup wizard
+    barbossa health            Check system health
+    barbossa doctor            Comprehensive diagnostics
+    barbossa run <agent>       Run an agent manually
+    barbossa status            Show current status
+    barbossa logs [agent]      View agent logs
+    barbossa watch             Tail all agent logs in real-time
+    barbossa metrics           View execution metrics
+
+Shortcuts:
+    barbossa engineer          Same as: barbossa run engineer
+    barbossa tl                Same as: barbossa run tech-lead
+    barbossa disco             Same as: barbossa run discovery
 """
 
 import argparse
@@ -15,6 +23,8 @@ import json
 import os
 import subprocess
 import sys
+import time
+import threading
 from pathlib import Path
 from datetime import datetime
 
@@ -25,6 +35,8 @@ class Colors:
     YELLOW = '\033[93m'
     RED = '\033[91m'
     BLUE = '\033[94m'
+    CYAN = '\033[96m'
+    DIM = '\033[2m'
     BOLD = '\033[1m'
     END = '\033[0m'
 
@@ -33,6 +45,7 @@ def ok(msg): print(f"{Colors.GREEN}✓{Colors.END} {msg}")
 def warn(msg): print(f"{Colors.YELLOW}⚠{Colors.END} {msg}")
 def err(msg): print(f"{Colors.RED}✗{Colors.END} {msg}")
 def info(msg): print(f"{Colors.BLUE}→{Colors.END} {msg}")
+def dim(msg): print(f"{Colors.DIM}{msg}{Colors.END}")
 def header(msg): print(f"\n{Colors.BOLD}{msg}{Colors.END}")
 
 
@@ -330,6 +343,45 @@ def cmd_init(args):
 
 
 # =============================================================================
+# AGENT INFO
+# =============================================================================
+
+AGENTS = {
+    'engineer': {
+        'module': 'barbossa.agents.engineer',
+        'desc': 'Implements features from backlog issues',
+    },
+    'tech-lead': {
+        'module': 'barbossa.agents.tech_lead',
+        'desc': 'Reviews PRs, merges or requests changes',
+    },
+    'discovery': {
+        'module': 'barbossa.agents.discovery',
+        'desc': 'Finds TODOs, missing tests, tech debt',
+    },
+    'product': {
+        'module': 'barbossa.agents.product',
+        'desc': 'Suggests high-value features',
+    },
+    'auditor': {
+        'module': 'barbossa.agents.auditor',
+        'desc': 'Weekly health check and cleanup',
+    },
+    'spec': {
+        'module': 'barbossa.agents.spec_generator',
+        'desc': 'Cross-repo feature specs (Spec Mode)',
+    },
+}
+
+# Shortcuts for common agents
+AGENT_ALIASES = {
+    'tl': 'tech-lead',
+    'disco': 'discovery',
+    'prod': 'product',
+}
+
+
+# =============================================================================
 # RUN AGENT
 # =============================================================================
 
@@ -337,35 +389,35 @@ def cmd_run(args):
     """Run an agent manually."""
     app_dir = get_app_dir()
 
-    agents = {
-        'engineer': 'barbossa.agents.engineer',
-        'tech-lead': 'barbossa.agents.tech_lead',
-        'discovery': 'barbossa.agents.discovery',
-        'product': 'barbossa.agents.product',
-        'auditor': 'barbossa.agents.auditor',
-        'spec': 'barbossa.agents.spec_generator',
-    }
-
     if not args.agent:
         header("Available Agents")
         print()
-        for name in agents:
+        for name, info in AGENTS.items():
+            desc = f"{Colors.DIM}{info['desc']}{Colors.END}"
             if name == 'spec':
-                print(f"  barbossa run {name} [--product NAME]")
+                print(f"  {name:12} {desc}")
+                print(f"  {'':12} Usage: barbossa run spec [--product NAME]")
             else:
-                print(f"  barbossa run {name}")
+                print(f"  {name:12} {desc}")
         print()
+        dim("Shortcuts: engineer, tl, disco, prod")
         return 0
 
     agent = args.agent.lower()
-    if agent not in agents:
-        err(f"Unknown agent: {agent}")
-        print(f"Available: {', '.join(agents.keys())}")
+
+    # Resolve alias
+    agent = AGENT_ALIASES.get(agent, agent)
+
+    if agent not in AGENTS:
+        err(f"Unknown agent: {args.agent}")
+        print(f"Available: {', '.join(AGENTS.keys())}")
+        print(f"Shortcuts: {', '.join(AGENT_ALIASES.keys())}")
         return 1
 
-    module = agents[agent]
+    module = AGENTS[agent]['module']
 
     header(f"Running {agent} agent")
+    info(AGENTS[agent]['desc'])
     print()
 
     # Set PYTHONPATH and run the agent as a module
@@ -378,6 +430,9 @@ def cmd_run(args):
     # Pass through --product for spec agent
     if agent == 'spec' and hasattr(args, 'product') and args.product:
         cmd.extend(['--product', args.product])
+
+    info(f"Logs: barbossa logs {agent}")
+    print()
 
     os.execvpe('python3', cmd, env)
 
@@ -490,6 +545,162 @@ def cmd_logs(args):
 
 
 # =============================================================================
+# DOCTOR (comprehensive diagnostics)
+# =============================================================================
+
+def cmd_doctor(args):
+    """Comprehensive diagnostics - shareable report of system state."""
+    app_dir = get_app_dir()
+
+    header("Barbossa Doctor")
+    print("Comprehensive system diagnostics")
+    print("=" * 50)
+
+    issues = []
+    warnings = []
+
+    # 1. Config check
+    print(f"\n{Colors.BOLD}Configuration{Colors.END}")
+    config_file = app_dir / 'config' / 'repositories.json'
+    if config_file.exists():
+        try:
+            with open(config_file) as f:
+                config = json.load(f)
+            repos = config.get('repositories', [])
+            ok(f"Config valid: {len(repos)} repo(s)")
+            for repo in repos:
+                print(f"    - {repo.get('name', 'unnamed')}")
+        except json.JSONDecodeError as e:
+            err(f"Invalid JSON: {e}")
+            issues.append("Fix JSON syntax in config/repositories.json")
+    else:
+        err("Config file missing")
+        issues.append("Run: barbossa init")
+
+    # 2. Auth check
+    print(f"\n{Colors.BOLD}Authentication{Colors.END}")
+
+    # GitHub
+    success, stdout, _ = run_cmd("gh auth status 2>&1")
+    if success:
+        ok("GitHub CLI authenticated")
+    else:
+        err("GitHub CLI not authenticated")
+        issues.append("Run: gh auth login")
+
+    # Claude
+    oauth = os.environ.get('CLAUDE_CODE_OAUTH_TOKEN')
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    if oauth:
+        ok("Claude OAuth token set")
+    elif api_key:
+        ok("Anthropic API key set")
+    else:
+        err("No Claude authentication")
+        issues.append("Set CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY in .env")
+
+    # 3. Git config
+    print(f"\n{Colors.BOLD}Git Configuration{Colors.END}")
+    success, name, _ = run_cmd("git config --global user.name")
+    success2, email, _ = run_cmd("git config --global user.email")
+    if success and name and success2 and email:
+        ok(f"Git: {name} <{email}>")
+    else:
+        warn("Git user not configured")
+        warnings.append("Run: git config --global user.name 'Your Name'")
+
+    # 4. Docker check
+    print(f"\n{Colors.BOLD}Environment{Colors.END}")
+    if Path('/.dockerenv').exists():
+        ok("Running in Docker")
+    else:
+        success, _, _ = run_cmd("docker --version")
+        if success:
+            ok("Docker available")
+        else:
+            warn("Docker not installed")
+            warnings.append("Install Docker for production use")
+
+    # 5. Logs check
+    print(f"\n{Colors.BOLD}Recent Activity{Colors.END}")
+    logs_dir = app_dir / 'logs'
+    if logs_dir.exists():
+        logs = sorted(logs_dir.glob('*.log'), key=lambda p: p.stat().st_mtime, reverse=True)
+        if logs:
+            recent = logs[:3]
+            for log in recent:
+                mtime = datetime.fromtimestamp(log.stat().st_mtime)
+                age = datetime.now() - mtime
+                if age.days > 0:
+                    age_str = f"{age.days}d ago"
+                elif age.seconds > 3600:
+                    age_str = f"{age.seconds // 3600}h ago"
+                else:
+                    age_str = f"{age.seconds // 60}m ago"
+                print(f"    {log.name} ({age_str})")
+        else:
+            warn("No logs yet")
+    else:
+        warn("No logs directory")
+
+    # 6. Cron status
+    print(f"\n{Colors.BOLD}Schedule{Colors.END}")
+    success, stdout, _ = run_cmd("crontab -l 2>/dev/null")
+    if success and stdout:
+        lines = [l for l in stdout.split('\n') if l.strip() and not l.startswith('#')]
+        ok(f"Cron active: {len(lines)} scheduled jobs")
+    else:
+        warn("No cron schedule (agents won't run automatically)")
+        warnings.append("Start container to enable scheduled runs")
+
+    # Summary
+    print("\n" + "=" * 50)
+    if issues:
+        err(f"{len(issues)} issue(s) found:")
+        for issue in issues:
+            print(f"    {Colors.RED}→{Colors.END} {issue}")
+    if warnings:
+        warn(f"{len(warnings)} warning(s):")
+        for warning in warnings:
+            print(f"    {Colors.YELLOW}→{Colors.END} {warning}")
+    if not issues and not warnings:
+        ok("All systems healthy!")
+        print("\n    Ready to ship code while you sleep.")
+
+    return 1 if issues else 0
+
+
+# =============================================================================
+# WATCH (tail all logs)
+# =============================================================================
+
+def cmd_watch(args):
+    """Tail all agent logs in real-time."""
+    app_dir = get_app_dir()
+    logs_dir = app_dir / 'logs'
+
+    if not logs_dir.exists():
+        err("No logs directory found")
+        info("Logs appear after agents run")
+        return 1
+
+    header("Watching all agent logs")
+    dim("Press Ctrl+C to stop")
+    print()
+
+    # Find all log files
+    log_files = list(logs_dir.glob('*.log'))
+    if not log_files:
+        warn("No log files yet")
+        info("Run an agent first: barbossa run engineer")
+        return 1
+
+    # Use tail -f on all logs
+    cmd = ['tail', '-f'] + [str(f) for f in sorted(log_files)]
+    os.execvp('tail', cmd)
+
+
+# =============================================================================
 # METRICS
 # =============================================================================
 
@@ -575,42 +786,48 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Commands:
-  init          Interactive setup wizard
-  health        Check system health
-  run [agent]   Run an agent manually
-  status        Show current status
-  logs [agent]  View agent logs
-  metrics       View execution metrics and cost tracking
+  init              Interactive setup wizard
+  health            Quick health check
+  doctor            Comprehensive diagnostics
+  run <agent>       Run an agent manually
+  status            Show current status
+  logs [agent]      View agent logs
+  watch             Tail all logs in real-time
+  metrics           View execution metrics
+
+Shortcuts:
+  engineer          Same as: run engineer
+  tl                Same as: run tech-lead
+  disco             Same as: run discovery
 
 Examples:
   barbossa init                 # Set up Barbossa
-  barbossa health               # Check everything works
-  barbossa run engineer         # Run engineer now
-  barbossa logs tech-lead -f    # Follow tech lead logs
-  barbossa metrics              # View metrics summary
-  barbossa metrics dashboard    # Generate HTML dashboard
+  barbossa doctor               # Full diagnostics
+  barbossa engineer             # Run engineer now
+  barbossa watch                # Tail all logs
+  barbossa logs tl -f           # Follow tech lead logs
         """
     )
 
     subparsers = parser.add_subparsers(dest='command')
 
     # init
-    init_parser = subparsers.add_parser('init', help='Interactive setup wizard')
-    init_parser.set_defaults(func=cmd_init)
+    subparsers.add_parser('init', help='Interactive setup wizard').set_defaults(func=cmd_init)
 
     # health
-    health_parser = subparsers.add_parser('health', help='Check system health')
-    health_parser.set_defaults(func=cmd_health)
+    subparsers.add_parser('health', help='Quick health check').set_defaults(func=cmd_health)
+
+    # doctor
+    subparsers.add_parser('doctor', help='Comprehensive diagnostics').set_defaults(func=cmd_doctor)
 
     # run
     run_parser = subparsers.add_parser('run', help='Run an agent manually')
-    run_parser.add_argument('agent', nargs='?', help='Agent to run: engineer, tech-lead, discovery, product, auditor, spec')
+    run_parser.add_argument('agent', nargs='?', help='Agent: engineer, tech-lead, discovery, product, auditor, spec')
     run_parser.add_argument('--product', help='For spec agent: only process this product')
     run_parser.set_defaults(func=cmd_run)
 
     # status
-    status_parser = subparsers.add_parser('status', help='Show current status')
-    status_parser.set_defaults(func=cmd_status)
+    subparsers.add_parser('status', help='Show current status').set_defaults(func=cmd_status)
 
     # logs
     logs_parser = subparsers.add_parser('logs', help='View agent logs')
@@ -618,6 +835,9 @@ Examples:
     logs_parser.add_argument('-f', '--follow', action='store_true', help='Follow log output')
     logs_parser.add_argument('-n', '--lines', type=int, help='Number of lines to show')
     logs_parser.set_defaults(func=cmd_logs)
+
+    # watch
+    subparsers.add_parser('watch', help='Tail all logs in real-time').set_defaults(func=cmd_watch)
 
     # metrics
     metrics_parser = subparsers.add_parser('metrics', help='View execution metrics')
@@ -627,6 +847,11 @@ Examples:
     metrics_parser.add_argument('--days', type=int, default=7, help='Number of days to include')
     metrics_parser.add_argument('--open', action='store_true', help='Open dashboard in browser')
     metrics_parser.set_defaults(func=cmd_metrics)
+
+    # Agent aliases as top-level commands
+    for alias, agent in [('engineer', 'engineer'), ('tl', 'tech-lead'), ('disco', 'discovery'), ('prod', 'product')]:
+        alias_parser = subparsers.add_parser(alias, help=f"Run {agent} agent")
+        alias_parser.set_defaults(func=cmd_run, agent=agent)
 
     args = parser.parse_args()
 

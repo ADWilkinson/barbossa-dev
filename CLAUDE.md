@@ -1,7 +1,7 @@
 # Barbossa Engineer - Claude Context
 
-**Last Updated:** 2026-01-16
-**Version:** v2.0.2
+**Last Updated:** 2026-01-17
+**Version:** v2.1.0
 
 ## Project Overview
 
@@ -217,25 +217,27 @@ Add to `config/repositories.json`:
 
 ## Common Operations
 
-### Manual Agent Execution
+### CLI Commands (run inside container with `docker exec barbossa`)
 ```bash
-# Inside container
-docker exec -it barbossa barbossa run engineer
-docker exec -it barbossa barbossa run tech-lead
-docker exec -it barbossa barbossa run discovery
-docker exec -it barbossa barbossa run product
-docker exec -it barbossa barbossa run auditor
-docker exec -it barbossa barbossa run spec                        # All products
-docker exec -it barbossa barbossa run spec --product my-platform  # Specific product
+# Diagnostics
+barbossa doctor               # Full system diagnostics
+barbossa health               # Quick health check
+barbossa status               # Current activity
 
-# Health check
-docker exec -it barbossa barbossa health
+# Run agents (shortcuts available)
+barbossa engineer             # Run engineer now
+barbossa tl                   # Run tech lead now (alias for tech-lead)
+barbossa disco                # Run discovery now
+barbossa run spec             # Run spec generator
 
-# View status
-docker exec -it barbossa barbossa status
+# Logs
+barbossa watch                # Tail all logs in real-time
+barbossa logs engineer        # View specific agent logs
+barbossa logs tl -f           # Follow tech lead logs
 
-# View logs
-docker exec -it barbossa barbossa logs
+# Metrics
+barbossa metrics              # 7-day summary
+barbossa metrics dashboard    # HTML dashboard
 ```
 
 ### Container Management
@@ -283,11 +285,12 @@ On container startup, `validate.py` checks:
 
 ## Version History
 
-**Current Version:** v2.0.2 (2026-01-16)
+**Current Version:** v2.1.0 (2026-01-17)
 
 For detailed release notes, see [CHANGELOG.md](CHANGELOG.md).
 
 **Key capabilities by version:**
+- v2.1.x: CLI improvements (doctor, watch, aliases), unified prompts, full GitHub integration
 - v1.8.x: Spec Mode (cross-repo feature specifications)
 - v1.7.x: Discord webhook notifications, PR ownership filtering
 - v1.6.x: Repository focus/known_gaps config, auto_merge enforcement

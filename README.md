@@ -103,11 +103,14 @@ See [configuration docs](https://barbossa.dev/configuration.html) for all option
 ## Commands
 
 ```bash
-docker exec barbossa barbossa health          # Check status
-docker exec barbossa barbossa run engineer    # Run engineer now
-docker exec barbossa barbossa run tech-lead   # Run tech lead now
-docker exec barbossa barbossa status          # View activity
+barbossa doctor       # Full diagnostics
+barbossa watch        # Tail all logs
+barbossa engineer     # Run engineer now
+barbossa tl           # Run tech lead now
+barbossa metrics      # Cost and performance
 ```
+
+Run inside container: `docker exec barbossa <command>`
 
 ---
 
