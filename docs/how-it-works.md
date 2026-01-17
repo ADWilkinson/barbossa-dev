@@ -7,28 +7,20 @@ Barbossa runs AI agents in Docker. Each agent has a role and runs on a schedule.
 ```
   ┌───────────┐   ┌─────────┐
   │ Discovery │   │ Product │
-  │ finds debt│   │suggests │
   └─────┬─────┘   └────┬────┘
-        │              │
         └──────┬───────┘
                ▼
          ┌──────────┐
-         │ Backlog  │  GitHub Issues
+         │ Backlog  │  ← GitHub Issues
          └────┬─────┘
               ▼
          ┌──────────┐
-         │ Engineer │  implements
+         │ Engineer │  → creates PR
          └────┬─────┘
               ▼
          ┌──────────┐
-         │   PR     │  Pull Request
-         └────┬─────┘
-              ▼
-         ┌──────────┐
-         │Tech Lead │  reviews
-         └────┬─────┘
-              ▼
-        Merge or Reject
+         │Tech Lead │  → merge or reject
+         └──────────┘
 ```
 
 ## Agents
@@ -115,10 +107,6 @@ Agents offset to avoid contention:
 ## Manual run
 
 ```bash
-docker exec barbossa barbossa run engineer
-docker exec barbossa barbossa run tech-lead
-docker exec barbossa barbossa run discovery
-docker exec barbossa barbossa run product
-docker exec barbossa barbossa run auditor
-docker exec barbossa barbossa run spec
+docker exec barbossa barbossa run <agent>
+# engineer, tech-lead, discovery, product, auditor, spec
 ```

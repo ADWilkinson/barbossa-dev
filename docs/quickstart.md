@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Docker
+- Docker (Linux, macOS, or Windows WSL2)
 - GitHub account + token
 - Claude Pro/Max subscription or Anthropic API key
 

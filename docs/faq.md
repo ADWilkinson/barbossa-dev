@@ -16,7 +16,10 @@ Code stays on your machine and GitHub. Claude sees code for analysis (same as us
 Close it. Barbossa moves on.
 
 **How do I improve quality?**
-Add a `CLAUDE.md` file to your repo with project context.
+Add a `CLAUDE.md` file to your repo root with project context (stack, conventions, what to avoid). Agents read this before working.
+
+**What goes in CLAUDE.md?**
+Tech stack, coding conventions, architecture notes, things to avoid. Example: "Next.js 14 with App Router. Use server components. Don't touch auth."
 
 **Can I pause it?**
 ```bash

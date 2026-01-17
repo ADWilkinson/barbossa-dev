@@ -10,7 +10,7 @@ docker pull ghcr.io/adwilkinson/barbossa-dev:latest
 
 ## What it does
 
-Barbossa runs AI agents on a schedule. They find issues, implement fixes, create PRs, and review each other's work. You wake up to merged PRs.
+Barbossa is self-hosted and runs AI agents on a schedule. They find issues, implement fixes, create PRs, and review each other's work. You wake up to merged PRs.
 
 **Autonomous Mode** — Agents implement, review, and merge code automatically.
 

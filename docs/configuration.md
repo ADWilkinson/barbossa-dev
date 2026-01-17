@@ -131,17 +131,6 @@ Auditor can auto-close old Barbossa-created issues:
 
 Only closes issues with matching labels. Set `stale_issue_days: 0` to disable.
 
-## Multiple repos
-
-```json
-{
-  "repositories": [
-    { "name": "frontend", "url": "https://github.com/you/frontend.git" },
-    { "name": "backend", "url": "https://github.com/you/backend.git" }
-  ]
-}
-```
-
 ## Spec Mode
 
 Generate feature specs instead of code:

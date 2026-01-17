@@ -52,8 +52,8 @@ docker exec barbossa barbossa logs engineer
 ## Notifications not working
 
 1. Check `notifications.enabled: true` in config
-2. Verify webhook URL
-3. Test: `docker exec barbossa python3 -c "from barbossa.utils.notifications import test_webhook; test_webhook()"`
+2. Verify webhook URL is correct
+3. Check Discord channel permissions
 
 ## Still stuck?
 
