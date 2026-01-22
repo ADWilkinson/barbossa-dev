@@ -153,7 +153,7 @@ Phase 1 - Setup:
   cd /app/projects
   [ ! -d "{{repo_name}}" ] && git clone {{repo_url}} {{repo_name}}
   cd {{repo_name}}
-  git fetch origin && git checkout main --force && git reset --hard origin/main && git clean -fd
+  git fetch origin && git checkout main --force && git reset --hard origin/main && git clean -fd -e ".env*"
   git branch -D $(git branch | grep 'barbossa/') 2>/dev/null || true
   git checkout -b barbossa/{{timestamp}}
   [ ! -f "{{env_file}}" ] && [ -f "/app/config/env/{{repo_name}}{{env_file}}" ] && cp "/app/config/env/{{repo_name}}{{env_file}}" "{{env_file}}"

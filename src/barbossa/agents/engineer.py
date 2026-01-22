@@ -943,7 +943,7 @@ Phase 1 - Setup:
   git fetch origin
   git checkout {pr_branch}
   git reset --hard origin/{pr_branch}
-  git clean -fd
+  git clean -fd -e ".env*"
 
   {install_cmd}
 {issue_instructions}

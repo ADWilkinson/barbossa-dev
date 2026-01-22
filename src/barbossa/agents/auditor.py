@@ -34,7 +34,7 @@ from barbossa.agents.firebase import (
     track_run_start,
     track_run_end
 )
-from barbossa.utils.issue_tracker import get_issue_tracker, IssueTracker
+from barbossa.utils.issue_tracker import get_issue_tracker, GitHubIssueTracker
 from barbossa.utils.notifications import (
     notify_agent_run_complete,
     notify_error,
@@ -1672,7 +1672,7 @@ class BarbossaAuditor:
 
         return issues_created
 
-    def _get_issue_tracker(self, repo_name: str) -> IssueTracker:
+    def _get_issue_tracker(self, repo_name: str) -> GitHubIssueTracker:
         """Get the issue tracker for a repository."""
         return get_issue_tracker(self.config, repo_name, self.logger)
 
