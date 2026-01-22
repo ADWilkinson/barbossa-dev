@@ -376,8 +376,12 @@ KEY FILES:
 
         return ""
 
-    def _analyze_with_claude(self, repo: Dict, claude_md: str) -> Optional[Dict]:
-        """Use Claude to analyze the product and suggest a feature."""
+    def _analyze_with_claude(self, repo: Dict, claude_md: str) -> Optional[str]:
+        """Use Claude to analyze product and create a feature issue via gh CLI.
+
+        Returns the issue URL if Claude created one, None otherwise.
+        Claude handles duplicate checking and value assessment directly.
+        """
         import re
         prompt = self._get_product_prompt(repo, claude_md)
 
@@ -386,9 +390,9 @@ KEY FILES:
         with open(prompt_file, 'w') as f:
             f.write(prompt)
 
-        # Call Claude CLI (15 minute timeout - matches Tech Lead complexity)
+        # Call Claude CLI with permissions to run gh commands (15 minute timeout)
         result = self._run_cmd(
-            f'cat {prompt_file} | claude -p --output-format json',
+            f'cat {prompt_file} | claude --dangerously-skip-permissions -p',
             timeout=900
         )
 
@@ -397,69 +401,42 @@ KEY FILES:
         if not result:
             return None
 
+        # Extract the actual response text
+        response_text = result
+        try:
+            wrapper = json.loads(result)
+            if 'result' in wrapper:
+                response_text = wrapper['result']
+        except json.JSONDecodeError:
+            pass
+
         # Check for explicit "NO SUGGESTION" response
-        if "NO SUGGESTION" in result.upper():
+        if "NO SUGGESTION" in response_text.upper():
             self.logger.info("Claude explicitly declined to suggest a feature (NO SUGGESTION)")
             return None
 
-        try:
-            # Claude CLI returns wrapper JSON with result field
-            wrapper = json.loads(result)
-            if 'result' in wrapper:
-                inner_result = wrapper['result']
+        # Look for GitHub issue URL in response (Claude created issue via gh CLI)
+        repo_name = repo.get('name', '')
+        owner = self.config.get('owner', '')
 
-                # Check for NO SUGGESTION in the result
-                if "NO SUGGESTION" in inner_result.upper():
-                    self.logger.info("Claude explicitly declined to suggest a feature (NO SUGGESTION)")
-                    return None
+        # Match issue URLs like https://github.com/owner/repo/issues/123
+        url_pattern = rf'https://github\.com/{owner}/{repo_name}/issues/(\d+)'
+        url_match = re.search(url_pattern, response_text)
 
-                # Extract JSON from markdown code block if present
-                json_block_match = re.search(r'```json\s*\n([\s\S]*?)\n```', inner_result)
-                if json_block_match:
-                    json_str = json_block_match.group(1).strip()
-                    self.logger.info(f"Extracted JSON from code block: {json_str[:300]}...")
-                    data = json.loads(json_str)
-                    if 'feature_title' in data:
-                        return data
+        if url_match:
+            issue_url = url_match.group(0)
+            issue_number = url_match.group(1)
+            self.logger.info(f"Claude created issue #{issue_number}: {issue_url}")
+            return issue_url
 
-                # Fallback: try to find JSON object directly
-                json_obj_match = re.search(r'\{[^{}]*"feature_title"[^{}]*("acceptance_criteria"\s*:\s*\[[^\]]*\])?[^{}]*\}', inner_result, re.DOTALL)
-                if json_obj_match:
-                    json_str = json_obj_match.group()
-                    self.logger.info(f"Extracted JSON object: {json_str[:300]}...")
-                    data = json.loads(json_str)
-                    if 'feature_title' in data:
-                        return data
+        # Fallback: check if any github issue URL was created
+        generic_url_match = re.search(r'https://github\.com/[^/]+/[^/]+/issues/\d+', response_text)
+        if generic_url_match:
+            issue_url = generic_url_match.group(0)
+            self.logger.info(f"Claude created issue: {issue_url}")
+            return issue_url
 
-            # Fallback: check if wrapper itself has feature_title
-            if 'feature_title' in wrapper:
-                return wrapper
-
-        except json.JSONDecodeError as e:
-            self.logger.warning(f"JSON parse error: {e}")
-            # Last resort: try to extract any valid JSON with feature_title
-            try:
-                # Find the start of JSON object
-                start = result.find('"feature_title"')
-                if start > 0:
-                    # Find opening brace before feature_title
-                    brace_start = result.rfind('{', 0, start)
-                    if brace_start >= 0:
-                        # Find matching closing brace
-                        depth = 0
-                        for i, c in enumerate(result[brace_start:]):
-                            if c == '{':
-                                depth += 1
-                            elif c == '}':
-                                depth -= 1
-                                if depth == 0:
-                                    json_str = result[brace_start:brace_start + i + 1]
-                                    self.logger.info(f"Extracted JSON via brace matching: {json_str[:300]}...")
-                                    return json.loads(json_str)
-            except Exception as ex:
-                self.logger.warning(f"Failed fallback JSON extraction: {ex}")
-
-        self.logger.warning("Could not parse feature suggestion from Claude response")
+        self.logger.warning("No issue URL found in Claude response")
         return None
 
     def _extract_keywords(self, text: str) -> set:
@@ -565,53 +542,17 @@ KEY FILES:
 
         issues_created = 0
 
-        # Analyze with Claude
+        # Analyze with Claude - Claude creates the issue directly via gh CLI
         self.logger.info("Analyzing product with Claude...")
-        feature = self._analyze_with_claude(repo, claude_md)
+        issue_url = self._analyze_with_claude(repo, claude_md)
 
-        if not feature:
+        if not issue_url:
             self.logger.warning("No feature suggestion from Claude")
             return 0
 
-        self.logger.info(f"Feature parsed: {json.dumps(feature, indent=2)[:500]}")
-
-        title = feature.get('feature_title', '')
-        if not title:
-            self.logger.warning("No feature title in response")
-            return 0
-
-        self.logger.info(f"Feature title: {title}")
-
-        # Check for exact/substring duplicates
-        title_lower = title.lower()
-        is_exact_duplicate = any(
-            existing in title_lower or title_lower in existing
-            for existing in all_existing
-        )
-
-        if is_exact_duplicate:
-            self.logger.info(f"Skipping exact duplicate: {title}")
-            return 0
-
-        # Check for semantic similarity with existing issues
-        if self._is_semantically_similar(title, existing_issues):
-            self.logger.info(f"Skipping semantically similar feature: {title}")
-            return 0
-
-        # Check value score
-        value_score = feature.get('value_score', 5)
-        self.logger.info(f"Value score: {value_score}")
-        if value_score < 6:
-            self.logger.info(f"Skipping low-value feature (score {value_score}): {title}")
-            return 0
-
-        # Create the issue
-        body = self._generate_issue_body(feature, repo_name)
-        if self._create_issue(repo_name, title, body):
-            issues_created += 1
-
-        self.logger.info(f"Created {issues_created} feature issues for {repo_name}")
-        return issues_created
+        # Claude created the issue - count it
+        self.logger.info(f"Feature issue created: {issue_url}")
+        return 1
 
     def _generate_session_id(self) -> str:
         """Generate unique session ID"""
