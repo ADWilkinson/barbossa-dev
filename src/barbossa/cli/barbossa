@@ -392,8 +392,8 @@ def cmd_run(args):
     if not args.agent:
         header("Available Agents")
         print()
-        for name, info in AGENTS.items():
-            desc = f"{Colors.DIM}{info['desc']}{Colors.END}"
+        for name, agent_info in AGENTS.items():
+            desc = f"{Colors.DIM}{agent_info['desc']}{Colors.END}"
             if name == 'spec':
                 print(f"  {name:12} {desc}")
                 print(f"  {'':12} Usage: barbossa run spec [--product NAME]")
