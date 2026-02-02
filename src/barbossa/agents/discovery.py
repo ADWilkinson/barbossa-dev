@@ -490,7 +490,7 @@ Found console.log statements in production code that should be removed.
             if issue.updated_at:
                 try:
                     updated = datetime.fromisoformat(issue.updated_at.replace('Z', '+00:00'))
-                    hours_since_update = (now - updated.replace(tzinfo=None)).total_seconds() / 3600
+                    hours_since_update = (now - updated).total_seconds() / 3600
                     if hours_since_update < 24:
                         self.logger.debug(f"Skipping #{issue.id}: recently updated ({hours_since_update:.1f}h ago)")
                         continue
@@ -500,7 +500,7 @@ Found console.log statements in production code that should be removed.
             # Check curation marker
             last_curated = get_last_curation_timestamp(issue.body or '')
             if last_curated:
-                hours_since_curation = (now - last_curated.replace(tzinfo=None)).total_seconds() / 3600
+                hours_since_curation = (now - last_curated).total_seconds() / 3600
                 if hours_since_curation < self.min_hours_since_curation:
                     self.logger.debug(f"Skipping #{issue.id}: curated {hours_since_curation:.1f}h ago")
                     continue
