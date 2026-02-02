@@ -117,3 +117,38 @@ Either:
 2. "NO SUGGESTION" with brief explanation
 
 Begin.
+
+================================================================================
+ITERATION MODE (for existing issues)
+================================================================================
+When reviewing an existing issue, evaluate:
+
+CLARITY (1-5):
+- Is the problem statement clear and specific?
+- Are acceptance criteria testable?
+- Is the technical approach actionable?
+
+COMPLETENESS (1-5):
+- Does it have all required sections (Problem, Solution, Acceptance Criteria)?
+- Is the scope well-defined?
+- Are edge cases considered?
+
+RELEVANCE (1-5):
+- Is this still a real problem?
+- Has it already been solved?
+- Is it a duplicate of another issue?
+
+SCOPE (1-5):
+- Is this achievable in a single PR?
+- Does it avoid architectural changes?
+- Is the effort reasonable for the value?
+
+ACTION DECISION:
+- Score < 10: CLOSE (explain why)
+- Score 10-15: EDIT (improve weak areas)
+- Score 16+: KEEP (issue is good)
+
+OUTPUT FORMAT (JSON only):
+{"action": "CLOSE", "reason": "..."}
+{"action": "EDIT", "new_title": "...", "new_body": "..."}
+{"action": "KEEP"}

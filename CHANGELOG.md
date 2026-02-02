@@ -5,6 +5,41 @@ All notable changes to Barbossa are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-02-02
+
+### Added
+- **Issue Curation Mode** - Barbossa now curates existing issues, not just creates new ones
+  - Discovery validates existing issues (closes if fixed, updates if still valid)
+  - Product Manager iterates on issues (improves clarity, closes stale/low-value)
+  - Curation markers track when issues were last reviewed (`*Last Curated: YYYY-MM-DDTHH:MM:SSZ*`)
+  - Configurable `iteration_ratio` controls balance between curation vs creation
+  - Configurable `min_hours_since_curation` prevents over-processing (default 48h)
+
+- **Issue Tracker Enhancements**
+  - `update_issue()` - Edit existing issues via `gh issue edit`
+  - `close_issue()` - Close issues with optional comment
+  - `get_issue_details()` - Fetch single issue with timestamps
+  - `get_last_curation_timestamp()` / `update_curation_marker()` - Parse/update curation footers
+
+### Changed
+- **Default Mode: Curation** - Engineer and Tech Lead disabled by default
+  - Discovery runs 6x daily (0,4,8,12,16,20 UTC)
+  - Product Manager runs 6x daily (2,6,10,14,18,22 UTC)
+  - Full pipeline can be re-enabled by setting `engineer.enabled: true` and `tech_lead.enabled: true`
+
+- **Agent Workflow Updates**
+  - Discovery: Phase 1 validates existing issues, Phase 2 creates new ones
+  - Product Manager: Phase 1 curates existing issues (70%), Phase 2 creates new (30%)
+  - Both agents now use timezone-aware datetime (fixes deprecation warnings)
+
+- **Prompt Updates**
+  - `product_manager.txt` now includes iteration mode scoring criteria (clarity, completeness, relevance, scope)
+
+### Technical
+- Agents bumped to v2.2.0
+- Issue dataclass now includes `updated_at` and `created_at` fields
+- `list_issues()` now returns timestamps for curation logic
+
 ## [2.1.0] - 2026-01-17
 
 ### Added

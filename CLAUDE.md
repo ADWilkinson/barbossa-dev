@@ -1,11 +1,13 @@
 # Barbossa Engineer - Claude Context
 
-**Last Updated:** 2026-01-17
-**Version:** v2.1.0
+**Last Updated:** 2026-02-02
+**Version:** v2.2.0
 
 ## Project Overview
 
 Barbossa is an autonomous AI development team powered by Claude that manages GitHub repositories automatically. It consists of multiple specialized agents that work together to maintain codebases, review PRs, discover improvements, manage issues, and more.
+
+**Current Mode: Issue Curation** - Barbossa is configured to curate GitHub issues (create, improve, close stale) rather than implement code. Engineer and Tech Lead are disabled; Discovery and Product Manager run 6x daily to maintain high-quality issue backlogs.
 
 ## Project Structure
 
@@ -51,22 +53,33 @@ barbossa-engineer/
 
 ## Current System State
 
-### Active Configuration
-- **Repositories:** 1 (scallywag-br-io)
+### Active Configuration (Curation Mode)
+- **Repositories:** 1 (galleonlabs-zkp2p)
 - **Owner:** ADWilkinson
-- **Schedule (Optimized):**
-  - Engineer: 12x daily at :00 (0,2,4,6,8,10,12,14,16,18,20,22 UTC)
-  - Tech Lead: 12x daily at :00 (1,3,5,7,9,11,13,15,17,19,21,23 UTC), 1h after engineer
-  - Discovery: 6x daily offset (1,5,9,13,17,21 UTC); keeps backlog stocked
-  - Product Manager: 3x daily offset (3,11,19 UTC); prioritizes quality over quantity
+- **Mode:** Issue Curation (Engineer/Tech Lead disabled)
+- **Schedule:**
+  - Engineer: **disabled**
+  - Tech Lead: **disabled**
+  - Discovery: 6x daily (0,4,8,12,16,20 UTC) - validates existing issues, creates new ones
+  - Product Manager: 6x daily (2,6,10,14,18,22 UTC) - curates PRDs, suggests features
   - Auditor: Daily at 06:30 UTC
-- **Schedule Philosophy:** Agents offset to avoid resource contention, ensure fresh PRs are reviewed in next cycle, and keep backlog healthy
+- **Schedule Philosophy:** Discovery and Product Manager alternate every 2 hours to maintain issue quality
 
-### Tech Lead Settings
-- Auto-merge: Enabled
+### Curation Settings
+- **Discovery:**
+  - `iteration_ratio: 0.5` - 50% effort on validating existing issues
+  - `min_hours_since_curation: 48` - re-validate issues after 48h
+  - `max_backlog_issues: 30` - cap on total backlog issues
+- **Product Manager:**
+  - `iteration_ratio: 0.7` - 70% effort on curating existing issues
+  - `min_hours_since_curation: 48` - re-curate issues after 48h
+  - `max_feature_issues: 30` - cap on total feature issues
+
+### Tech Lead Settings (when enabled)
+- Auto-merge: Disabled
 - Min lines for tests required: 50
 - Max files per PR: 15
-- Stale PR threshold: 5 days
+- Stale PR threshold: 7 days
 
 ### System Health
 - ✅ GitHub CLI: Authenticated
@@ -81,6 +94,73 @@ Barbossa uses GitHub Issues for tracking work:
 - Uses `gh` CLI for issue operations
 - Agents reference issues as `#123`
 - PRs linked via "Closes #123" in PR description
+
+## Issue Curation Mode (v2.2.0)
+
+### Overview
+Curation Mode transforms Barbossa from a full CI pipeline into an issue quality system. Instead of implementing features, agents focus on creating and improving GitHub issues.
+
+### How It Works
+
+**Discovery Agent (validates technical issues):**
+1. Phase 1: Validate existing issues
+   - Check if TODOs/bugs still exist in code
+   - Close issues where evidence is gone (problem fixed)
+   - Update valid issues with fresh evidence counts
+2. Phase 2: Create new issues from code analysis
+
+**Product Manager Agent (curates PRDs/features):**
+1. Phase 1: Curate existing issues (70% of effort)
+   - Review for clarity, completeness, relevance, scope
+   - CLOSE stale/duplicate/low-value issues
+   - EDIT issues that need improvement
+   - KEEP good issues (just update curation timestamp)
+2. Phase 2: Create new feature suggestions (30% of effort)
+
+### Curation Markers
+All Barbossa issues include a footer marker to track curation:
+
+```markdown
+---
+*Created by Barbossa Product Manager v2.2.0*
+*Last Curated: 2026-02-02T14:30:00Z*
+```
+
+Issues are only re-curated if:
+- `updatedAt` > 24h ago (not recently touched by humans)
+- Last Curated marker > 48h ago (configurable via `min_hours_since_curation`)
+
+### Configuration
+```json
+{
+  "settings": {
+    "schedule": {
+      "engineer": "disabled",
+      "tech_lead": "disabled",
+      "discovery": "0 0,4,8,12,16,20 * * *",
+      "product_manager": "0 2,6,10,14,18,22 * * *"
+    },
+    "engineer": { "enabled": false },
+    "tech_lead": { "enabled": false },
+    "discovery": {
+      "enabled": true,
+      "iteration_ratio": 0.5,
+      "min_hours_since_curation": 48
+    },
+    "product_manager": {
+      "enabled": true,
+      "iteration_ratio": 0.7,
+      "min_hours_since_curation": 48
+    }
+  }
+}
+```
+
+### Re-enabling Full Pipeline
+To switch back to full CI mode (implement + review):
+1. Set `engineer.enabled: true` and `tech_lead.enabled: true`
+2. Update schedules to non-"disabled" cron expressions
+3. Restart container: `docker compose restart`
 
 ## Webhook Notifications
 
@@ -285,11 +365,12 @@ On container startup, `validate.py` checks:
 
 ## Version History
 
-**Current Version:** v2.1.0 (2026-01-17)
+**Current Version:** v2.2.0 (2026-02-02)
 
 For detailed release notes, see [CHANGELOG.md](CHANGELOG.md).
 
 **Key capabilities by version:**
+- v2.2.x: **Issue Curation Mode** - curate existing issues, close stale ones, improve quality
 - v2.1.x: CLI improvements (doctor, watch, aliases), unified prompts, full GitHub integration
 - v1.8.x: Spec Mode (cross-repo feature specifications)
 - v1.7.x: Discord webhook notifications, PR ownership filtering

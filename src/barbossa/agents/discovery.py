@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Barbossa Discovery v2.1.0 - Autonomous Feature Discovery Agent
-Runs 3x daily (06:00, 14:00, 22:00) to find improvements and create Issues.
+Barbossa Discovery v2.2.0 - Autonomous Feature Discovery Agent
+Runs 6x daily to find improvements and curate Issues.
 Keeps the backlog fed so Engineers always have work to pick from.
 
 Part of the Pipeline:
@@ -23,7 +23,7 @@ import logging
 import os
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 import uuid
@@ -36,7 +36,13 @@ from barbossa.agents.firebase import (
     track_run_start,
     track_run_end
 )
-from barbossa.utils.issue_tracker import get_issue_tracker, GitHubIssueTracker
+from barbossa.utils.issue_tracker import (
+    get_issue_tracker,
+    GitHubIssueTracker,
+    get_last_curation_timestamp,
+    update_curation_marker,
+    Issue
+)
 from barbossa.utils.notifications import (
     notify_agent_run_complete,
     notify_error,
@@ -48,9 +54,11 @@ from barbossa.utils.notifications import (
 class BarbossaDiscovery:
     """Autonomous discovery agent that creates issues for the pipeline."""
 
-    VERSION = "2.1.0"
+    VERSION = "2.2.0"
     DEFAULT_BACKLOG_THRESHOLD = 20
     DEFAULT_PRECISION_MODE = "high"
+    DEFAULT_ITERATION_RATIO = 0.5
+    DEFAULT_MIN_HOURS_SINCE_CURATION = 48
 
     def __init__(self, work_dir: Optional[Path] = None):
         default_dir = Path(os.environ.get('BARBOSSA_DIR', '/app'))
@@ -84,6 +92,8 @@ class BarbossaDiscovery:
         self.enabled = settings.get('enabled', True)
         self.BACKLOG_THRESHOLD = settings.get('max_backlog_issues', self.DEFAULT_BACKLOG_THRESHOLD)
         self.precision_mode = settings.get('precision_mode', self.DEFAULT_PRECISION_MODE)
+        self.iteration_ratio = settings.get('iteration_ratio', self.DEFAULT_ITERATION_RATIO)
+        self.min_hours_since_curation = settings.get('min_hours_since_curation', self.DEFAULT_MIN_HOURS_SINCE_CURATION)
 
         # Issue tracker type for logging
         tracker_type = self.config.get('issue_tracker', {}).get('type', 'github')
@@ -93,6 +103,7 @@ class BarbossaDiscovery:
         self.logger.info(f"Repositories: {len(self.repositories)}")
         self.logger.info(f"Issue Tracker: {tracker_type}")
         self.logger.info(f"Settings: max_backlog_issues={self.BACKLOG_THRESHOLD}, precision_mode={self.precision_mode}")
+        self.logger.info(f"Curation: iteration_ratio={self.iteration_ratio}, min_hours={self.min_hours_since_curation}")
         self.logger.info("=" * 60)
 
     def _setup_logging(self):
@@ -466,8 +477,221 @@ Found console.log statements in production code that should be removed.
 
         return {'title': title, 'body': body}
 
+    def _get_issues_needing_validation(self, repo_name: str) -> List[Issue]:
+        """Find discovery issues that need validation (haven't been curated recently)."""
+        tracker = self._get_issue_tracker(repo_name)
+        issues = tracker.list_issues(labels=['discovery'], state='open', limit=50)
+
+        now = datetime.now(timezone.utc)
+        needs_validation = []
+
+        for issue in issues:
+            # Skip if recently updated by humans (within 24h)
+            if issue.updated_at:
+                try:
+                    updated = datetime.fromisoformat(issue.updated_at.replace('Z', '+00:00'))
+                    hours_since_update = (now - updated.replace(tzinfo=None)).total_seconds() / 3600
+                    if hours_since_update < 24:
+                        self.logger.debug(f"Skipping #{issue.id}: recently updated ({hours_since_update:.1f}h ago)")
+                        continue
+                except ValueError:
+                    pass
+
+            # Check curation marker
+            last_curated = get_last_curation_timestamp(issue.body or '')
+            if last_curated:
+                hours_since_curation = (now - last_curated.replace(tzinfo=None)).total_seconds() / 3600
+                if hours_since_curation < self.min_hours_since_curation:
+                    self.logger.debug(f"Skipping #{issue.id}: curated {hours_since_curation:.1f}h ago")
+                    continue
+
+            needs_validation.append(issue)
+
+        self.logger.info(f"Found {len(needs_validation)} discovery issues needing validation")
+        return needs_validation
+
+    def _validate_issue_evidence(self, repo_path: Path, issue: Issue) -> Dict:
+        """Check if the evidence in a discovery issue still exists in the code.
+
+        Returns dict with:
+        - still_valid: bool - whether evidence still exists
+        - evidence_count: int - number of matching items found
+        - details: str - what was found
+        """
+        body = issue.body or ''
+        title = issue.title.lower()
+
+        # Determine issue type and validate
+        if 'todo' in title or 'fixme' in title:
+            return self._validate_todo_evidence(repo_path, body)
+        elif 'console.log' in title:
+            return self._validate_console_log_evidence(repo_path)
+        elif 'loading' in title:
+            return self._validate_loading_evidence(repo_path, body)
+        elif 'error handling' in title:
+            return self._validate_error_evidence(repo_path, body)
+        elif 'a11y' in title or 'accessibility' in title:
+            return self._validate_a11y_evidence(repo_path, body)
+
+        # Unknown type - assume still valid
+        return {'still_valid': True, 'evidence_count': 0, 'details': 'Could not validate (unknown issue type)'}
+
+    def _validate_todo_evidence(self, repo_path: Path, body: str) -> Dict:
+        """Check if TODO/FIXME comments mentioned in issue still exist."""
+        import re
+
+        # Extract file references from body
+        file_refs = re.findall(r'`([^`]+\.(ts|tsx|js|jsx)):(\d+)`', body)
+
+        if not file_refs:
+            # No specific files, do general check
+            result = self._run_cmd(
+                "grep -rn 'TODO\\|FIXME\\|HACK\\|XXX' --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=dist . | wc -l",
+                cwd=str(repo_path)
+            )
+            count = int(result.strip()) if result and result.strip().isdigit() else 0
+            return {
+                'still_valid': count > 0,
+                'evidence_count': count,
+                'details': f'{count} TODO/FIXME comments found in codebase'
+            }
+
+        # Check specific files
+        found_count = 0
+        for file_path, ext, line_no in file_refs:
+            full_path = repo_path / file_path.lstrip('./')
+            if full_path.exists():
+                result = self._run_cmd(f"grep -n 'TODO\\|FIXME\\|HACK\\|XXX' '{full_path}'", cwd=str(repo_path))
+                if result:
+                    found_count += len(result.strip().split('\n'))
+
+        return {
+            'still_valid': found_count > 0,
+            'evidence_count': found_count,
+            'details': f'{found_count} TODO/FIXME comments still found in referenced files'
+        }
+
+    def _validate_console_log_evidence(self, repo_path: Path) -> Dict:
+        """Check if console.log statements still exist."""
+        result = self._run_cmd(
+            "grep -rn 'console\\.log' --include='*.ts' --include='*.tsx' --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=dist . | grep -v '.test.' | wc -l",
+            cwd=str(repo_path)
+        )
+        count = int(result.strip()) if result and result.strip().isdigit() else 0
+        return {
+            'still_valid': count > 0,
+            'evidence_count': count,
+            'details': f'{count} console.log statements found'
+        }
+
+    def _validate_loading_evidence(self, repo_path: Path, body: str) -> Dict:
+        """Check if files without loading states still exist."""
+        import re
+        file_refs = re.findall(r'`([^`]+\.tsx?)`', body)
+
+        if not file_refs:
+            return {'still_valid': True, 'evidence_count': 0, 'details': 'No files to validate'}
+
+        still_missing = 0
+        for file_path in file_refs:
+            full_path = repo_path / file_path.lstrip('./')
+            if full_path.exists():
+                has_loading = self._run_cmd(
+                    f"grep -l 'isLoading\\|loading\\|Skeleton\\|Spinner' '{full_path}'",
+                    cwd=str(repo_path)
+                )
+                if not has_loading:
+                    still_missing += 1
+
+        return {
+            'still_valid': still_missing > 0,
+            'evidence_count': still_missing,
+            'details': f'{still_missing} files still missing loading states'
+        }
+
+    def _validate_error_evidence(self, repo_path: Path, body: str) -> Dict:
+        """Check if files without error handling still exist."""
+        import re
+        file_refs = re.findall(r'`([^`]+\.tsx?)`', body)
+
+        if not file_refs:
+            return {'still_valid': True, 'evidence_count': 0, 'details': 'No files to validate'}
+
+        still_missing = 0
+        for file_path in file_refs:
+            full_path = repo_path / file_path.lstrip('./')
+            if full_path.exists():
+                has_error = self._run_cmd(
+                    f"grep -l 'isError\\|error\\|catch\\|ErrorBoundary' '{full_path}'",
+                    cwd=str(repo_path)
+                )
+                if not has_error:
+                    still_missing += 1
+
+        return {
+            'still_valid': still_missing > 0,
+            'evidence_count': still_missing,
+            'details': f'{still_missing} files still missing error handling'
+        }
+
+    def _validate_a11y_evidence(self, repo_path: Path, body: str) -> Dict:
+        """Check if accessibility issues still exist."""
+        # Check for images without alt
+        result = self._run_cmd(
+            "grep -rn '<img' --include='*.tsx' --include='*.jsx' --exclude-dir=node_modules --exclude-dir=.next . | grep -v 'alt=' | wc -l",
+            cwd=str(repo_path)
+        )
+        count = int(result.strip()) if result and result.strip().isdigit() else 0
+        return {
+            'still_valid': count > 0,
+            'evidence_count': count,
+            'details': f'{count} images without alt attributes found'
+        }
+
+    def _iterate_on_discovery_issue(self, repo_path: Path, issue: Issue, repo_name: str) -> str:
+        """Validate and update a discovery issue. Returns action taken."""
+        tracker = self._get_issue_tracker(repo_name)
+
+        # Validate evidence
+        validation = self._validate_issue_evidence(repo_path, issue)
+
+        if not validation['still_valid']:
+            # Close the issue - problem has been fixed
+            reason = f"Automatically closed: Evidence no longer found in codebase. {validation['details']}"
+            tracker.close_issue(int(issue.id), reason)
+            self.logger.info(f"CLOSED issue #{issue.id}: evidence no longer exists")
+            return "closed"
+
+        # Evidence still exists - update with current count and curation marker
+        updated_body = issue.body or ''
+
+        # Add validation note if evidence count changed significantly
+        if validation['evidence_count'] > 0:
+            validation_note = f"\n\n**Last Validation:** {validation['details']}"
+            # Remove old validation note if present
+            import re
+            updated_body = re.sub(r'\n\n\*\*Last Validation:\*\*[^\n]*', '', updated_body)
+            # Add before footer
+            if '---' in updated_body:
+                parts = updated_body.rsplit('---', 1)
+                updated_body = parts[0].rstrip() + validation_note + '\n\n---' + parts[1]
+            else:
+                updated_body += validation_note
+
+        # Update curation marker
+        updated_body = update_curation_marker(updated_body, datetime.now(timezone.utc), "Barbossa Discovery Agent", self.VERSION)
+
+        tracker.update_issue(int(issue.id), body=updated_body)
+        self.logger.info(f"VALIDATED issue #{issue.id}: {validation['details']}")
+        return "validated"
+
     def discover_for_repo(self, repo: Dict) -> int:
-        """Run discovery for a single repository. Returns number of issues created."""
+        """Run discovery for a single repository.
+
+        Curation Mode (v2.2.0):
+        1. First: validate existing issues (close if fixed, update if still valid)
+        2. Then: create new issues from fresh analysis
+        """
         repo_name = repo['name']
         self.logger.info(f"\n{'='*60}")
         self.logger.info(f"DISCOVERING: {repo_name}")
@@ -477,20 +701,47 @@ Found console.log statements in production code that should be removed.
         backlog_count = self._get_backlog_count(repo_name)
         self.logger.info(f"Current backlog: {backlog_count} issues")
 
-        if backlog_count >= self.BACKLOG_THRESHOLD:
-            self.logger.info(f"Backlog full (>= {self.BACKLOG_THRESHOLD}), skipping discovery")
-            return 0
-
-        # Clone/update repo
+        # Clone/update repo first (needed for validation)
         repo_path = self._clone_or_update_repo(repo)
         if not repo_path:
             self.logger.error(f"Could not access repo: {repo_name}")
             return 0
 
+        issues_validated = 0
+        issues_closed = 0
+        issues_created = 0
+
+        # Phase 1: Validate existing discovery issues
+        max_validations = max(1, int(5 * self.iteration_ratio))  # Cap at 5 * ratio
+        self.logger.info(f"\n--- PHASE 1: Validating existing issues (max {max_validations}) ---")
+
+        issues_needing_validation = self._get_issues_needing_validation(repo_name)
+
+        for issue in issues_needing_validation[:max_validations]:
+            self.logger.info(f"Validating issue #{issue.id}: {issue.title}")
+            action = self._iterate_on_discovery_issue(repo_path, issue, repo_name)
+            if action == 'closed':
+                issues_closed += 1
+            elif action == 'validated':
+                issues_validated += 1
+
+        self.logger.info(f"Validated {issues_validated}, closed {issues_closed} issues")
+
+        # Refresh backlog count after closures
+        if issues_closed > 0:
+            backlog_count = self._get_backlog_count(repo_name)
+            self.logger.info(f"Updated backlog count: {backlog_count} issues")
+
+        # Phase 2: Create new issues if backlog allows
+        if backlog_count >= self.BACKLOG_THRESHOLD:
+            self.logger.info(f"Backlog full (>= {self.BACKLOG_THRESHOLD}), skipping new issue creation")
+            return issues_validated + issues_closed
+
+        self.logger.info(f"\n--- PHASE 2: Creating new issues ---")
+
         # Get existing issues to avoid duplicates
         existing_titles = self._get_existing_issue_titles(repo_name)
 
-        issues_created = 0
         issues_needed = self.BACKLOG_THRESHOLD - backlog_count
 
         # Run analyses (precision mode controls signal quality)
@@ -536,8 +787,9 @@ Found console.log statements in production code that should be removed.
                 issues_created += 1
                 existing_titles.append(issue['title'].lower())
 
-        self.logger.info(f"Created {issues_created} issues for {repo_name}")
-        return issues_created
+        total = issues_validated + issues_closed + issues_created
+        self.logger.info(f"\nTotal actions: {issues_validated} validated, {issues_closed} closed, {issues_created} created")
+        return total
 
     def _generate_session_id(self) -> str:
         """Generate unique session ID"""

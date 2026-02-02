@@ -8,9 +8,16 @@ Provides issue tracking via GitHub Issues using the gh CLI.
 import json
 import logging
 import os
+import re
 import subprocess
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from datetime import datetime, timezone
+from typing import Dict, List, Optional, Tuple
+
+
+# Curation marker pattern for parsing/updating issue footers
+CURATION_MARKER_PATTERN = r'\*Last Curated: (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)\*'
+BARBOSSA_FOOTER_PATTERN = r'---\s*\n\*Created by Barbossa .+\*'
 
 
 @dataclass
@@ -23,6 +30,8 @@ class Issue:
     state: str
     labels: List[str]
     url: str
+    updated_at: Optional[str] = None
+    created_at: Optional[str] = None
 
     @classmethod
     def from_github(cls, gh_data: Dict) -> 'Issue':
@@ -33,7 +42,9 @@ class Issue:
             body=gh_data.get('body', ''),
             state=gh_data.get('state', ''),
             labels=[l.get('name', '') for l in gh_data.get('labels', [])],
-            url=gh_data.get('url', '')
+            url=gh_data.get('url', ''),
+            updated_at=gh_data.get('updatedAt'),
+            created_at=gh_data.get('createdAt')
         )
 
 
@@ -94,7 +105,7 @@ class GitHubIssueTracker:
         state: Optional[str] = None,
         limit: int = 50
     ) -> List[Issue]:
-        cmd = f"gh issue list --repo {self.owner}/{self.repo} --limit {limit} --json number,title,body,state,labels,url"
+        cmd = f"gh issue list --repo {self.owner}/{self.repo} --limit {limit} --json number,title,body,state,labels,url,updatedAt,createdAt"
         if labels:
             cmd += f" --label {','.join(labels)}"
         if state:
@@ -189,6 +200,110 @@ class GitHubIssueTracker:
 
     def get_pr_link_instruction(self, issue_id: str) -> str:
         return f'Include "Closes #{issue_id}" in your PR description to automatically close the issue when merged.'
+
+    def get_issue_details(self, issue_number: int) -> Optional[Issue]:
+        """Fetch a single issue with full body and timestamps."""
+        result = self._run_cmd(
+            f"gh issue view {issue_number} --repo {self.owner}/{self.repo} --json number,title,body,state,labels,url,updatedAt,createdAt"
+        )
+        if not result:
+            return None
+        try:
+            data = json.loads(result)
+            return Issue.from_github(data)
+        except json.JSONDecodeError:
+            return None
+
+    def update_issue(
+        self,
+        issue_number: int,
+        title: Optional[str] = None,
+        body: Optional[str] = None,
+        add_labels: Optional[List[str]] = None,
+        remove_labels: Optional[List[str]] = None
+    ) -> bool:
+        """Edit an existing issue via gh issue edit."""
+        import tempfile
+
+        cmd_parts = [f"gh issue edit {issue_number} --repo {self.owner}/{self.repo}"]
+
+        if title:
+            escaped_title = title.replace('"', '\\"')
+            cmd_parts.append(f'--title "{escaped_title}"')
+
+        body_file = None
+        if body is not None:
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+                f.write(body)
+                body_file = f.name
+            cmd_parts.append(f"--body-file {body_file}")
+
+        if add_labels:
+            for label in add_labels:
+                self._ensure_label_exists(label)
+            cmd_parts.append(f"--add-label \"{','.join(add_labels)}\"")
+
+        if remove_labels:
+            cmd_parts.append(f"--remove-label \"{','.join(remove_labels)}\"")
+
+        cmd = " ".join(cmd_parts)
+        try:
+            result = self._run_cmd(cmd, timeout=30)
+            if result is not None or self._run_cmd(f"gh issue view {issue_number} --repo {self.owner}/{self.repo} --json number", timeout=10):
+                self.logger.info(f"Updated issue #{issue_number}")
+                return True
+            return False
+        finally:
+            if body_file:
+                os.unlink(body_file)
+
+    def close_issue(self, issue_number: int, reason: Optional[str] = None) -> bool:
+        """Close an issue with an optional comment."""
+        if reason:
+            comment_cmd = f'gh issue comment {issue_number} --repo {self.owner}/{self.repo} --body "{reason}"'
+            self._run_cmd(comment_cmd, timeout=15)
+
+        result = self._run_cmd(
+            f"gh issue close {issue_number} --repo {self.owner}/{self.repo}",
+            timeout=15
+        )
+        if result is not None:
+            self.logger.info(f"Closed issue #{issue_number}")
+            return True
+        return False
+
+
+def get_last_curation_timestamp(body: str) -> Optional[datetime]:
+    """Parse 'Last Curated: YYYY-MM-DDTHH:MM:SSZ' from issue body footer."""
+    if not body:
+        return None
+    match = re.search(CURATION_MARKER_PATTERN, body)
+    if match:
+        try:
+            return datetime.fromisoformat(match.group(1).replace('Z', '+00:00'))
+        except ValueError:
+            return None
+    return None
+
+
+def update_curation_marker(body: str, timestamp: datetime, agent_name: str = "Barbossa", version: str = "2.2.0") -> str:
+    """Add or update the curation marker in the issue body footer."""
+    ts_str = timestamp.strftime('%Y-%m-%dT%H:%M:%SZ')
+    new_footer = f"---\n*Created by {agent_name} v{version}*\n*Last Curated: {ts_str}*"
+
+    # Check if there's already a Barbossa footer
+    if re.search(BARBOSSA_FOOTER_PATTERN, body):
+        # Update existing footer
+        body = re.sub(
+            BARBOSSA_FOOTER_PATTERN + r'(\s*\n\*Last Curated: [^*]+\*)?',
+            new_footer,
+            body
+        )
+    else:
+        # Add new footer
+        body = body.rstrip() + f"\n\n{new_footer}"
+
+    return body
 
 
 def get_issue_tracker(config: Dict, repo_name: str, logger: Optional[logging.Logger] = None) -> GitHubIssueTracker:

@@ -24,7 +24,7 @@ import logging
 import os
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 import uuid
@@ -37,7 +37,13 @@ from barbossa.agents.firebase import (
     track_run_start,
     track_run_end
 )
-from barbossa.utils.issue_tracker import get_issue_tracker, GitHubIssueTracker
+from barbossa.utils.issue_tracker import (
+    get_issue_tracker,
+    GitHubIssueTracker,
+    get_last_curation_timestamp,
+    update_curation_marker,
+    Issue
+)
 from barbossa.utils.notifications import (
     notify_agent_run_complete,
     notify_error,
@@ -49,9 +55,11 @@ from barbossa.utils.notifications import (
 class BarbossaProduct:
     """Product Manager agent that creates feature Issues for the pipeline."""
 
-    VERSION = "2.1.0"
+    VERSION = "2.2.0"
     DEFAULT_MAX_ISSUES_PER_RUN = 3
     DEFAULT_FEATURE_BACKLOG_THRESHOLD = 20
+    DEFAULT_ITERATION_RATIO = 0.7
+    DEFAULT_MIN_HOURS_SINCE_CURATION = 48
 
     def __init__(self, work_dir: Optional[Path] = None):
         default_dir = Path(os.environ.get('BARBOSSA_DIR', '/app'))
@@ -85,11 +93,14 @@ class BarbossaProduct:
         self.enabled = settings.get('enabled', True)
         self.MAX_ISSUES_PER_RUN = settings.get('max_issues_per_run', self.DEFAULT_MAX_ISSUES_PER_RUN)
         self.FEATURE_BACKLOG_THRESHOLD = settings.get('max_feature_issues', self.DEFAULT_FEATURE_BACKLOG_THRESHOLD)
+        self.iteration_ratio = settings.get('iteration_ratio', self.DEFAULT_ITERATION_RATIO)
+        self.min_hours_since_curation = settings.get('min_hours_since_curation', self.DEFAULT_MIN_HOURS_SINCE_CURATION)
 
         self.logger.info("=" * 60)
         self.logger.info(f"BARBOSSA PRODUCT MANAGER v{self.VERSION}")
         self.logger.info(f"Repositories: {len(self.repositories)}")
         self.logger.info(f"Settings: max_issues_per_run={self.MAX_ISSUES_PER_RUN}, max_feature_issues={self.FEATURE_BACKLOG_THRESHOLD}")
+        self.logger.info(f"Curation: iteration_ratio={self.iteration_ratio}, min_hours={self.min_hours_since_curation}")
         self.logger.info("=" * 60)
 
     def _setup_logging(self):
@@ -508,8 +519,179 @@ KEY FILES:
 *Created by Barbossa Product Manager v{self.VERSION}*
 """
 
+    def _get_issues_needing_curation(self, repo_name: str) -> List[Issue]:
+        """Find product/feature issues that haven't been curated recently."""
+        tracker = self._get_issue_tracker(repo_name)
+        issues = tracker.list_issues(labels=['product'], state='open', limit=50)
+
+        now = datetime.now(timezone.utc)
+        needs_curation = []
+
+        for issue in issues:
+            # Skip if recently updated by humans (within 24h)
+            if issue.updated_at:
+                try:
+                    updated = datetime.fromisoformat(issue.updated_at.replace('Z', '+00:00'))
+                    hours_since_update = (now - updated.replace(tzinfo=None)).total_seconds() / 3600
+                    if hours_since_update < 24:
+                        self.logger.debug(f"Skipping #{issue.id}: recently updated ({hours_since_update:.1f}h ago)")
+                        continue
+                except ValueError:
+                    pass
+
+            # Check curation marker
+            last_curated = get_last_curation_timestamp(issue.body or '')
+            if last_curated:
+                hours_since_curation = (now - last_curated.replace(tzinfo=None)).total_seconds() / 3600
+                if hours_since_curation < self.min_hours_since_curation:
+                    self.logger.debug(f"Skipping #{issue.id}: curated {hours_since_curation:.1f}h ago")
+                    continue
+
+            needs_curation.append(issue)
+
+        self.logger.info(f"Found {len(needs_curation)} issues needing curation")
+        return needs_curation
+
+    def _get_iteration_prompt(self, repo: Dict, issue: Issue) -> str:
+        """Generate prompt for iterating on an existing issue."""
+        repo_name = repo['name']
+
+        return f"""You are Barbossa Product Manager reviewing an existing GitHub issue.
+
+================================================================================
+ISSUE TO REVIEW
+================================================================================
+Repository: {self.owner}/{repo_name}
+Issue: #{issue.id}
+Title: {issue.title}
+Labels: {', '.join(issue.labels)}
+
+Body:
+{issue.body or '(empty)'}
+
+================================================================================
+TASK
+================================================================================
+Review this issue and decide:
+1. CLOSE - The problem is no longer relevant, was already solved, or is a duplicate
+2. EDIT - The issue needs improvement (clearer scope, better acceptance criteria, updated context)
+3. KEEP - The issue is good as-is, just update the curation timestamp
+
+================================================================================
+OUTPUT FORMAT
+================================================================================
+Output valid JSON only:
+
+For CLOSE:
+{{"action": "CLOSE", "reason": "Brief explanation why this should be closed"}}
+
+For EDIT:
+{{"action": "EDIT", "new_title": "Updated title if needed or null", "new_body": "Complete updated body"}}
+
+For KEEP:
+{{"action": "KEEP"}}
+
+================================================================================
+GUIDELINES
+================================================================================
+- CLOSE if: issue duplicates another, problem was fixed, feature already exists, scope too large
+- EDIT if: unclear acceptance criteria, missing technical approach, outdated context, vague problem statement
+- KEEP if: issue is well-written, actionable, and still relevant
+
+Be aggressive about closing stale or low-value issues. Quality over quantity.
+
+Output JSON only, no other text.
+"""
+
+    def _iterate_on_issue(self, repo: Dict, issue: Issue) -> str:
+        """Use Claude to review and improve an existing issue. Returns action taken."""
+        import re
+
+        prompt = self._get_iteration_prompt(repo, issue)
+        prompt_file = self.work_dir / 'temp_iteration_prompt.txt'
+
+        with open(prompt_file, 'w') as f:
+            f.write(prompt)
+
+        result = self._run_cmd(
+            f'cat {prompt_file} | claude --dangerously-skip-permissions -p',
+            timeout=300
+        )
+
+        prompt_file.unlink(missing_ok=True)
+
+        if not result:
+            self.logger.warning(f"No response from Claude for issue #{issue.id}")
+            return "error"
+
+        # Parse JSON response
+        try:
+            # Extract JSON from response (might have wrapper)
+            response_text = result
+            try:
+                wrapper = json.loads(result)
+                if 'result' in wrapper:
+                    response_text = wrapper['result']
+            except json.JSONDecodeError:
+                pass
+
+            # Find JSON object in response
+            json_match = re.search(r'\{[^{}]*\}', response_text, re.DOTALL)
+            if not json_match:
+                self.logger.warning(f"No JSON found in response for issue #{issue.id}")
+                return "error"
+
+            decision = json.loads(json_match.group())
+            action = decision.get('action', '').upper()
+
+            tracker = self._get_issue_tracker(repo['name'])
+
+            if action == 'CLOSE':
+                reason = decision.get('reason', 'Closed by Barbossa Product Manager during curation.')
+                tracker.close_issue(int(issue.id), reason)
+                self.logger.info(f"CLOSED issue #{issue.id}: {reason}")
+                return "closed"
+
+            elif action == 'EDIT':
+                new_title = decision.get('new_title')
+                new_body = decision.get('new_body')
+
+                if new_body:
+                    new_body = update_curation_marker(new_body, datetime.now(timezone.utc), "Barbossa Product Manager", self.VERSION)
+                else:
+                    # Just update curation marker on existing body
+                    new_body = update_curation_marker(issue.body or '', datetime.now(timezone.utc), "Barbossa Product Manager", self.VERSION)
+
+                tracker.update_issue(
+                    int(issue.id),
+                    title=new_title,
+                    body=new_body
+                )
+                self.logger.info(f"EDITED issue #{issue.id}")
+                return "edited"
+
+            elif action == 'KEEP':
+                # Update curation marker only
+                new_body = update_curation_marker(issue.body or '', datetime.now(timezone.utc), "Barbossa Product Manager", self.VERSION)
+                tracker.update_issue(int(issue.id), body=new_body)
+                self.logger.info(f"KEPT issue #{issue.id} (updated curation timestamp)")
+                return "kept"
+
+            else:
+                self.logger.warning(f"Unknown action '{action}' for issue #{issue.id}")
+                return "error"
+
+        except json.JSONDecodeError as e:
+            self.logger.warning(f"Could not parse Claude response for issue #{issue.id}: {e}")
+            return "error"
+
     def discover_for_repo(self, repo: Dict) -> int:
-        """Run product analysis for a single repository."""
+        """Run product analysis for a single repository.
+
+        Curation Mode (v2.2.0):
+        1. First: iterate on existing issues (based on iteration_ratio)
+        2. Then: create new issues if backlog allows
+        """
         repo_name = repo['name']
         self.logger.info(f"\n{'='*60}")
         self.logger.info(f"ANALYZING: {repo_name}")
@@ -519,40 +701,55 @@ KEY FILES:
         feature_count = self._get_feature_backlog_count(repo_name)
         self.logger.info(f"Current feature backlog: {feature_count} issues")
 
-        if feature_count >= self.FEATURE_BACKLOG_THRESHOLD:
-            self.logger.info(f"Feature backlog full (>= {self.FEATURE_BACKLOG_THRESHOLD}), skipping")
-            return 0
+        issues_curated = 0
+        issues_created = 0
 
-        # Clone/update repo
+        # Phase 1: Iterate on existing issues (based on iteration_ratio)
+        max_iterations = max(1, int(self.MAX_ISSUES_PER_RUN * self.iteration_ratio))
+        self.logger.info(f"\n--- PHASE 1: Curating existing issues (max {max_iterations}) ---")
+
+        issues_needing_curation = self._get_issues_needing_curation(repo_name)
+
+        for issue in issues_needing_curation[:max_iterations]:
+            self.logger.info(f"Reviewing issue #{issue.id}: {issue.title}")
+            action = self._iterate_on_issue(repo, issue)
+            if action in ['closed', 'edited', 'kept']:
+                issues_curated += 1
+
+        self.logger.info(f"Curated {issues_curated} existing issues")
+
+        # Phase 2: Create new issues if backlog allows
+        if feature_count >= self.FEATURE_BACKLOG_THRESHOLD:
+            self.logger.info(f"Feature backlog full (>= {self.FEATURE_BACKLOG_THRESHOLD}), skipping new issue creation")
+            return issues_curated
+
+        max_new = max(1, int(self.MAX_ISSUES_PER_RUN * (1 - self.iteration_ratio)))
+        self.logger.info(f"\n--- PHASE 2: Creating new issues (max {max_new}) ---")
+
+        # Clone/update repo for context
         repo_path = self._clone_or_update_repo(repo)
         if not repo_path:
             self.logger.error(f"Could not access repo: {repo_name}")
-            return 0
+            return issues_curated
 
         # Read project context
         claude_md = self._read_claude_md(repo_path)
         if not claude_md:
             self.logger.warning(f"No CLAUDE.md found for {repo_name}")
 
-        # Get existing issues and PRs to avoid duplicates
-        existing_titles = self._get_existing_issue_titles(repo_name)
-        existing_issues = self._get_existing_issue_details(repo_name)
-        recent_prs = self._get_recent_prs(repo_name)
-        all_existing = existing_titles + recent_prs
-
-        issues_created = 0
-
         # Analyze with Claude - Claude creates the issue directly via gh CLI
         self.logger.info("Analyzing product with Claude...")
         issue_url = self._analyze_with_claude(repo, claude_md)
 
         if not issue_url:
-            self.logger.warning("No feature suggestion from Claude")
-            return 0
+            self.logger.info("No new feature suggestion from Claude")
+        else:
+            self.logger.info(f"Feature issue created: {issue_url}")
+            issues_created = 1
 
-        # Claude created the issue - count it
-        self.logger.info(f"Feature issue created: {issue_url}")
-        return 1
+        total = issues_curated + issues_created
+        self.logger.info(f"\nTotal actions: {issues_curated} curated, {issues_created} created")
+        return total
 
     def _generate_session_id(self) -> str:
         """Generate unique session ID"""
