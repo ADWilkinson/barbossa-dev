@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "Andy Wilkinson", email = "andywilkinson1993@gmail.com"}
+    {name = "Andy Wilkinson", email = "gm@galleonlabs.io"}
 ]
 keywords = ["ai", "automation", "development", "github", "claude"]
 classifiers = [
